@@ -1,12 +1,119 @@
-<!doctype html><html lang="zh-Hant"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#0b151c"><title>晶片沉默者：九人的協議 — 共體時艱</title><link rel="stylesheet" href="style.css"></head><body>
-<header><a class="brand" href="./">◈ SILICON SILENCE <small>晶片沉默者</small></a><div><button id="sources">史實與創作</button><button id="restart">重新開始</button></div></header>
-<main><section class="intro"><div class="eyebrow">INTERACTIVE CASE FILE / 01 <span>半紀實背景 × 虛構懸疑</span></div><h1>九人的協議<span>第一章 · 共體時艱</span></h1><p>你可以懷疑每一個人。<br>但在開口之前，先找到證據。</p><div class="status"><span>● 自動存檔</span><span id="progress"></span><span id="risk"></span></div></section>
-<div class="layout"><section class="explore"><div class="sectionhead"><span id="location">01 / 廠區走廊</span><span>點選人物 · 下一步帶你前往</span></div><div class="viewport" id="viewport"><div class="room" id="room"></div><div class="scene-caption">虛構場景 / 晶衡記憶體 · 台中廠</div></div><nav id="rooms" aria-label="選擇場景"></nav><div class="objective"><b>當前目標</b><p id="objective"></p><button id="hint">需要提示？</button><p id="hintText" hidden></p></div></section>
-<section class="conversation"><div class="sectionhead"><span>通訊與現場紀錄</span><span id="clock">夜班 / 22:40</span></div><div id="dialogue" aria-live="polite"></div><div id="choices"></div></section></div>
-<section class="desk"><div class="sectionhead"><span>調查工作台</span><span>原件、證詞、傳聞，分開判讀。</span></div><div class="tabs"><button id="bagTab">證據背包 <span id="count">0</span></button><button id="boardTab">推理板</button><button id="logTab">對話紀錄</button></div><div id="deskContent"></div></section>
-<footer>所有人物、晶衡公司、九人名單與文件均為虛構。新聞背景不等於劇情指控。<br>玩法參考 <a href="https://github.com/mcltyl/fab24hr-engine" target="_blank" rel="noopener">fab24hr-engine</a>；本試玩版獨立實作，未使用其引擎程式。</footer></main>
-<dialog id="modal"><button id="closeModal" class="close" aria-label="關閉">✕</button><div id="modalContent"></div></dialog><script src="game.js"></script><script src="https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js"></script><script src="experience.js"></script><script src="context.js"></script><script src="status.js"></script></body></html>
-
-
-
-
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>晶片沉默者：九人的協議・第一章</title>
+<style>
+:root{--bg:#f4f1ec;--fg:#1d1b19;--card:#fff;--ac:#e0962a;--mut:#6b655d;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#10161d;--fg:#ece7df;--card:#1b242e;--mut:#9aa3ab}}
+:root[data-theme="dark"]{--bg:#10161d;--fg:#ece7df;--card:#1b242e;--mut:#9aa3ab}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font-family:system-ui,"Noto Sans TC","PingFang TC","Microsoft JhengHei",sans-serif}
+#app{height:100%;display:flex;flex-direction:column;max-width:980px;margin:0 auto}
+#bar{display:flex;gap:10px;align-items:center;padding:8px 12px;font-size:14px;flex-wrap:wrap}
+#bar b{flex:1;min-width:120px}
+button{font:inherit;cursor:pointer}
+.sm{padding:4px 12px;border-radius:999px;border:1px solid var(--mut);background:transparent;color:var(--fg)}
+#stage{position:relative;flex:1;min-height:0;overflow:hidden;border-radius:14px;margin:0 8px 8px;background:#000}
+#art,#art svg{position:absolute;inset:0;width:100%;height:100%}
+@media (prefers-reduced-motion:no-preference){#art svg{animation:dr 20s ease-in-out infinite alternate}}
+@keyframes dr{from{transform:scale(1)}to{transform:scale(1.06)}}
+#panel{position:absolute;left:0;right:0;bottom:0;padding:34px 16px 14px;background:linear-gradient(transparent,rgba(5,8,12,.93) 30%);color:#f3efe8;cursor:pointer}
+#nm{display:inline-block;background:var(--ac);color:#111;font-weight:700;padding:2px 12px;border-radius:999px;font-size:14px;margin-bottom:6px}
+#tx{font-size:clamp(16px,2.4vw,19px);line-height:1.75;min-height:3.5em}
+#hint{font-size:12px;opacity:.7;text-align:right}
+.ch{display:block;width:100%;text-align:left;margin-top:8px;padding:11px 14px;border-radius:10px;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.1);color:inherit}
+.ch:hover,.ch:focus-visible{background:var(--ac);color:#111;outline:none}
+.ch[disabled]{opacity:.45;cursor:default;background:transparent;color:inherit}
+#title{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:20px;color:#f3efe8;background:linear-gradient(transparent 20%,rgba(5,8,12,.92));z-index:2}
+#title h1{margin:0 0 4px;font-size:clamp(26px,5vw,40px)}
+#title p{margin:4px 0;opacity:.85;font-size:14px;line-height:1.6;max-width:640px}
+.pri{padding:12px 22px;border-radius:12px;border:0;background:var(--ac);color:#111;font-weight:700;margin:10px 10px 0 0}
+#mod{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.6);padding:16px;z-index:9}
+#mod.on{display:flex}
+.card{background:var(--card);color:var(--fg);max-width:520px;width:100%;max-height:80%;overflow:auto;border-radius:14px;padding:18px;line-height:1.7}
+.card h3{margin:.2em 0}
+</style></head><body>
+<div id="app">
+ <div id="bar"><b>晶片沉默者・第一章〈大家都相信他們〉</b><span id="tr"></span><span id="ec"></span><button class="sm" id="nb">筆記</button><button class="sm" id="rs">重來</button></div>
+ <div id="stage">
+  <div id="art"></div>
+  <div id="title"><h1>晶片沉默者：九人的協議</h1><p>第一章〈大家都相信他們〉。你只是基層員工「雞雞HH」，想把一件小事問清楚。點一下畫面或按空白鍵繼續，選項可按數字鍵。</p><p>本作為虛構故事，公司與角色皆為虛構，不證明任何真實人物的行為。約 8 分鐘，自動存檔。</p><div><button class="pri" id="go">開始</button><button class="pri" id="ct" style="display:none">繼續</button></div></div>
+  <div id="panel"><span id="nm"></span><div id="tx"></div><div id="cs"></div><div id="hint"></div></div>
+ </div>
+</div>
+<div id="mod"><div class="card" id="mc"></div></div>
+<script>
+const $=s=>document.querySelector(s);
+const E={
+slide:{n:'投影片：「會員討論後決定」',src:'說明會現場投影片',h:'說明會現場的投影片',yes:'公開說法是由會員討論後決定。',no:'不能證明討論實際進行過，也不能證明誰做了決定。'},
+notice:{n:'會後通知（省略確認步驟）',src:'會後發放的通知',h:'會後發放的通知',yes:'通知中沒有寫「會員確認」這一步。',no:'可能只是簡化，不能直接推出有人隱瞞。'},
+agenda:{n:'議程註記（公司版本較早）',src:'合法提供的議程註記',h:'一份合法提供的議程註記',yes:'公司版本的討論時間早於公開說明。',no:'只能說明需要釐清授權與程序，不能證明收款或密約。'}};
+const C={mu:['許沐','同班同事','#2f8f8a','#2b2118'],fk:['法克','說明會主講幹部','#b5432e','#1a1a1a'],cd:['糖果','會員聯繫幹部','#c0577f','#3a2420']};
+const G=(a,b)=>`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient><radialGradient id="v"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient></defs><rect width="800" height="450" fill="url(#g)"/>`;
+const R=(x,y,w,h,f,r=4,o=1)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${f}" opacity="${o}"/>`;
+const T=(x,y,s,z,f,w=400)=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="${z}" fill="${f}" font-weight="${w}">${s}</text>`;
+const N12=[...Array(12).keys()];
+const BG={
+hall:()=>G('#1c2b3a','#0b121a')+[0,1,2,3,4,5].map(i=>`<ellipse cx="${100+i*120}" cy="16" rx="44" ry="8" fill="#fff6d8"/><circle cx="${100+i*120}" cy="30" r="60" fill="#fff6d8" opacity=".07"/>`).join('')+R(250,50,300,150,'#e6eef5',6)+R(270,64,260,24,'#2d6a9f',3)+T(400,82,'協商方向說明',15,'#fff')+T(400,138,'會員討論後決定',24,'#17324a',700)+R(290,158,220,6,'#9fb3c4',3)+R(290,172,160,6,'#9fb3c4',3)+R(120,215,560,28,'#4a3b32')+R(560,168,80,50,'#6a5444')+[0,1,2].map(r=>N12.map(i=>(i*7+r*3)%4<2?`<circle cx="${30+i*64+(r%2)*32+18}" cy="${318+r*42}" r="${11+r*2}" fill="#0a1017"/>`:'').join('')+N12.map(i=>R(30+i*64+(r%2)*32,330+r*42,36,26,'#203245',6)).join('')).join(''),
+corr:()=>G('#2a3946','#10171e')+R(0,330,800,120,'#161f28')+R(70,70,200,160,'#0c1a2a',6)+'<circle cx="210" cy="120" r="22" fill="#f3efc8"/>'+R(470,90,150,250,'#2c5f8a',8)+R(485,108,120,150,'#10202f',4)+[0,1,2].map(r=>[0,1,2].map(c=>R(494+c*37,116+r*46,28,36,['#e0603f','#e7b93a','#58b46a'][(r+c)%3],4,.9)).join('')).join('')+R(500,280,100,34,'#08121b',4)+R(300,300,120,10,'#6a5444')+R(310,310,8,50,'#6a5444')+R(402,310,8,50,'#6a5444'),
+docs:()=>G('#2a2320','#15100e')+`<g transform="rotate(-5 250 240)">${R(110,70,260,320,'#f1ece2',4)}${T(240,110,'公開投影片',18,'#444',700)}${R(135,150,210,24,'#f0b84a',3)}${T(240,167,'會員討論後決定',14,'#222')}${R(135,196,210,8,'#c9c2b4',2)}${R(135,218,170,8,'#c9c2b4',2)}${R(135,240,200,8,'#c9c2b4',2)}</g><g transform="rotate(4 550 240)">${R(430,60,260,330,'#f1ece2',4)}${T(560,102,'會後通知',18,'#444',700)}${R(455,140,210,8,'#c9c2b4',2)}${R(455,162,190,8,'#c9c2b4',2)}<rect x="455" y="188" width="210" height="30" rx="3" fill="none" stroke="#c0392b" stroke-width="2.5" stroke-dasharray="6 5"/>${T(560,208,'（這裡沒有「會員確認」）',12,'#c0392b')}${R(455,240,200,8,'#c9c2b4',2)}${R(455,262,150,8,'#c9c2b4',2)}</g>`,
+night:d=>G(d?'#f2b76b':'#0d1b2e',d?'#5a3b4f':'#1d2a3a')+(d?'<circle cx="620" cy="250" r="50" fill="#ffe9b0"/>':'<circle cx="640" cy="80" r="28" fill="#f3efc8"/>'+[...Array(30).keys()].map(i=>`<circle cx="${(i*97)%800}" cy="${(i*53)%200}" r="1.3" fill="#fff" opacity=".7"/>`).join(''))+R(0,360,800,90,'#0a1118')+R(120,230,360,130,'#16222f',2)+R(500,200,120,160,'#1a2836',2)+R(150,150,26,90,'#16222f',2)+[0,1,2,3,4].map(r=>N12.map(c=>(r*5+c*3)%4?R(135+c*28,248+r*20,16,10,d?'#ffd98a':'#f5cf7a',1,.9):'').join('')).join('')};
+BG.dawn=()=>BG.night(1);
+const bust=(x,c,h,on)=>`<g opacity="${on?1:.4}" transform="translate(${x},0)"><path d="M-80 450Q-80 335 0 322Q80 335 80 450Z" fill="${c}"/><rect x="-14" y="296" width="28" height="30" fill="#d9b794"/><ellipse cy="262" rx="42" ry="48" fill="#e8c7a6"/><path d="M-46 258Q-48 200 0 204Q48 200 46 258Q24 232 0 236Q-24 232 -46 258Z" fill="${h}"/><circle cx="-15" cy="266" r="3.5" fill="#222"/><circle cx="15" cy="266" r="3.5" fill="#222"/><path d="M-9 288Q0 294 9 288" stroke="#8a5a44" stroke-width="2.5" fill="none"/></g>`;
+const S={
+s0:{b:'hall',sp:'旁白',t:'九月，台中廠。說明會的燈很亮，座位幾乎坐滿。你是基層員工雞雞HH，這一章，你只是想把一件小事問清楚。',n:'s1'},
+s1:{b:'hall',l:'mu',sp:'mu',t:'「來，坐前面一點。法克今天要講協商方向，你不要又想太多喔。」許沐是你的同班同事，他信任幹部，也信任你的為人。',n:'s2'},
+s2:{b:'hall',l:'mu',r:'fk',sp:'fk',t:'「協商的方向，一定會跟大家討論後再決定。請大家安心，我們會替你們爭取。」',n:'s3'},
+s3:{b:'hall',l:'mu',r:'cd',sp:'cd',t:'「有問題的人寫在紙條上，我收齊後交給前面。不要客氣喔。」',n:'s4'},
+s4:{b:'docs',sp:'旁白',t:'投影片寫著「會員討論後決定」，但你剛拿到的會後通知，沒有這一步。也許只是簡化，也許不是。你要怎麼做？',c:[{t:'當場站起來喊：「早就談好了吧！」',g:'shout',fx:{trust:-2}},{t:'先安靜地把兩份文字都留下來',g:'hub'}]},
+shout:{b:'hall',l:'mu',sp:'mu',t:'全場安靜，大家轉頭看你。許沐拉住你的袖子，小聲問：「你有證據嗎？還是只是感覺？」',c:[{t:'「對不起，我說得太快。我想先把文件核對清楚。」',g:'hub',fx:{trust:1}},{t:'「我就是知道。」',g:'hub',fx:{trust:-1}}]},
+hub:{b:'hall',sp:'旁白',t:'說明會結束，人群散去。你想先查什麼？至少保存兩份文件，才有具體的問題可以問。',c:s=>{const o=k=>s.ev.includes(k);return[
+{t:o('slide')?'✓ 已保存：投影片':'拍下投影片「會員討論後決定」',g:'hub',fx:{ev:'slide'},d:o('slide')},
+{t:o('notice')?'✓ 已保存：會後通知':'把會後通知的內容抄下來',g:'hub',fx:{ev:'notice'},d:o('notice')},
+{t:o('agenda')?'✓ 已保存：議程註記':'翻看一份合法提供的議程註記',g:'hub',fx:{ev:'agenda'},d:o('agenda')},
+s.ev.length>=2?{t:'帶著具體問題去找糖果',g:'ask'}:{t:'（先保存至少兩份文件，再去問糖果）',g:'hub',d:1}]}},
+ask:{b:'corr',r:'cd',sp:'cd',t:'糖果收著紙條，對你笑了一下：「你有什麼問題？」',c:[{t:'「通知沒有寫會員確認這一步，議程註記的日期也比公開說明早。你們的授權範圍是什麼？」',g:'ok',fx:{trust:1}},{t:'「你們早就簽好了，對不對？」',g:'bad',fx:{trust:-2}}]},
+ok:{b:'corr',r:'cd',sp:'cd',t:'她停了一下：「這個我要先確認，不想亂回答。我下週給你書面答覆。」這不是承認，也不是否認，只是一個必須追下去的答案。',n:'mu2'},
+bad:{b:'corr',r:'cd',sp:'cd',t:'她的笑容收了起來：「你這樣問，我沒辦法回答。」她轉身走開，什麼也沒留下。',n:'mu2'},
+mu2:{b:'corr',l:'mu',sp:'mu',f:s=>{if(s.trust>=1&&!s.fl.includes('p'))s.fl.push('p')},t:s=>s.fl.includes('p')?'「兩份我都看了。我也不確定誰對誰錯，但我們把問題寫清楚，再一起問，好嗎？」他第一次沒有叫你別想太多。':'「我今天需要想一想……你先別太急。」他看起來很為難，沒有再多說。',n:'end'}};
+const endNode=s=>{const p=s.fl.includes('p'),a=p&&s.ev.length>=3;return{b:'dawn',sp:'旁白',ti:a?'第一位願意一起查證的人':p?'未完的說明會':'孤獨先知',
+t:a?'你和許沐把三份文件逐行對好，寫成一張只問問題、不指控任何人的清單。夜班的燈一盞盞亮起。你還不知道答案，但這一次不只你一個人在問：「你們授權的是協商，還是直接接受方案？」':p?'證據還不夠下定論，但許沐還願意聽你說。疑問留在紙上，你們約好補齊其餘文件再問。':'你也許看對了方向，卻沒有人願意站在你旁邊。知道，不等於能改變。回到說明會，換一種問法吧。',
+c:[{t:'重新開始',g:'RESET'},{t:'翻閱證物筆記',g:'NB'}]}};
+let st,ty,tm,cur;
+const mk=()=>({id:'s0',trust:2,ev:[],fl:[],met:[]});
+const save=()=>{try{localStorage.setItem('wsg1',JSON.stringify(st))}catch(e){}};
+const load=()=>{try{return JSON.parse(localStorage.getItem('wsg1'))}catch(e){return null}};
+function hud(){$('#tr').textContent='信任 '+'♥'.repeat(st.trust)+'♡'.repeat(5-st.trust);$('#ec').textContent='證物 '+st.ev.length+'/3'}
+function modal(h,cb){$('#mc').innerHTML=h+'<button class="pri" id="cl">好</button>';$('#mod').classList.add('on');$('#cl').onclick=()=>{$('#mod').classList.remove('on');cb&&cb()};$('#cl').focus()}
+function nbk(){modal('<h3>證物筆記</h3>'+Object.keys(E).map(k=>st.ev.includes(k)?`<p><b>✓ ${E[k].n}</b><br><small>來源：${E[k].src}</small><br>可支持：${E[k].yes}<br>不能支持：${E[k].no}</p>`:`<p style="color:var(--mut)">☐ 尚未取得：${E[k].h}</p>`).join('')+'<h3>已認識的人</h3>'+(st.met.length?st.met.map(k=>`<p><b>${C[k][0]}</b>：${C[k][1]}</p>`).join(''):'<p>尚無</p>'))}
+function show(id){
+ st.id=id;const n=id==='end'?endNode(st):S[id];if(n.f)n.f(st);cur=n;
+ const side=(k,x)=>{if(!n[k])return'';const c=C[n[k]];if(!st.met.includes(n[k]))st.met.push(n[k]);return bust(x,c[2],c[3],n.sp===n[k])};
+ $('#art').innerHTML=`<svg viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice">${BG[n.b]()}${side('l',170)}${side('r',630)}<rect width="800" height="450" fill="url(#v)"/></svg>`;
+ const c=C[n.sp];$('#nm').textContent=n.ti?'結局｜'+n.ti:c?c[0]+'・'+c[1]:'旁白';
+ $('#cs').innerHTML='';$('#hint').textContent='';hud();save();
+ const t=typeof n.t==='function'?n.t(st):n.t;let i=0;ty=1;clearInterval(tm);$('#tx').textContent='';
+ tm=setInterval(()=>{$('#tx').textContent=t.slice(0,++i);if(i>=t.length)fin()},24);cur.full=t}
+function fin(){if(!ty)return;ty=0;clearInterval(tm);$('#tx').textContent=cur.full;
+ if(cur.c){(typeof cur.c==='function'?cur.c(st):cur.c).forEach((o,i)=>{const b=document.createElement('button');b.className='ch';b.textContent=(i+1)+'. '+o.t;b.disabled=!!o.d;b.onclick=e=>{e.stopPropagation();pick(o)};$('#cs').appendChild(b)})}
+ else $('#hint').textContent='點一下繼續 ▶'}
+function pick(o){const f=o.fx||{};if(f.trust)st.trust=Math.max(0,Math.min(5,st.trust+f.trust));
+ if(o.g==='RESET'){reset();return}if(o.g==='NB'){nbk();return}
+ if(f.ev&&!st.ev.includes(f.ev)){st.ev.push(f.ev);const e=E[f.ev];hud();modal(`<h3>取得證物</h3><p><b>${e.n}</b><br><small>來源：${e.src}</small></p><p>可支持：${e.yes}<br>不能支持：${e.no}</p>`,()=>show(o.g));return}
+ show(o.g)}
+function adv(){if(ty){fin();return}if(cur&&!cur.c&&cur.n)show(cur.n)}
+function reset(){st=mk();show('s0')}
+function begin(s){$('#title').style.display='none';st=s;show(s.id)}
+$('#go').onclick=()=>begin(mk());
+$('#ct').onclick=()=>begin(load());
+$('#rs').onclick=()=>{if(confirm('要重新開始嗎？目前進度會被覆蓋。')){$('#title').style.display='none';reset()}};
+$('#nb').onclick=()=>st?nbk():0;
+$('#panel').onclick=adv;
+document.addEventListener('keydown',e=>{if($('#mod').classList.contains('on')||$('#title').style.display!=='none')return;
+ if(e.key===' '||e.key==='Enter'){if(document.activeElement.className==='ch')return;e.preventDefault();adv()}
+ else if(/^[1-4]$/.test(e.key)){const b=document.querySelectorAll('.ch')[e.key-1];if(b&&!b.disabled)b.click()}});
+$('#art').innerHTML=`<svg viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice">${BG.night(0)}<rect width="800" height="450" fill="url(#v)"/></svg>`;
+$('#panel').style.display='none';
+const sv=load();if(sv&&sv.id&&sv.id!=='s0')$('#ct').style.display='inline-block';
+const _s=show;show=function(id){$('#panel').style.display='block';_s(id)};
+</script></body></html>
