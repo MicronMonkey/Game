@@ -1,0 +1,26 @@
+// Original scene and guided interaction layer; three.js is MIT licensed.
+(function(){
+const host=$('viewport');let renderer,scene,camera,group;
+try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;host.prepend(renderer.domElement);scene=new THREE.Scene();camera=new THREE.PerspectiveCamera(38,1,.1,100);camera.position.set(13,13,17);camera.lookAt(0,0,0);scene.add(new THREE.HemisphereLight(0xbde5ff,0x374658,1.5));let light=new THREE.DirectionalLight(0xffd5a1,1.8);light.position.set(4,12,6);light.castShadow=true;light.shadow.mapSize.set(1024,1024);scene.add(light);}catch(e){host.classList.add('fallback');}
+function box(w,h,d,x,y,z,color){let m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),new THREE.MeshStandardMaterial({color,roughness:.65}));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;group.add(m);return m;}
+function person(x,z,color){box(.48,.75,.35,x,.95,z,color);box(.35,.35,.35,x,1.51,z,0xe1bc9e);box(.17,.55,.22,x-.14,.3,z,0x283947);box(.17,.55,.22,x+.14,.3,z,0x283947);box(.13,.6,.17,x-.34,.95,z,color);box(.13,.6,.17,x+.34,.95,z,color);}
+function desk(x,z){box(2,.12,1,x,1,z,0xd0b18c);[-.8,.8].forEach(dx=>box(.1,1,.8,x+dx,.5,z,0x3f5360));box(.7,.5,.08,x,1.35,z-.2,0x142530);box(.6,.35,.02,x,1.36,z-.15,0x79dce4);}
+function build(){if(!renderer)return;if(group){scene.remove(group);group.traverse(o=>{if(o.geometry)o.geometry.dispose();if(o.material)o.material.dispose();});}group=new THREE.Group();scene.add(group);box(12,.5,8,0,-.3,0,0x253a49);box(12,2.6,.15,0,1.3,-4,0x647985);box(.15,2.6,8,-6,1.3,0,0x536975);for(let x=-5.5;x<6;x++)box(.015,.01,8,x,.01,0,0x718591);for(let z=-3.5;z<4;z++)box(12,.01,.015,0,.01,z,0x718591);for(let x=-4;x<=4;x+=4){box(2.5,.07,.6,x,3,-1,0xddf4ec);box(2.8,1.2,.1,x,1.5,-3.88,0x153a4c);}
+if(state.room===0){for(let x=-4;x<=0;x++)box(.8,1.8,.6,x,.9,-3.4,0x91a7af);box(2,1.3,.1,3,1.5,-3.7,0xc4b89e);for(let i=0;i<5;i++)box(.25,.4,.02,2.4+i*.28,1.55,-3.62,0xe9e0c8);person(-1,1,0x75a8b5);}
+if(state.room===1){desk(-2,0);desk(2,1);box(1.3,2.2,.8,-4,1.1,-3,0xb97b53);box(.9,1.2,.04,-4,1.4,-2.56,0x172c3b);person(1,2,0xc69b67);for(let x=-3;x<4;x+=2)box(.65,.5,.65,x,.25,2.5,0x587a82);}
+if(state.room===2){desk(-3,-1);desk(1,-1);for(let i=0;i<3;i++){box(1,2,.7,3.8,1,-3+i*1.1,0x91a1a5);box(.5,.05,.02,3.8,1.3,-2.63+i*1.1,0xe6c789);}person(-2,1,0xa4ad83);person(2,2,0xc59685);}
+if(state.room===3){for(let x=-4;x<5;x+=3){box(2,2,1.6,x,1,-2,0xb7cbd0);box(1.3,.75,.05,x,1.4,-1.17,0x184651);box(.16,.16,.08,x+.7,1.8,-1.12,0x80e4bc);}desk(3,2);person(-1,1,0xe3edf0);}
+resize();}
+function resize(){if(!renderer)return;let w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();renderer.render(scene,camera);}
+new ResizeObserver(resize).observe(host);
+const originalRoom=renderRoom;renderRoom=function(){originalRoom();build();};
+const route=[['memo',0,'old','接聽林澄的來訊'],['notice',0,'board','閱讀獎酬公告'],['pay',3,'terminal','查看自己的薪資明細'],['chat',1,'rumor','查閱休息室的匿名訊息'],['minutes',2,'he','向何岑確認授權範圍'],['receipt',2,'zhou','聽周岳說明收件經過'],['archive',2,'archive','調閱封存附件']];
+const guide=document.createElement('button');guide.id='goNext';$('objective').after(guide);function next(){return route.find(r=>!has(r[0]));}function updateGuide(){let n=next();guide.textContent=state.ended?'查看本章結局 →':n?n[3]+' →':state.solved.length<3?'開始核對證據 →':!state.redacted?'整理去識別副本 →':'交付調查報告 →';$('objective').textContent=state.ended?'本章調查已完成':n?'下一步 · '+n[3]:state.solved.length<3?'下一步 · 在原件旁完成三項核對':'下一步 · 保護來源，決定如何交付';}
+guide.onclick=()=>{if(state.ended)return showEnding();let n=next();if(n){state.room=n[1];renderRoom();interact(n[2]);save();}else if(state.solved.length<3){tab='board';renderDesk();document.querySelector('.desk').scrollIntoView({behavior:'smooth'});}else if(!state.redacted){state.room=3;renderRoom();interact('lin');}else finale();document.querySelector('.conversation').scrollIntoView({behavior:'smooth',block:'nearest'});};
+const oldStats=renderStats;renderStats=function(){oldStats();updateGuide();};
+const oldPuzzles=renderPuzzles;renderPuzzles=function(root){oldPuzzles(root);root.querySelectorAll('.puzzle').forEach((el,i)=>{let docs=document.createElement('div');docs.className='referenceDocs';puzzles[i].needs.filter(has).forEach(id=>{let b=document.createElement('button');b.textContent='▤ '+evidence[id].name;b.onclick=()=>modal(evidence[id].name,evidence[id].text);docs.append(b);});el.append(docs);});};
+const oldSay=say;say=function(...args){oldSay(...args);if(!$('choices').children.length&&!state.ended){let b=document.createElement('button');b.textContent='繼續調查 →';b.onclick=()=>guide.click();$('choices').append(b);}};
+host.onpointerdown=host.onpointermove=host.onpointerup=host.onpointercancel=null;
+renderRoom();renderStats();
+if(!sessionStorage.getItem('silicon-intro-v2')){modal('今晚，你只需要先接一則訊息。','你是夜班工程師陳以安。已離職的同事傳來一份三年前的備忘錄。\n\n① 點「下一步」前往調查對象。\n② 選擇回答，取得文件。\n③ 文件齊全後，在推理板旁讀原件、核對結論。\n\n所有可玩人物與文件均為虛構。');let b=document.createElement('button');b.textContent='開始夜班 →';b.onclick=()=>{$('modal').close();sessionStorage.setItem('silicon-intro-v2','1');guide.click();};$('modalContent').append(b);}
+})();
