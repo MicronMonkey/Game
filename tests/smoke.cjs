@@ -13,3 +13,16 @@ b=boot();b.run("interact('lin')");b.click(1);assert.equal(b.run('state.ended'),'
 b=boot();b.run("mistake('x');mistake('x');mistake('x')");assert.equal(b.run('state.ended'),'noise');
 b=boot('{broken');assert.equal(b.run('state.bag.length'),0);b.run("add('memo');add('memo')");assert.equal(b.run('state.bag.length'),1);
 console.log('PASS: evidence gates, all 3 puzzle actions, redaction gate, 6 endings, save/resume, malformed save and duplicate evidence. Browser layout not covered.');
+
+// Orientation integration: first encounter, progress and history stay distinct.
+El.prototype.before=function(){};El.prototype.after=function(){};
+let orientation=boot();orientation.c.document.querySelector=()=>new El('layout');
+orientation.c.document.createElement=t=>{let e=new El(t);Object.defineProperty(e,'id',{set(v){orientation.els[v]=e;}});return e;};
+orientation.els.goNext=new El('button');orientation.els.goNext.click=()=>{};
+vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../context.js'),'utf8'),orientation.c);
+orientation.run("interact('old')");assert.equal(orientation.run("state.met.includes('old')"),true);
+assert.match(orientation.els.characterCard.children[1].children[0].textContent,/林澄/);
+orientation.run("add('memo');add('archive')");assert.match(orientation.els.caseOrientation.children[0].textContent,/23:25/);
+assert.equal(boot(orientation.storage.value).run("state.met.includes('old')"),true);
+console.log('PASS: character introduction, case timeline and encounter persistence.');
+

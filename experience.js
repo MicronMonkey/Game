@@ -14,7 +14,7 @@ resize();}
 function resize(){if(!renderer)return;let w=host.clientWidth,h=host.clientHeight;renderer.setSize(w,h);camera.aspect=w/h;camera.updateProjectionMatrix();renderer.render(scene,camera);}
 new ResizeObserver(resize).observe(host);
 const originalRoom=renderRoom;renderRoom=function(){originalRoom();build();};
-const route=[['memo',0,'old','接聽林澄的來訊'],['notice',0,'board','閱讀獎酬公告'],['pay',3,'terminal','查看自己的薪資明細'],['chat',1,'rumor','查閱休息室的匿名訊息'],['minutes',2,'he','向何岑確認授權範圍'],['receipt',2,'zhou','聽周岳說明收件經過'],['archive',2,'archive','調閱封存附件']];
+const route=[['memo',0,'old','接聽林澄的來訊'],['notice',0,'board','閱讀獎酬公告'],['pay',1,'mei','找同班同事許沐，一起看薪資明細'],['chat',1,'rumor','查閱休息室的匿名訊息'],['minutes',2,'he','向何岑確認授權範圍'],['receipt',2,'zhou','聽周岳說明收件經過'],['archive',2,'archive','調閱封存附件']];
 const guide=document.createElement('button');guide.id='goNext';$('objective').after(guide);function next(){return route.find(r=>!has(r[0]));}function updateGuide(){let n=next();guide.textContent=state.ended?'查看本章結局 →':n?n[3]+' →':state.solved.length<3?'開始核對證據 →':!state.redacted?'整理去識別副本 →':'交付調查報告 →';$('objective').textContent=state.ended?'本章調查已完成':n?'下一步 · '+n[3]:state.solved.length<3?'下一步 · 在原件旁完成三項核對':'下一步 · 保護來源，決定如何交付';}
 guide.onclick=()=>{if(state.ended)return showEnding();let n=next();if(n){state.room=n[1];renderRoom();interact(n[2]);save();}else if(state.solved.length<3){tab='board';renderDesk();document.querySelector('.desk').scrollIntoView({behavior:'smooth'});}else if(!state.redacted){state.room=3;renderRoom();interact('lin');}else finale();document.querySelector('.conversation').scrollIntoView({behavior:'smooth',block:'nearest'});};
 const oldStats=renderStats;renderStats=function(){oldStats();updateGuide();};
@@ -24,3 +24,4 @@ host.onpointerdown=host.onpointermove=host.onpointerup=host.onpointercancel=null
 renderRoom();renderStats();
 if(!sessionStorage.getItem('silicon-intro-v2')){modal('今晚，你只需要先接一則訊息。','你是夜班工程師陳以安。已離職的同事傳來一份三年前的備忘錄。\n\n① 點「下一步」前往調查對象。\n② 選擇回答，取得文件。\n③ 文件齊全後，在推理板旁讀原件、核對結論。\n\n所有可玩人物與文件均為虛構。');let b=document.createElement('button');b.textContent='開始夜班 →';b.onclick=()=>{$('modal').close();sessionStorage.setItem('silicon-intro-v2','1');guide.click();};$('modalContent').append(b);}
 })();
+
