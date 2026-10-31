@@ -1,2 +1,25 @@
-# Game
+# 晶片沉默者：九人的協議
+
+第一章《共體時艱》繁體中文試玩版：四間可旋轉 CSS 3D 房間、角色對話、七份證據、三道推理、三種章節結局及三種失敗結局、本機自動存檔。約 10–20 分鐘，尚未做玩家時長測試。
+
+直接開啟 index.html 即可遊玩；建議在此目錄執行 `python -m http.server 8080`，再開啟 http://localhost:8080 。不需安裝套件或編譯。Google Fonts 無法載入時會使用系統字型。存檔限同裝置瀏覽器，部分瀏覽器會限制 file:// 存檔。
+
+GitHub Pages：Settings → Pages → Source 選 GitHub Actions。推送 main 或手動執行附帶工作流程。預期網址 https://micronmonkey.github.io/Game/ ，以 Actions 成功回報為準，未成功前不代表已上線。相對資源路徑支援 /Game/ 子目錄。
+
+完整設計見 [DESIGN.md](DESIGN.md)。驗證指令：`node tests/smoke.cjs`。
+
+## 史實與虛構
+
+查閱日期 2026-11-01。真實背景與可玩小說分開，所有遊戲角色、晶衡公司、九人小組、文件、數字、時間及結局均為虛構，無真人對照。
+
+- [焦點事件 10/23：協商與罷工](https://eventsinfocus.org/news/7148521)：報導簽約爭議與桃園幹部 24 小時罷工；質疑不等於證實背叛。
+- [焦點事件 10/25：獎酬方案分析](https://eventsinfocus.org/news/7148522)：公司有一次性獎金與後續方案，不可概括為完全沒發獎金。
+- [焦點事件 10/28：協議性質](https://eventsinfocus.org/news/7148527)：報導引述勞動部人員說明，非遊戲的司法判決。
+- [維基百科延伸閱讀](https://zh.wikipedia.org/wiki/2026年臺灣美光勞資爭議)：次級整理，不作唯一依據。
+
+未證實的金流、背叛、保密年限不作事實陳述。遊戲不是法律意見，也未重製新聞全文、照片或真人肖像。
+
+## 參考引擎
+
+[fab24hr-engine](https://github.com/mcltyl/fab24hr-engine) 為場景、對話、任務、存檔等玩法參考。本試玩版獨立實作，未移植其程式或素材，使用 CSS 3D 立體佈景，沒有自由行走與路徑搜尋。未來若實際採用該引擎，須遵守其非商用授權與首頁、結局署名規定。
 Game
