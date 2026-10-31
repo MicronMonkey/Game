@@ -32,12 +32,21 @@ button{font:inherit;cursor:pointer}
 #mod.on{display:flex}
 .card{background:var(--card);color:var(--fg);max-width:520px;width:100%;max-height:80%;overflow:auto;border-radius:14px;padding:18px;line-height:1.7}
 .card h3{margin:.2em 0}
+#panel{max-height:100%;overflow:auto;box-sizing:border-box}
+#stats{display:flex;gap:8px;padding:0 8px 6px}
+.sc{flex:1;background:var(--card);border-radius:12px;padding:6px 8px;cursor:pointer;text-align:center}
+.sc small{display:block;color:var(--mut);font-size:12px}
+.sc b{font-size:clamp(15px,3.6vw,22px);letter-spacing:2px;color:var(--ac)}
+#goal{margin:0 8px 6px;padding:8px 12px;border-radius:10px;background:var(--card);font-size:14px;line-height:1.5}
+#toast{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:var(--ac);color:#111;font-weight:700;padding:6px 14px;border-radius:999px;z-index:3;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
 </style></head><body>
 <div id="app">
- <div id="bar"><b>晶片沉默者・第一章〈大家都相信他們〉</b><span id="tr"></span><span id="ec"></span><button class="sm" id="nb">筆記</button><button class="sm" id="rs">重來</button></div>
+ <div id="bar"><b>晶片沉默者・第一章〈大家都相信他們〉</b><button class="sm" id="nb">筆記</button><button class="sm" id="rs">重來</button></div>
+ <div id="stats"><div class="sc"><small>🔍 證物（點開看筆記）</small><b id="ec">0</b></div><div class="sc"><small>♥ 信任</small><b id="tr"></b></div><div class="sc"><small>◆ 支持</small><b id="sp"></b></div></div>
+ <div id="goal"></div>
  <div id="stage">
   <div id="art"></div>
-  <div id="title"><h1>晶片沉默者：九人的協議</h1><p>第一章〈大家都相信他們〉。你只是基層員工「雞雞HH」，想把一件小事問清楚。點一下畫面或按空白鍵繼續，選項可按數字鍵。</p><p>本作為虛構故事，公司與角色皆為虛構，不證明任何真實人物的行為。約 8 分鐘，自動存檔。</p><div><button class="pri" id="go">開始</button><button class="pri" id="ct" style="display:none">繼續</button></div></div>
+  <div id="title"><h1>晶片沉默者：九人的協議</h1><p><b>玩法：</b>🔍 蒐集證物、♥ 取得同事信任、◆ 爭取會員支持。選項後面的 [ ] 會告訴你它影響什麼；上方「筆記」可看全部證物與人物。</p><p>全六章。你只是基層員工「雞雞HH」，想把一件小事問清楚。點一下畫面或按空白鍵繼續，選項可按數字鍵。</p><p>本作為虛構故事，公司與角色皆為虛構，不證明任何真實人物的行為。約 20 分鐘，自動存檔。</p><div><button class="pri" id="go">開始</button><button class="pri" id="ct" style="display:none">繼續</button></div></div>
   <div id="panel"><span id="nm"></span><div id="tx"></div><div id="cs"></div><div id="hint"></div></div>
  </div>
 </div>
@@ -48,7 +57,8 @@ const E={
 slide:{n:'投影片：「會員討論後決定」',src:'說明會現場投影片',h:'說明會現場的投影片',yes:'公開說法是由會員討論後決定。',no:'不能證明討論實際進行過，也不能證明誰做了決定。'},
 notice:{n:'會後通知（省略確認步驟）',src:'會後發放的通知',h:'會後發放的通知',yes:'通知中沒有寫「會員確認」這一步。',no:'可能只是簡化，不能直接推出有人隱瞞。'},
 agenda:{n:'議程註記（公司版本較早）',src:'合法提供的議程註記',h:'一份合法提供的議程註記',yes:'公司版本的討論時間早於公開說明。',no:'只能說明需要釐清授權與程序，不能證明收款或密約。'}};
-const C={mu:['許沐','同班同事','#2f8f8a','#2b2118'],fk:['法克','說明會主講幹部','#b5432e','#1a1a1a'],cd:['糖果','會員聯繫幹部','#c0577f','#3a2420']};
+const C={mu:['許沐','同班同事','#2f8f8a','#2b2118'],fk:['法克','說明會主講幹部','#b5432e','#1a1a1a'],cd:['糖果','會員聯繫幹部','#c0577f','#3a2420'],hd:['豆花','晶衡董事長','#4a5568','#cfcfcf'],gx:['高興','董事長幕僚長','#2d3a4f','#222'],jj:['婕貽','人資長','#7a4e8a','#2a1d2e'],hc:['何岑','會員代表','#5b7f3a','#3a2f20']};
+const CT=['','大家都相信他們','先知沒有聽眾','簽字之前','簽字後的說明會','重新站在一起','把選擇交還給大家'];
 const G=(a,b)=>`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient><radialGradient id="v"><stop offset=".55" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".55"/></radialGradient></defs><rect width="800" height="450" fill="url(#g)"/>`;
 const R=(x,y,w,h,f,r=4,o=1)=>`<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r}" fill="${f}" opacity="${o}"/>`;
 const T=(x,y,s,z,f,w=400)=>`<text x="${x}" y="${y}" text-anchor="middle" font-size="${z}" fill="${f}" font-weight="${w}">${s}</text>`;
@@ -59,6 +69,9 @@ corr:()=>G('#2a3946','#10171e')+R(0,330,800,120,'#161f28')+R(70,70,200,160,'#0c1
 docs:()=>G('#2a2320','#15100e')+`<g transform="rotate(-5 250 240)">${R(110,70,260,320,'#f1ece2',4)}${T(240,110,'公開投影片',18,'#444',700)}${R(135,150,210,24,'#f0b84a',3)}${T(240,167,'會員討論後決定',14,'#222')}${R(135,196,210,8,'#c9c2b4',2)}${R(135,218,170,8,'#c9c2b4',2)}${R(135,240,200,8,'#c9c2b4',2)}</g><g transform="rotate(4 550 240)">${R(430,60,260,330,'#f1ece2',4)}${T(560,102,'會後通知',18,'#444',700)}${R(455,140,210,8,'#c9c2b4',2)}${R(455,162,190,8,'#c9c2b4',2)}<rect x="455" y="188" width="210" height="30" rx="3" fill="none" stroke="#c0392b" stroke-width="2.5" stroke-dasharray="6 5"/>${T(560,208,'（這裡沒有「會員確認」）',12,'#c0392b')}${R(455,240,200,8,'#c9c2b4',2)}${R(455,262,150,8,'#c9c2b4',2)}</g>`,
 night:d=>G(d?'#f2b76b':'#0d1b2e',d?'#5a3b4f':'#1d2a3a')+(d?'<circle cx="620" cy="250" r="50" fill="#ffe9b0"/>':'<circle cx="640" cy="80" r="28" fill="#f3efc8"/>'+[...Array(30).keys()].map(i=>`<circle cx="${(i*97)%800}" cy="${(i*53)%200}" r="1.3" fill="#fff" opacity=".7"/>`).join(''))+R(0,360,800,90,'#0a1118')+R(120,230,360,130,'#16222f',2)+R(500,200,120,160,'#1a2836',2)+R(150,150,26,90,'#16222f',2)+[0,1,2,3,4].map(r=>N12.map(c=>(r*5+c*3)%4?R(135+c*28,248+r*20,16,10,d?'#ffd98a':'#f5cf7a',1,.9):'').join('')).join('')};
 BG.dawn=()=>BG.night(1);
+BG.sign=()=>G('#1b2530','#0c1117')+R(80,250,640,40,'#5a4636')+R(280,170,240,90,'#f1ece2',3)+T(400,205,'協議書',20,'#333',700)+R(310,225,180,6,'#c9c2b4',2)+R(310,240,120,6,'#c9c2b4',2)+R(560,236,70,8,'#222',2)+R(150,236,70,8,'#222',2);
+BG.vote=()=>G('#233246','#0d141c')+R(330,190,140,120,'#2d6a9f',8)+R(370,180,60,10,'#0d141c',3)+T(400,262,'會員表決',20,'#fff',700)+[0,1,2,3,4].map(i=>R(100+i*130,340,90,50,'#e6eef5',4,.8)).join('');
+const fe=s=>{const f=k=>s.fl.includes(k),v=f('vote'),o=f('org');const r=f('delay')&&v&&s.sup>=4?['預警成功','暫緩簽署，並把最後決定交還給會員。']:s.trust<=1||f('lone')?['孤獨先知','你預測得接近事實，卻傷害了同伴。知道，不等於能改變。']:s.sup<=1||f('stop')?['重新沉默','來源受傷、組織停擺。行動停止了，但原因都留在回顧裡。']:v&&o&&s.sup>=5?['公司讓步','壓力與協商促成具體改善：計算方式更透明、會員確認機制建立，會員知情後才點頭。']:v&&o&&s.sup>=4?['集體選擇','程序完成，由會員自己決定下一步。有能力行動，結果仍未定。']:o&&f('rec')?['重新議約','錯過第一次，仍能挽回：組織與核對完整，後續談成可驗證的改善。']:['未完的夜班','證據不足以定論，但你仍保有信任。疑問留著，故事沒有結束。'];return{b:'dawn',sp:'旁白',ti:r[0],t:r[1]+'（以上皆為小說反事實分支，不代表真實事件。）',c:[{t:'重新開始',g:'RESET'},{t:'翻閱證物筆記',g:'NB'}]}};
 const bust=(x,c,h,on)=>`<g opacity="${on?1:.4}" transform="translate(${x},0)"><path d="M-80 450Q-80 335 0 322Q80 335 80 450Z" fill="${c}"/><rect x="-14" y="296" width="28" height="30" fill="#d9b794"/><ellipse cy="262" rx="42" ry="48" fill="#e8c7a6"/><path d="M-46 258Q-48 200 0 204Q48 200 46 258Q24 232 0 236Q-24 232 -46 258Z" fill="${h}"/><circle cx="-15" cy="266" r="3.5" fill="#222"/><circle cx="15" cy="266" r="3.5" fill="#222"/><path d="M-9 288Q0 294 9 288" stroke="#8a5a44" stroke-width="2.5" fill="none"/></g>`;
 const S={
 s0:{b:'hall',sp:'旁白',t:'九月，台中廠。說明會的燈很亮，座位幾乎坐滿。你是基層員工雞雞HH，這一章，你只是想把一件小事問清楚。',n:'s1'},
@@ -75,19 +88,41 @@ s.ev.length>=2?{t:'帶著具體問題去找糖果',g:'ask'}:{t:'（先保存至�
 ask:{b:'corr',r:'cd',sp:'cd',t:'糖果收著紙條，對你笑了一下：「你有什麼問題？」',c:[{t:'「通知沒有寫會員確認這一步，議程註記的日期也比公開說明早。你們的授權範圍是什麼？」',g:'ok',fx:{trust:1}},{t:'「你們早就簽好了，對不對？」',g:'bad',fx:{trust:-2}}]},
 ok:{b:'corr',r:'cd',sp:'cd',t:'她停了一下：「這個我要先確認，不想亂回答。我下週給你書面答覆。」這不是承認，也不是否認，只是一個必須追下去的答案。',n:'mu2'},
 bad:{b:'corr',r:'cd',sp:'cd',t:'她的笑容收了起來：「你這樣問，我沒辦法回答。」她轉身走開，什麼也沒留下。',n:'mu2'},
-mu2:{b:'corr',l:'mu',sp:'mu',f:s=>{if(s.trust>=1&&!s.fl.includes('p'))s.fl.push('p')},t:s=>s.fl.includes('p')?'「兩份我都看了。我也不確定誰對誰錯，但我們把問題寫清楚，再一起問，好嗎？」他第一次沒有叫你別想太多。':'「我今天需要想一想……你先別太急。」他看起來很為難，沒有再多說。',n:'end'}};
+mu2:{b:'corr',l:'mu',sp:'mu',f:s=>{if(s.trust>=1&&!s.fl.includes('p')){s.fl.push('p');s.sup=Math.min(5,s.sup+1+(s.ev.length>=3?1:0))}},t:s=>s.fl.includes('p')?'「兩份我都看了。我也不確定誰對誰錯，但我們把問題寫清楚，再一起問，好嗎？」他第一次沒有叫你別想太多。':'「我今天需要想一想……你先別太急。」他看起來很為難，沒有再多說。',n:'c2a'},
+c2a:{b:'corr',l:'mu',sp:'旁白',t:'九月到十月中。你把疑問說給同事聽，起初沒人當真。有人信任幹部，有人擔心生活，也有人只是生氣。三種人，需要三種說法。',n:'c2h'},
+c2h:{b:'corr',sp:'旁白',t:'你想先找誰談？至少談兩種人，才有足夠的人聽你說完。',c:s=>{const o=k=>s.fl.includes(k);return[{t:o('g1')?'✓ 已談：信任幹部的同事':'給信任幹部的同事看原件，請他自己核對',g:'c2x',fx:{flag:'g1',sup:1},d:o('g1')},{t:o('g2')?'✓ 已談：擔心生活的同事':'告訴擔心生活的同事：查證只是問清楚，不是要鬧事',g:'c2y',fx:{flag:'g2',sup:1},d:o('g2')},{t:o('g3')?'✓ 已談：生氣的同事':'陪生氣的同事分清傳聞與可公開的內容',g:'c2z',fx:{flag:'g3',sup:1},d:o('g3')},['g1','g2','g3'].filter(k=>o(k)).length>=2?{t:'去聽資方怎麼說明',g:'c2j'}:{t:'（先談至少兩種人）',g:'c2h',d:1}]}},
+c2x:{b:'corr',l:'mu',sp:'mu',t:'「原件我自己看了一遍。我不是不信他們，但這個問題，應該有人回答。」',n:'c2h'},
+c2y:{b:'corr',sp:'旁白',t:'同事鬆了一口氣：「只要不影響班表，我願意聽你說完。」',n:'c2h'},
+c2z:{b:'corr',sp:'旁白',t:'你把截圖拆成「來源不明的傳聞」與「可以公開核對的文件」。對方安靜了很久，點了點頭。',n:'c2h'},
+c2j:{b:'hall',r:'jj',sp:'jj',t:'「方案摘要都在這裡，係數與計算方式請看附件。」她說得很流暢，但附件只有結果，沒有計算欄位。',n:'c2k'},
+c2k:{b:'docs',r:'gx',sp:'gx',t:'「議程只討論到這裡，版本以今天發出的為準。」你注意到，有些頁面只在特定時間出現在特定人手上。',n:'c2l'},
+c2l:{b:'hall',r:'hd',sp:'hd',t:'「公司看的是長期競爭力與營運穩定。我們願意談，但需要穩定的條件。」你不知道三人心裡怎麼想，只知道這三段話。',n:'c2m'},
+c2m:{b:'docs',sp:'旁白',t:'「草案」「共識」「正式簽署」是三種不同的狀態。你要怎麼寫進筆記？',c:[{t:'分開記下三種狀態，未公開的內容標為「未知」',g:'c3a',fx:{sup:1,flag:'rec'}},{t:'把未公開的部分，當作已經簽好',g:'c3a',fx:{sup:-1,trust:-1}}]},
+c3a:{b:'night',l:'hc',sp:'hc',t:'十月二十日夜。「明天可能簽約。如果你有具體的問題，明天的公開核對會是最後的機會。」何岑說。',n:'c3b'},
+c3b:{b:'hall',l:'hc',sp:'旁白',t:'公開核對會上，大家都看著你。你要怎麼說？',c:[{t:'提出三項具體要求：版本、授權範圍、會員確認，並附上原件',g:'c3r',fx:{sup:1}},{t:'只說「他們一定有問題」，要大家立刻反對',g:'c3r',fx:{sup:-1,trust:-1}}]},
+c3r:{b:'hall',l:'hc',sp:'hc',f:s=>{if(s.sup>=4&&s.ev.length>=3&&s.trust>=2&&!s.fl.includes('delay'))s.fl.push('delay')},t:s=>s.fl.includes('delay')?'何岑宣布：「版本、授權與會員確認補齊之前，暫緩簽署，改開公開審議。」這不是勝負，只是把決定留給了會員。':'協議仍在隔天簽署。這不是 Game Over，你保留了證據、同事關係與查證紀錄。',c:s=>s.fl.includes('delay')?[{t:'暫緩的這一晚',g:'win'}]:[{t:'簽字的那一刻',g:'c4a'}]},
+win:{b:'dawn',sp:'旁白',ti:'預警成功',t:'未充分說明的協議暫緩了。這是小說裡的反事實分支：關鍵不是你猜對，而是你拿得出可核對的原件，也有人願意站在你旁邊。',c:[{t:'重新開始',g:'RESET'},{t:'繼續：透明協商後日談',g:'c5a'},{t:'翻閱證物筆記',g:'NB'}]},
+c4a:{b:'sign',sp:'旁白',t:'小說裡的簽字夜。隔日的聯合說明會，台上有資方與幹部，台下全是憤怒。',n:'c4b'},
+c4b:{b:'hall',l:'mu',sp:'mu',t:'幾位會員走過來：「你早就提醒過了。」',c:[{t:'接住情緒：「謝謝你們。我們先把沒回答的問題列清楚。」',g:'c4c',fx:{trust:1,sup:1}},{t:'「看吧，我早就說了，是你們不聽。」',g:'c4c',fx:{trust:-2,sup:-1,flag:'lone'}}]},
+c4c:{b:'hall',r:'fk',sp:'fk',t:'台上法克說：「授權是充分的。」但沒有說明對應哪份文件的哪個欄位。你要把這個回答標成？',c:[{t:'已完整回答',g:'c4d',fx:{sup:-1}},{t:'只回答了一部分',g:'c4d',fx:{sup:1}},{t:'未回答',g:'c4d'}]},
+c4d:{b:'hall',r:'cd',sp:'cd',t:'糖果說：「這個問題我們稍後再回覆。」你要把這個回答標成？',c:[{t:'已完整回答',g:'c4e',fx:{sup:-1}},{t:'只回答了一部分',g:'c4e'},{t:'未回答（尚待回覆）',g:'c4e',fx:{sup:1}}]},
+c4e:{b:'hall',sp:'旁白',t:'答非所問，不等於犯罪。你把「已回答、部分、未回答」連到具體欄位，留下一份可核對的問題清單。未公開的條款，仍標為未知。',n:'c5a'},
+c5a:{b:'corr',l:'hc',sp:'hc',t:'「一次說明會不夠，我們需要跨廠區的協作。」新的組織也要接受會員監督，不能換一群人重演同樣的事。',c:[{t:'各班別推代表，會議摘要經同意後公開，並接受會員監督',g:'c5b',fx:{sup:2,flag:'org'}},{t:'先找信任的少數人私下決定，比較快',g:'c5b',fx:{sup:-1,flag:'solo'}},{t:'太累了，先停下來',g:'c5b',fx:{sup:-1,trust:-1,flag:'stop'}}]},
+c5b:{b:'night',l:'mu',sp:'mu',t:s=>s.fl.includes('org')?'「這次，每個人都知道會議在談什麼。」你們整理了有效回覆，資源與生活壓力也有人分擔。':s.fl.includes('solo')?'有人開始問：「又是少數人決定？」新組織離舊問題，只差一步。':'行動停了下來。名單散了，沒有人再回訊息。',n:'c6a'},
+c6a:{b:'vote',sp:'旁白',t:'階段圖：會員討論 → 連署核對 → 表決 → 協商。取得行動權只是程序上的節點，不代表已經執行，更不保證公司讓步。遊戲中的分數不是法律門檻，真實規則需另行查核。',c:[{t:'公開表決程序，把決定交還給會員',g:'c6b',fx:{flag:'vote'}},{t:'由我們替大家決定比較省事',g:'c6b',fx:{sup:-1,trust:-1}}]},
+c6b:{b:'dawn',sp:'旁白',t:'投票的那一天，你只是站在隊伍裡。結果，要看每個人怎麼選。',n:'fin'}};
 const endNode=s=>{const p=s.fl.includes('p'),a=p&&s.ev.length>=3;return{b:'dawn',sp:'旁白',ti:a?'第一位願意一起查證的人':p?'未完的說明會':'孤獨先知',
 t:a?'你和許沐把三份文件逐行對好，寫成一張只問問題、不指控任何人的清單。夜班的燈一盞盞亮起。你還不知道答案，但這一次不只你一個人在問：「你們授權的是協商，還是直接接受方案？」':p?'證據還不夠下定論，但許沐還願意聽你說。疑問留在紙上，你們約好補齊其餘文件再問。':'你也許看對了方向，卻沒有人願意站在你旁邊。知道，不等於能改變。回到說明會，換一種問法吧。',
 c:[{t:'重新開始',g:'RESET'},{t:'翻閱證物筆記',g:'NB'}]}};
 let st,ty,tm,cur;
-const mk=()=>({id:'s0',trust:2,ev:[],fl:[],met:[]});
+const mk=()=>({id:'s0',trust:2,sup:1,ev:[],fl:[],met:[]});
 const save=()=>{try{localStorage.setItem('wsg1',JSON.stringify(st))}catch(e){}};
 const load=()=>{try{return JSON.parse(localStorage.getItem('wsg1'))}catch(e){return null}};
-function hud(){$('#tr').textContent='信任 '+'♥'.repeat(st.trust)+'♡'.repeat(5-st.trust);$('#ec').textContent='證物 '+st.ev.length+'/3'}
+function hud(){$('#tr').textContent='信任 '+'♥'.repeat(st.trust)+'♡'.repeat(5-st.trust);$('#ec').textContent='證物 '+st.ev.length+'/3・支持 '+st.sup+'/5'}
 function modal(h,cb){$('#mc').innerHTML=h+'<button class="pri" id="cl">好</button>';$('#mod').classList.add('on');$('#cl').onclick=()=>{$('#mod').classList.remove('on');cb&&cb()};$('#cl').focus()}
 function nbk(){modal('<h3>證物筆記</h3>'+Object.keys(E).map(k=>st.ev.includes(k)?`<p><b>✓ ${E[k].n}</b><br><small>來源：${E[k].src}</small><br>可支持：${E[k].yes}<br>不能支持：${E[k].no}</p>`:`<p style="color:var(--mut)">☐ 尚未取得：${E[k].h}</p>`).join('')+'<h3>已認識的人</h3>'+(st.met.length?st.met.map(k=>`<p><b>${C[k][0]}</b>：${C[k][1]}</p>`).join(''):'<p>尚無</p>'))}
 function show(id){
- st.id=id;const n=id==='end'?endNode(st):S[id];if(n.f)n.f(st);cur=n;
+ st.id=id;const n=id==='fin'?fe(st):S[id];const m=/^c(\d)/.exec(id);if(m)st.ch=+m[1];$('#bar b').textContent='晶片沉默者・第'+(st.ch||1)+'章〈'+CT[st.ch||1]+'〉';if(n.f)n.f(st);cur=n;
  const side=(k,x)=>{if(!n[k])return'';const c=C[n[k]];if(!st.met.includes(n[k]))st.met.push(n[k]);return bust(x,c[2],c[3],n.sp===n[k])};
  $('#art').innerHTML=`<svg viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice">${BG[n.b]()}${side('l',170)}${side('r',630)}<rect width="800" height="450" fill="url(#v)"/></svg>`;
  const c=C[n.sp];$('#nm').textContent=n.ti?'結局｜'+n.ti:c?c[0]+'・'+c[1]:'旁白';
@@ -97,13 +132,13 @@ function show(id){
 function fin(){if(!ty)return;ty=0;clearInterval(tm);$('#tx').textContent=cur.full;
  if(cur.c){(typeof cur.c==='function'?cur.c(st):cur.c).forEach((o,i)=>{const b=document.createElement('button');b.className='ch';b.textContent=(i+1)+'. '+o.t;b.disabled=!!o.d;b.onclick=e=>{e.stopPropagation();pick(o)};$('#cs').appendChild(b)})}
  else $('#hint').textContent='點一下繼續 ▶'}
-function pick(o){const f=o.fx||{};if(f.trust)st.trust=Math.max(0,Math.min(5,st.trust+f.trust));
+function pick(o){const f=o.fx||{};if(f.trust)st.trust=Math.max(0,Math.min(5,st.trust+f.trust));if(f.sup)st.sup=Math.max(0,Math.min(5,st.sup+f.sup));if(f.flag&&!st.fl.includes(f.flag))st.fl.push(f.flag);
  if(o.g==='RESET'){reset();return}if(o.g==='NB'){nbk();return}
  if(f.ev&&!st.ev.includes(f.ev)){st.ev.push(f.ev);const e=E[f.ev];hud();modal(`<h3>取得證物</h3><p><b>${e.n}</b><br><small>來源：${e.src}</small></p><p>可支持：${e.yes}<br>不能支持：${e.no}</p>`,()=>show(o.g));return}
  show(o.g)}
 function adv(){if(ty){fin();return}if(cur&&!cur.c&&cur.n)show(cur.n)}
 function reset(){st=mk();show('s0')}
-function begin(s){$('#title').style.display='none';st=s;show(s.id)}
+function begin(s){$('#title').style.display='none';if(s.sup==null)s.sup=1;if(s.id==='end')s.id='c2a';st=s;show(s.id)}
 $('#go').onclick=()=>begin(mk());
 $('#ct').onclick=()=>begin(load());
 $('#rs').onclick=()=>{if(confirm('要重新開始嗎？目前進度會被覆蓋。')){$('#title').style.display='none';reset()}};
@@ -116,4 +151,50 @@ $('#art').innerHTML=`<svg viewBox="0 0 800 450" preserveAspectRatio="xMidYMid sl
 $('#panel').style.display='none';
 const sv=load();if(sv&&sv.id&&sv.id!=='s0')$('#ct').style.display='inline-block';
 const _s=show;show=function(id){$('#panel').style.display='block';_s(id)};
+</script><script>
+Object.assign(C,{lc:['林澄','離職同事','#8a7a5a','#d8d8d8']});
+const DB={mu:1,fk:1,cd:1,lc:2,jj:2,gx:2,hd:2,hc:3},IDS=Object.keys(DB);
+Object.assign(E,{
+pay:{n:'本人薪資試算',src:'許沐陪你核對',h:'第2章：找許沐，重算你自己的獎金',yes:'50,000×2×1×0.8＝80,000，這一期可以重算。',no:'另一期的係數沒公開，不能當成零，也不能推出實領。'},
+memo:{n:'留任備忘錄',src:'林澄授權提供',h:'第2章：找離職的林澄',yes:'2023 年的職場記憶，說明過去怎麼通知大家。',no:'不能證明現任幹部做了什麼。'},
+draft:{n:'討論版方案',src:'合法取得的資訊請求',h:'第2章：把草案、共識、簽署分開記',yes:'標示為「未定稿，供討論」。',no:'不等於已同意或已簽署。'},
+recv:{n:'送達回條',src:'公開核對會',h:'第3章：在核對會提出具體要求',yes:'你的要求確實送到會員代表手上。',no:'不會自動撤銷協議。'},
+minutes:{n:'會議筆記',src:'聯合說明會',h:'第4章：分清楚台上哪些問題沒答',yes:'列出已回答與未回答的問題。',no:'不是司法認定。'},
+charter:{n:'章程草案',src:'跨廠協作',h:'第5章：建立可監督的組織',yes:'授權、版本公開、代表問責寫成規則。',no:'不代表自動取得合法資格。'},
+plan:{n:'方案全文與版本紀錄',src:'資方提供',h:'第6章：讓會員看完差異再決定',yes:'可以對照改善與限制。',no:'沒寫進文字的保證，不算數。'}});
+['slide','notice','agenda'].forEach(k=>E[k].ch=1);['pay','memo','draft'].forEach(k=>E[k].ch=2);E.recv.ch=3;E.minutes.ch=4;E.charter.ch=5;E.plan.ch=6;
+S.s0.t='9月，台中廠，18:40。說明會的燈很亮，座位幾乎坐滿。你是台中員工「雞雞HH」。目標很簡單：🔍 蒐集證物，並讓同事 ♥ 信任你，一起把問題核對清楚。';
+S.s1.t='「今天應該會講清楚吧。先坐前面，後面冷氣太強。」許沐是你的同班同事，他信任幹部，也信任你。';
+S.hub.t=s=>'說明會結束，人群散去。先 🔍 保存文件（'+['slide','notice','agenda'].filter(k=>s.ev.includes(k)).length+'/3），至少 2 份，就能帶著具體問題去問糖果。';
+S.c2a.t='回條上，下一次通知換了問題標題。你想：「同一個問題，為什麼換了名字？」接下來幾週，你一個個去找人談。';
+S.c2h.t='你想先找誰？至少談 2 個人，才有足夠的人聽你說完。';
+S.c2h.c=s=>{const o=k=>s.fl.includes(k),L=(k,a,b)=>o(k)?'✓ 已談：'+a:b;return[{t:L('g1','許沐','找許沐，核對你自己的獎金試算'),g:'c2x',fx:{flag:'g1',sup:1,ev:'pay'},d:o('g1')},{t:L('g2','林澄','找離職的林澄，請她提供留任備忘錄'),g:'c2y',fx:{flag:'g2',sup:1,ev:'memo'},d:o('g2')},{t:L('g3','生氣的同事','陪生氣的同事分清「傳聞」和「可公開的文件」'),g:'c2z',fx:{flag:'g3',sup:1},d:o('g3')},['g1','g2','g3'].filter(o).length>=2?{t:'去聽資方怎麼說明',g:'c2j'}:{t:'（先談至少 2 個人，才能去聽資方說明）',g:'c2h',d:1}]};
+S.c2x={b:'corr',l:'mu',sp:'mu',t:'「要我站出來可以，先告訴我，我到底答應了什麼。」你們一起重算你的獎金：50,000×2×1×0.8＝80,000。另一期的係數沒公開，只能說「不確定」，不能當成零。',n:'c2h'};
+S.c2y={b:'corr',r:'lc',sp:'lc',t:'「我當時最怕的不是少一筆，是不知道下次要犧牲什麼。」林澄同意提供她的留任備忘錄，但請你別公開她的名字。',n:'c2h'};
+S.c2j.t='婕貽：「上限提高，不代表每個人都領到上限。我可以解釋公告範圍。」她說得很清楚，但附件只有結果，沒有計算欄位。';
+S.c2m.t='資方的說法有三種狀態：草案（還在討論）、共識（大家同意）、簽署（正式生效）。你要怎麼記？';
+S.c2m.c[0].fx.ev='draft';
+S.c3a.n='c3f';
+S.c3f={b:'sign',r:'fk',sp:'fk',t:'「我如果什麼都拿回去重來，公司不一定還給這個條件。」法克沒有躲開你的眼睛，他看起來真的相信這是對大家好。',n:'c3b'};
+S.c3b.t='公開核對會上，大家看著你。把證物變成具體要求，比喊口號有用。';
+S.c3b.c[0].fx.ev='recv';
+S.c3r.f=s=>{if(s.sup>=4&&s.ev.length>=5&&s.trust>=2&&!s.fl.includes('delay'))s.fl.push('delay')};
+S.c3r.t=s=>s.fl.includes('delay')?'何岑宣布：「版本、授權與會員確認補齊前，暫緩簽署，改開公開審議。」這不是勝負，只是把決定留給了會員。':'協議仍在隔天簽署。這不是 Game Over，你保留了證據與同事關係。'+(s.ev.length<5?'（證物只有 '+s.ev.length+'/5。）':'')+(s.sup<4?'（支持不到 4 格。）':'')+(s.trust<2?'（信任太低。）':'');
+S.c4c={b:'hall',r:'fk',sp:'fk',t:'會員問：「誰決定最好？」法克答：「我認為這是當下能拿到的最好條件。」他沒有回答「誰授權接受」。你把這個回答標成？',c:[{t:'已回答',g:'c4d',fx:{sup:-1}},{t:'沒回答到重點',g:'c4d',fx:{sup:1}}]};
+S.c4d={b:'hall',r:'cd',sp:'cd',t:'會員問全文何時能看。糖果：「一次一個問題，我會留下來。」但沒有說時間。你把這個回答標成？',c:[{t:'已回答',g:'c4e',fx:{sup:-1}},{t:'還沒回答（沒給時程）',g:'c4e',fx:{sup:1,ev:'minutes'}}]};
+S.c5a.t='何岑：「先分清楚。有人要報名，有人要問問題，有人要申請入會，不是同一張表。新的組織也要接受會員監督。」你要怎麼組織？';
+S.c5a.c[0].fx.ev='charter';
+S.c6a.c[0].fx.ev='plan';
+S.c6b.t='投票那天，許沐說：「你以前說只有你看見。現在，我們每個人都看得見了。」結果，要看每個人怎麼選。';
+hud=function(){$('#ec').textContent=st.ev.length+' / '+Object.keys(E).length;$('#tr').textContent='♥'.repeat(st.trust)+'♡'.repeat(5-st.trust);$('#sp').textContent='◆'.repeat(st.sup)+'◇'.repeat(5-st.sup)};
+nbk=function(){const ks=Object.keys(E);modal('<h3>🔍 證物 '+st.ev.length+'/'+ks.length+'</h3>'+ks.map(k=>{const e=E[k];return st.ev.includes(k)?`<p><b>✓ ${e.n}</b>（第${e.ch}章）<br><small>能支持：${e.yes}<br>不能支持：${e.no}</small></p>`:`<p style="color:var(--mut)">☐ ${e.n}（第${e.ch}章）<br><small>取得方式：${e.h}</small></p>`}).join('')+'<h3>👥 人物 '+st.met.length+'/'+IDS.length+'</h3>'+IDS.map(k=>st.met.includes(k)?`<p><b>${C[k][0]}</b>・${C[k][1]}</p>`:`<p style="color:var(--mut)">？？？（第${DB[k]}章登場）</p>`).join(''))};
+fin=function(){if(!ty)return;ty=0;clearInterval(tm);$('#tx').textContent=cur.full;if(cur.c){(typeof cur.c==='function'?cur.c(st):cur.c).forEach((o,i)=>{const f=o.fx||{},g=[];if(f.ev&&!st.ev.includes(f.ev))g.push('🔍 蒐證');if(f.trust)g.push('♥'+(f.trust>0?'↑':'↓'));if(f.sup)g.push('◆'+(f.sup>0?'↑':'↓'));const b=document.createElement('button');b.className='ch';b.textContent=(i+1)+'. '+o.t+(g.length?'　['+g.join(' ')+']':'');b.disabled=!!o.d;b.onclick=e=>{e.stopPropagation();pick(o)};$('#cs').appendChild(b)})}else $('#hint').textContent='點一下繼續 ▶'};
+const GL=['','本章目標：🔍 收集 3 份文件，再用「具體問題」去問糖果，讓許沐 ♥ 信任你。','本章目標：找至少 2 個人談（◆），拿到 🔍 薪資試算與備忘錄，再聽資方說明。','本章目標：在核對會提出具體要求。需要 🔍 5 份以上、◆ 4 格、♥ 2 顆以上，才有機會暫緩簽約。','本章目標：接住同事的情緒（♥），分清台上的回答哪些「沒答」。','本章目標：建立人人看得到、能監督的組織（◆）。','本章目標：把決定交還給會員，迎接結局。'],DT=['','9月說明會 18:40','9月下旬〜10/19','10/20〜10/21','10/22〜10/28','10/30〜11/3','架空後續'];
+const _s2=show;show=function(id){_s2(id);$('#bar b').textContent+='・'+DT[st.ch||1];$('#goal').textContent=GL[st.ch||1]};
+const _p=pick;pick=function(o){const a=[st.trust,st.sup];_p(o);if(o.g==='RESET')return;const d=[];if(st.trust!==a[0])d.push('♥ 信任'+(st.trust>a[0]?'上升':'下降'));if(st.sup!==a[1])d.push('◆ 支持'+(st.sup>a[1]?'上升':'下降'));if(d.length){const t=$('#toast');t.textContent=d.join('　');t.style.opacity=1;setTimeout(()=>t.style.opacity=0,2200)}};
+const tz=document.createElement('div');tz.id='toast';$('#stage').appendChild(tz);
+$('#goal').textContent=GL[1];
+$('#ec').parentNode.onclick=()=>st&&nbk();
+$('#tr').parentNode.onclick=()=>st&&modal('<h3>♥ 信任</h3><p>同事願意相信你的程度（0〜5）。拿出具體問題、承認自己說太快會上升；沒有證據就指控、嘲笑別人會下降。信任太低，同事不會跟你一起查證。</p>');
+$('#sp').parentNode.onclick=()=>st&&modal('<h3>◆ 支持</h3><p>願意一起核對、一起決定的會員有多少（0〜5）。傾聽、公開可核對的資料會上升；私下決定、替別人做決定會下降。第 3 章要 4 格以上，才有機會暫緩簽約。</p>');
 </script></body></html>
