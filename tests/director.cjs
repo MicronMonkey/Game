@@ -29,7 +29,7 @@ class E{
  append(x){this.children.push(x)}after(){}remove(){}setAttribute(k,v){this[k]=v}querySelectorAll(){return this.children}addEventListener(){}
 }
 const els=new Map(),get=key=>{if(!els.has(key))els.set(key,new E());return els.get(key)};
-const holder=get('#hsl'),doc={createElement:()=>new E(),querySelector:get};
+const holder=get('#hsl'),doc={head:new E(),createElement:()=>new E(),querySelector:get};
 let lastModal='',s2={ch:1,sc:'seat',fl:[],ev:[],met:[],trust:2,sup:2};
 const vmCtx=vm.createContext({
  document:doc,st:s2,cur:{b:'hall',qs:true},S:{qd:null},CT:{1:'大家都相信他們'},C:{mu:['阿凱']},
