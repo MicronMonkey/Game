@@ -1,29 +1,67 @@
+// 引擎：狀態、存檔、畫面、選項處理與介面。資料在 art／characters／evidence／chapters／story／resources.js。
 const $=s=>document.querySelector(s);
 let st,ty,tm,cur;
+let chg=[],hi=0,lsc='',logs=[],instant=false,resultToastTimer;
 const mk=()=>({id:'s0',trust:2,sup:1,ev:[],fl:[],met:[]});
 const save=()=>{try{localStorage.setItem('wsg1',JSON.stringify(st))}catch(e){}};
 const load=()=>{try{return JSON.parse(localStorage.getItem('wsg1'))}catch(e){return null}};
-function hud(){$('#tr').textContent='信任 '+'♥'.repeat(st.trust)+'♡'.repeat(5-st.trust);$('#ec').textContent='證物 '+st.ev.length+'/3・支持 '+st.sup+'/5'}
-function modal(h,cb){$('#mc').innerHTML=h+'<button class="pri" id="cl">好</button>';$('#mod').classList.add('on');$('#cl').onclick=()=>{$('#mod').classList.remove('on');cb&&cb()};$('#cl').focus()}
-function nbk(){modal('<h3>證物筆記</h3>'+Object.keys(E).map(k=>st.ev.includes(k)?`<p><b>✓ ${E[k].n}</b><br><small>來源：${E[k].src}</small><br>資料告訴我們：${E[k].yes}<br>還不能下的結論：${E[k].no}</p>`:`<p style="color:var(--mut)">☐ 尚未取得：${E[k].h}</p>`).join('')+'<h3>已認識的人</h3>'+(st.met.length?st.met.map(k=>`<p><b>${C[k][0]}</b>：${C[k][1]}</p>`).join(''):'<p>尚無</p>'))}
+
+// ── 介面元件 ──
+function hud(){$('#ec').textContent=st.ev.length+' / '+Object.keys(E).length;$('#tr').textContent='♥'.repeat(st.trust)+'♡'.repeat(5-st.trust);$('#sp').textContent='◆'.repeat(st.sup)+'◇'.repeat(5-st.sup)}
+function modal(h,cb){const back=document.activeElement;$('#mc').innerHTML=h+'<button class="pri" id="cl">好</button>';$('#mod').classList.add('on');$('#cl').onclick=()=>{$('#mod').classList.remove('on');if(back?.isConnected)back.focus();if(cb)cb();};$('#cl').focus();if(h.includes('新證物已收進筆記'))$('#cl').textContent='收進筆記，繼續故事';}
+function evidenceDetail(k,acquired=false){const e=E[k];return `<div class="case-label">EVIDENCE / 第 ${e.ch} 章</div><h3>${acquired?'新證物已收進筆記：':''}${esc(e.n)}</h3><div class="file-art">${documentArt(k)}</div><div class="case-note">來源：${esc(e.src)} · 圖中為劇情重製示意，並非真實新聞文件或原件。</div><div class="reading-grid"><div class="reading-box"><b>① 這份資料告訴你什麼？</b>${esc(e.yes)}</div><div class="reading-box pending"><b>② 先別急著下這個結論</b>${esc(e.no)}</div></div><p class="case-note">閱讀順序：先看標記的內容，再分清「已看見的資訊」與「仍需查證的推測」。</p>`;}
+function nbk(tab='evidence'){const head=`<div class="case-top"><div><div class="case-label">FIELD NOTES / 調查手帳</div><h3>把看見的事，留下來。</h3></div><span>${st.ev.length} / ${Object.keys(E).length} 件證物</span></div><div class="case-tabs" role="tablist"><button role="tab" aria-selected="${tab==='evidence'}" data-tab="evidence">證物圖鑑</button><button role="tab" aria-selected="${tab==='people'}" data-tab="people">人物關係</button></div>`;const content=tab==='people'?`<div class="people-grid">${IDS.map(k=>st.met.includes(k)?`<article class="person-card"><div class="avatar">${portrait(k)}</div><div><strong>${C[k][0]}</strong><small>${C[k][1]}<br>${PERSON_NOTES[k]}</small></div></article>`:`<article class="person-card"><div class="avatar"><div class="empty-face">？</div></div><div>尚未見面<small>第 ${DB[k]} 章登場</small></div></article>`).join('')}</div><p class="case-note">所有頭像均為原創虛構角色造型，不描繪真實人物。</p>`:`<div class="evidence-grid">${Object.keys(E).map(k=>st.ev.includes(k)?`<button class="evidence-tile" data-file="${k}">${documentArt(k)}<strong>${E[k].n}</strong><small>第 ${E[k].ch} 章 · 點開查看重點</small></button>`:`<div class="evidence-tile locked"><div style="height:105px;display:grid;place-items:center;font-size:32px">▱</div><strong>未取得 · 第 ${E[k].ch} 章</strong><small>${E[k].h}</small></div>`).join('')}</div>`;modal(head+content);$('#mc').querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>nbk(b.dataset.tab));$('#mc').querySelectorAll('[data-file]').forEach(b=>b.onclick=()=>{modal('<button class="file-back" id="backFiles">← 返回證物圖鑑</button>'+evidenceDetail(b.dataset.file));$('#backFiles').onclick=()=>nbk();});}
+function status(){const f=k=>st.fl.includes(k),L=a=>a.filter(x=>f(x[0])).map(x=>'<p>• '+x[1]+'</p>').join('')||'<p>（尚無）</p>';modal('<h3>📋 事件回顧</h3><h4>我答應了誰</h4>'+L([['mu_with','許沐：我不把他推上台，他願意才陪我'],['mu_stay','許沐：他留在台下，我尊重他的界線'],['a_full','何岑：代表發言時保留「版本何時能看」'],['a_narrow','何岑：接受較窄的共同題目'],['b_story','許沐：只在他同意的範圍內帶入他的遭遇']])+'<h4>對方答應了什麼</h4>'+L([['hc_agree','何岑：在台上提出共同問題'],['cd_note','糖果：盯著法克的當場承諾'],['c_date','法克：十月二十日前公布下次說明會時間（未含版本）'],['c_window','窗口：十月二十日前回覆版本與時間'],['c_shareable','糖果：提供可轉述的短回覆'],['c_next','糖果：約下一次共同確認'],['c_verbal','口頭說明，尚未取得可公開版本'],['c_none','法克：無法當場答覆，沒有承諾']])+'<h4>誰知道</h4>'+(f('q_pub')?'<p>• 全場聽到你的問題'+(f('b_story')?'（含許沐同意的遭遇）':'')+'</p>':f('q_priv')?'<p>• 只有小圈知道，其他會員不知道</p>':'<p>（尚無）</p>')+'<h4>何時再確認</h4>'+L([['p_hc','何岑會追蹤說明時間'],['p_cd','糖果說下一輪會列入你的問題']])+'<p><small>小說事件，沒有現實效力。</small></p>');
+ // 第 3 章起把「何時再確認」改寫成已結束。注意：重設 innerHTML 會讓「好」按鈕失去作用（沿用原行為）。
+ const m=$('#mc'),h=m.innerHTML;if(st.ch>=3)m.innerHTML=h.replace('<h4>何時再確認</h4>','<h4>已結束的追蹤（改記為結果）</h4>').replace('何岑會追蹤說明時間','追蹤已結束，是否履行見結局').replace('糖果說下一輪會列入你的問題','追蹤已結束，是否履行見結局')}
+function mis(){if(!st)return;const c=st.ch||1,sc=st.sc||'seat',q=cur&&cur.qs;$('#goal').innerHTML='<b>📌 '+(c===1?'讓下次如何討論的問題得到處理。':MS[c][0])+'</b>'+(q?'<div class="ab"><button class="sm" id="hnt">💡 提示</button><span id="hx"></span></div>':'')+'<div class="ab"><button class="sm" id="bgb">🎒 證物袋 '+st.ev.length+'</button><button class="sm" id="ppl">👥 人物</button><button class="sm" id="sts">📋 事件回顧</button></div>';$('#bgb').onclick=()=>nbk('evidence');$('#ppl').onclick=()=>nbk('people');$('#sts').onclick=()=>status();if(q)$('#hnt').onclick=()=>{$('#hx').textContent=' '+HT[sc][Math.min(hi++,2)]}}
+function qhs(){const o=$('#hsl');o&&o.remove();if(!cur||!cur.qs)return;const d=document.createElement('div');d.id='hsl';qActs().forEach(a=>{const b=document.createElement('button');b.className='hs';b.style.left=a.x+'%';b.style.top=a.y+'%';b.textContent=a.l;b.onclick=e=>{e.stopPropagation();pick(a)};d.appendChild(b)});$('#stage').appendChild(d)}
+function say(m){const q=$('#pop');q&&q.remove();const p=document.createElement('div');p.id='pop';p.innerHTML='<div class="up">'+m+'</div>';document.body.appendChild(p);setTimeout(()=>p.remove(),2600)}
+
+// ── 劇情推進 ──
 function show(id){
- st.id=id;const n=id==='fin'?fe(st):S[id];const m=/^c(\d)/.exec(id);if(m)st.ch=+m[1];$('#bar b').textContent='晶片沉默者・第'+(st.ch||1)+'章〈'+CT[st.ch||1]+'〉';if(n.f)n.f(st);cur=n;
+ $('#panel').style.display='block';if(id==='s0')logs=[];
+ st.id=id;const n=id==='fin'?fe(st):S[id];const m=/^c(\d)/.exec(id);if(m)st.ch=+m[1];if(n.f)n.f(st);cur=n;
  const side=(k,x)=>{if(!n[k])return'';const c=C[n[k]];if(!st.met.includes(n[k]))st.met.push(n[k]);return bust(x,c[2],c[3],n.sp===n[k])};
  $('#art').innerHTML=`<svg viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice">${BG[n.b]()}${side('l',170)}${side('r',630)}<rect width="800" height="450" fill="url(#v)"/></svg>`;
  const c=C[n.sp];$('#nm').textContent=n.ti?(id==='win'?'階段成果｜':'結局｜')+n.ti:c?c[0]+'・'+c[1]:'旁白';
  $('#cs').innerHTML='';$('#hint').textContent='';hud();save();
  const t=typeof n.t==='function'?n.t(st):n.t;let i=0;ty=1;clearInterval(tm);$('#tx').textContent='';
- tm=setInterval(()=>{$('#tx').textContent=t.slice(0,++i);if(i>=t.length)fin()},24);cur.full=t}
+ tm=setInterval(()=>{$('#tx').textContent=t.slice(0,++i);if(i>=t.length)fin()},24);cur.full=t;
+ $('#panel').scrollTop=0;$('#art').classList.remove('sceneIn');void $('#art').offsetWidth;$('#art').classList.add('sceneIn');
+ let text=cur.full||'';if(logs.at(-1)?.text!==text){logs.push({who:$('#nm').textContent,text});logs=logs.slice(-80);try{localStorage.setItem('silicon-v1-log',JSON.stringify(logs));lamp.textContent='✓ 進度已記錄';}catch{lamp.textContent='無法儲存紀錄';}}
+ if(instant||matchMedia('(prefers-reduced-motion: reduce)').matches)fin();
+ if(C[cur.sp])$('#nm').innerHTML=`<span class="dialog-avatar">${portrait(cur.sp)}</span><span class="speaker-text">${C[cur.sp][0]}<small>${C[cur.sp][1]}</small></span>`;
+ const ch=st.ch||1,name=ch==7?'序章':ch==8?'終章':'第'+ch+'章';$('#bar b').textContent='晶片沉默者・'+name+'〈'+CT[ch]+'〉・'+DT[ch];ribbon.textContent=name+' / '+DT[ch];rw.style.display=(ch>=4&&ch<=6)||ch==8||id==='fin'?'':'none';
+ if(st.sc!==lsc){lsc=st.sc;hi=0}qhs();mis();decorate()}
+// 場景小道具與角色表情符號
+function decorate(){const sv=$('#art svg');if(!sv||!sv.insertAdjacentHTML)return;const f=k=>st.fl.includes(k),n=cur;let h='';
+ if(n.b==='lounge'||(n.qs&&st.sc==='seat'))h+=R(60,300,56,26,'#d9c9a3',4)+R(66,306,44,5,'#8a6a3a',2);
+ if(n.b==='chairs2'&&f('v1_sit'))h+=R(40,330,36,26,'#c9a02f',6);
+ const em=(x,k)=>{if(!k)return'';const t=n.sp===k?'💬':k==='mu'&&f('mu_stay')?'…':k==='mu'&&f('v4_leave')?'↗':'⋯';return '<text x="'+(x+50)+'" y="205" font-size="34">'+t+'</text>'};
+ sv.insertAdjacentHTML('beforeend',h+em(170,n.l)+em(630,n.r))}
 function fin(){if(!ty)return;ty=0;clearInterval(tm);$('#tx').textContent=cur.full;
  if(cur.c){(typeof cur.c==='function'?cur.c(st):cur.c).forEach((o,i)=>{const b=document.createElement('button');b.className='ch';b.textContent=(i+1)+'. '+o.t;b.disabled=!!o.d;b.onclick=e=>{e.stopPropagation();pick(o)};$('#cs').appendChild(b)})}
  else $('#hint').textContent='點一下繼續 ▶'}
-function pick(o){const f=o.fx||{};if(f.trust)st.trust=Math.max(0,Math.min(5,st.trust+f.trust));if(f.sup)st.sup=Math.max(0,Math.min(5,st.sup+f.sup));if(f.flag&&!st.fl.includes(f.flag))st.fl.push(f.flag);
- if(o.g==='RESET'){reset();return}if(o.g==='NB'){nbk();return}
- if(f.ev&&!st.ev.includes(f.ev)){st.ev.push(f.ev);const e=E[f.ev];hud();modal(`${evidenceDetail(f.ev,true)}`,()=>show(o.g));return}
- show(o.g)}
+function pick(o){
+ if(o.do){const d=o.do;delete o.do;d(st)}
+ if(o.msg){const m=o.msg;delete o.msg;modal(m,()=>pick(o));return}
+ const a=[st.trust,st.sup,st.ev.length];cue(!!o.fx?.ev);
+ const f=o.fx||{};if(f.trust)st.trust=Math.max(0,Math.min(5,st.trust+f.trust));if(f.sup)st.sup=Math.max(0,Math.min(5,st.sup+f.sup));if(f.flag&&!st.fl.includes(f.flag))st.fl.push(f.flag);
+ if(o.g==='RESET'){reset();return}
+ if(o.g==='NB')nbk();
+ else{
+  if(f.ev&&!st.ev.includes(f.ev)){st.ev.push(f.ev);hud();modal(evidenceDetail(f.ev,true),()=>show(o.g))}else show(o.g);
+  // 畫面上方的數值變化提示
+  const changes=[];const delta=(n)=>n>0?'+'+n:String(n);if(st.ev.length!==a[2])changes.push('🔍 蒐證 '+delta(st.ev.length-a[2]));if(st.trust!==a[0])changes.push('♥ 信任 '+delta(st.trust-a[0]));if(st.sup!==a[1])changes.push('◆ 支持 '+delta(st.sup-a[1]));const t=$('#toast');clearTimeout(resultToastTimer);t.textContent=changes.length?changes.join('　'):'此次選擇：數值未變';t.style.opacity=1;resultToastTimer=setTimeout(()=>t.style.opacity=0,3200);
+ }
+ const d=[];if(st.trust!==a[0])d.push('♥ 信任 '+(st.trust>a[0]?'+':'')+(st.trust-a[0]));if(st.sup!==a[1])d.push('◆ 支持 '+(st.sup>a[1]?'+':'')+(st.sup-a[1]));if(st.ev.length>a[2])d.push('🔍 新證物');if(o.t&&d.length){chg.unshift({t:o.t.slice(0,26),d});chg.length=Math.min(chg.length,8)}
+ if(st.ev.length>a[2])say('🔍 新證物')}
 function adv(){if(ty){fin();return}if(cur&&!cur.c&&cur.n)show(cur.n)}
-function reset(){st=mk();show('s0')}
-function begin(s){$('#title').style.display='none';if(s.sup==null)s.sup=1;if(s.id==='end')s.id='c2a';st=s;show(s.id)}
+function reset(){st=mk();show('c7a')}
+function begin(s){$('#title').style.display='none';if(s.sup==null)s.sup=1;if(s.id==='s0'&&!s.met.length&&!s.ev.length)s.id='c7a';st=s;show(s.id)}
+
+// ── 啟動：按鈕、鍵盤、標題畫面 ──
 $('#go').onclick=()=>begin(mk());
 $('#ct').onclick=()=>begin(load());
 $('#rs').onclick=()=>{if(confirm('要重新開始嗎？目前進度會被覆蓋。')){$('#title').style.display='none';reset()}};
@@ -35,77 +73,41 @@ document.addEventListener('keydown',e=>{if($('#mod').classList.contains('on')||$
 $('#art').innerHTML=`<svg viewBox="0 0 800 450" preserveAspectRatio="xMidYMid slice">${BG.night(0)}<rect width="800" height="450" fill="url(#v)"/></svg>`;
 $('#panel').style.display='none';
 const sv=load();if(sv&&sv.id&&sv.id!=='s0')$('#ct').style.display='inline-block';
-const _s=show;show=function(id){$('#panel').style.display='block';_s(id)};
-hud=function(){$('#ec').textContent=st.ev.length+' / '+Object.keys(E).length;$('#tr').textContent='♥'.repeat(st.trust)+'♡'.repeat(5-st.trust);$('#sp').textContent='◆'.repeat(st.sup)+'◇'.repeat(5-st.sup)};
-nbk=function(){const ks=Object.keys(E);modal('<h3>🔍 證物 '+st.ev.length+'/'+ks.length+'</h3>'+ks.map(k=>{const e=E[k];return st.ev.includes(k)?`<p><b>✓ ${e.n}</b>（第${e.ch}章）<br><small>資料告訴我們：${e.yes}<br>還不能下的結論：${e.no}</small></p>`:`<p style="color:var(--mut)">☐ ${e.n}（第${e.ch}章）<br><small>取得方式：${e.h}</small></p>`}).join('')+'<h3>👥 人物 '+st.met.length+'/'+IDS.length+'</h3>'+IDS.map(k=>st.met.includes(k)?`<p><b>${C[k][0]}</b>・${C[k][1]}</p>`:`<p style="color:var(--mut)">？？？（第${DB[k]}章登場）</p>`).join(''))};
-fin=function(){if(!ty)return;ty=0;clearInterval(tm);$('#tx').textContent=cur.full;if(cur.c){(typeof cur.c==='function'?cur.c(st):cur.c).forEach((o,i)=>{const b=document.createElement('button');b.className='ch';b.textContent=(i+1)+'. '+o.t;b.disabled=!!o.d;b.onclick=e=>{e.stopPropagation();pick(o)};$('#cs').appendChild(b)})}else $('#hint').textContent='點一下繼續 ▶'};
-const _s2=show;show=function(id){_s2(id);$('#bar b').textContent+='・'+DT[st.ch||1];$('#goal').textContent=GL[st.ch||1]};
-let resultToastTimer;const _p=pick;pick=function(o){const before={trust:st.trust,sup:st.sup,ev:st.ev.length};_p(o);if(o.g==='RESET'||o.g==='NB')return;const changes=[];const delta=(n)=>n>0?'+'+n:String(n);if(st.ev.length!==before.ev)changes.push('🔍 蒐證 '+delta(st.ev.length-before.ev));if(st.trust!==before.trust)changes.push('♥ 信任 '+delta(st.trust-before.trust));if(st.sup!==before.sup)changes.push('◆ 支持 '+delta(st.sup-before.sup));const t=$('#toast');clearTimeout(resultToastTimer);t.textContent=changes.length?changes.join('　'):'此次選擇：數值未變';t.style.opacity=1;resultToastTimer=setTimeout(()=>t.style.opacity=0,3200);};
 const tz=document.createElement('div');tz.id='toast';$('#stage').appendChild(tz);
-$('#goal').textContent=GL[1];
+$('#goal').textContent=INTRO_GOAL;
 $('#ec').parentNode.onclick=()=>st&&nbk();
 $('#tr').parentNode.onclick=()=>st&&modal('<h3>♥ 信任</h3><p>同事願意相信你的程度（0〜5）。拿出具體問題、承認自己說太快會上升；沒有證據就指控、嘲笑別人會下降。信任太低，同事不會跟你一起查證。</p>');
 $('#sp').parentNode.onclick=()=>st&&modal('<h3>◆ 支持</h3><p>願意一起核對、一起決定的會員有多少（0〜5）。傾聽、公開可核對的資料會上升；私下決定、替別人做決定會下降。第 3 章要 4 格以上，才有機會暫緩簽約。</p>');
-(()=>{
+
+// ── 上方工具列（依序：配樂、對話紀錄、文字速度、存檔燈、時間線、真實資源、背景說明）──
 const bar=$('#bar'),audio=document.createElement('div');audio.className='audioControl';audio.innerHTML='<button class="sm" id="music" aria-pressed="false">♫ 開啟配樂</button><input id="volume" type="range" min="0" max="60" value="25" aria-label="音樂音量">';bar.append(audio);
-const historyButton=document.createElement('button');historyButton.className='sm';historyButton.textContent='對話紀錄';bar.append(historyButton);const speed=document.createElement('button');speed.className='sm';speed.textContent='文字：逐字';bar.append(speed);let instant=false;speed.onclick=()=>{instant=!instant;speed.textContent=instant?'文字：即時':'文字：逐字';if(instant&&ty)fin();};
+const historyButton=document.createElement('button');historyButton.className='sm';historyButton.textContent='對話紀錄';bar.append(historyButton);const speed=document.createElement('button');speed.className='sm';speed.textContent='文字：逐字';bar.append(speed);speed.onclick=()=>{instant=!instant;speed.textContent=instant?'文字：即時':'文字：逐字';if(instant&&ty)fin();};
 const lamp=document.createElement('span');lamp.id='saveLamp';lamp.textContent='本機自動存檔';bar.append(lamp);const ribbon=document.createElement('div');ribbon.id='chapterRibbon';ribbon.textContent='九月 · 說明會之前';$('#stage').append(ribbon);
+
+// 原創環境配樂（Web Audio 即時合成）
+const cue=(()=>{
 let ctx,master,enabled=false,timer=null,step=0;const voices=new Set();
 function note(freq,at,len,amp,type='sine'){if(!ctx)return;const o=ctx.createOscillator(),g=ctx.createGain();o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(0,at);g.gain.linearRampToValueAtTime(amp,at+.08);g.gain.exponentialRampToValueAtTime(.0001,at+len);o.connect(g);g.connect(master);o.start(at);o.stop(at+len+.05);voices.add(o);o.onended=()=>{voices.delete(o);o.disconnect();g.disconnect();};}
 const chords=[[146.83,174.61,220],[130.81,164.81,196],[116.54,146.83,174.61],[130.81,164.81,196]];
 function phrase(){if(!enabled||document.hidden||!ctx)return;let ch=st?.ch||1,now=ctx.currentTime+.04,notes=ch>=5?[130.81,164.81,196]:ch>=3?[146.83,155.56,220]:chords[step%4];notes.forEach((f,i)=>note(f,now+i*.08,5,.055));note(notes[0]/2,now,5,.035);[0,2,1,2].forEach((n,i)=>note(notes[n]*2,now+i*1.15,1.8,.035,'triangle'));step++;}
 async function toggle(){try{if(!ctx){ctx=new (window.AudioContext||window.webkitAudioContext)();master=ctx.createGain();master.gain.value=0;master.connect(ctx.destination);}enabled=!enabled;await ctx.resume();master.gain.cancelScheduledValues(ctx.currentTime);master.gain.setTargetAtTime(enabled?Number($('#volume').value)/100:0,ctx.currentTime,.2);clearInterval(timer);if(enabled){phrase();timer=setInterval(phrase,4800);}$('#music').textContent=enabled?'♫ 配樂播放中':'♫ 開啟配樂';$('#music').setAttribute('aria-pressed',String(enabled));}catch(e){enabled=false;$('#music').textContent='此瀏覽器無法播放音樂';}}
 $('#music').onclick=toggle;$('#volume').oninput=()=>{if(ctx&&enabled)master.gain.setTargetAtTime(Number($('#volume').value)/100,ctx.currentTime,.1);};document.addEventListener('visibilitychange',()=>{if(!ctx)return;if(document.hidden)ctx.suspend();else if(enabled)ctx.resume();});
-function cue(evidence){if(!enabled||!ctx)return;let t=ctx.currentTime;note(evidence?659.25:440,t,.3,.12);if(evidence)note(880,t+.12,.5,.1);}
-const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));let logs=[];try{logs=JSON.parse(localStorage.getItem('silicon-v1-log')||'[]');if(!Array.isArray(logs))logs=[];}catch{logs=[];}
+return function cue(evidence){if(!enabled||!ctx)return;let t=ctx.currentTime;note(evidence?659.25:440,t,.3,.12);if(evidence)note(880,t+.12,.5,.1);};
+})();
+
+try{logs=JSON.parse(localStorage.getItem('silicon-v1-log')||'[]');if(!Array.isArray(logs))logs=[];}catch{logs=[];}
 historyButton.onclick=()=>modal('<h3>對話紀錄</h3><p>僅保存在此裝置，最多 80 則。</p>'+logs.map(x=>'<p><b>'+esc(x.who)+'</b><br>'+esc(x.text)+'</p>').join(''));
-const oldShow=show;show=function(id){if(id==='s0')logs=[];oldShow(id);ribbon.textContent=(id==='fin'?'章節結局':'第 '+(st.ch||1)+' 章')+' / '+(DT[st.ch||1]||'');$('#panel').scrollTop=0;$('#art').classList.remove('sceneIn');void $('#art').offsetWidth;$('#art').classList.add('sceneIn');let text=cur.full||'';if(logs.at(-1)?.text!==text){logs.push({who:$('#nm').textContent,text});logs=logs.slice(-80);try{localStorage.setItem('silicon-v1-log',JSON.stringify(logs));lamp.textContent='✓ 進度已記錄';}catch{lamp.textContent='無法儲存紀錄';}}if(instant||matchMedia('(prefers-reduced-motion: reduce)').matches)fin();};
-const oldPick=pick;pick=function(o){cue(!!o.fx?.ev);oldPick(o);};
 // Keep keys on controls from also advancing the story; trap focus in the reading dialog.
-const mod=$('#mod');mod.setAttribute('role','dialog');mod.setAttribute('aria-modal','true');mod.setAttribute('aria-label','筆記與紀錄');let returnFocus;const oldModal=modal;modal=function(h,cb){returnFocus=document.activeElement;oldModal(h,()=>{if(returnFocus?.isConnected)returnFocus.focus();if(cb)cb();});};
+const mod=$('#mod');mod.setAttribute('role','dialog');mod.setAttribute('aria-modal','true');mod.setAttribute('aria-label','筆記與紀錄');
 document.addEventListener('keydown',e=>{if(mod.classList.contains('on')){if(e.key==='Escape'){e.preventDefault();$('#cl').click();}if(e.key==='Tab'){let list=[...mod.querySelectorAll('button,a,input,select,textarea,[tabindex="0"]')].filter(x=>!x.disabled);if(!list.length)return;let first=list[0],last=list.at(-1);if(e.shiftKey&&document.activeElement===first){e.preventDefault();last.focus();}else if(!e.shiftKey&&document.activeElement===last){e.preventDefault();first.focus();}}return;}if(e.target.closest('button,input,select,textarea,a'))e.stopPropagation();},true);
 for(const el of document.querySelectorAll('.sc')){el.tabIndex=0;el.setAttribute('role','button');el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();el.click();}});}
 const subtitle=document.createElement('p');subtitle.textContent='♫ 原創環境配樂｜點上方開啟，可調音量。音樂隨章節由懸疑轉為希望。';$('#title').append(subtitle);
-})();
-document.querySelector("#toast").setAttribute("role","status");document.querySelector("#toast").setAttribute("aria-live","polite");
-function evidenceDetail(k,acquired=false){const e=E[k];return `<div class="case-label">EVIDENCE / 第 ${e.ch} 章</div><h3>${acquired?'新證物已收進筆記：':''}${artEscape(e.n)}</h3><div class="file-art">${documentArt(k)}</div><div class="case-note">來源：${artEscape(e.src)} · 圖中為劇情重製示意，並非真實新聞文件或原件。</div><div class="reading-grid"><div class="reading-box"><b>① 這份資料告訴你什麼？</b>${artEscape(e.yes)}</div><div class="reading-box pending"><b>② 先別急著下這個結論</b>${artEscape(e.no)}</div></div><p class="case-note">閱讀順序：先看標記的內容，再分清「已看見的資訊」與「仍需查證的推測」。</p>`;}
-nbk=function(tab='evidence'){const head=`<div class="case-top"><div><div class="case-label">FIELD NOTES / 調查手帳</div><h3>把看見的事，留下來。</h3></div><span>${st.ev.length} / ${Object.keys(E).length} 件證物</span></div><div class="case-tabs" role="tablist"><button role="tab" aria-selected="${tab==='evidence'}" data-tab="evidence">證物圖鑑</button><button role="tab" aria-selected="${tab==='people'}" data-tab="people">人物關係</button></div>`;const content=tab==='people'?`<div class="people-grid">${IDS.map(k=>st.met.includes(k)?`<article class="person-card"><div class="avatar">${portrait(k)}</div><div><strong>${C[k][0]}</strong><small>${C[k][1]}<br>${PERSON_NOTES[k]}</small></div></article>`:`<article class="person-card"><div class="avatar"><div class="empty-face">？</div></div><div>尚未見面<small>第 ${DB[k]} 章登場</small></div></article>`).join('')}</div><p class="case-note">所有頭像均為原創虛構角色造型，不描繪真實人物。</p>`:`<div class="evidence-grid">${Object.keys(E).map(k=>st.ev.includes(k)?`<button class="evidence-tile" data-file="${k}">${documentArt(k)}<strong>${E[k].n}</strong><small>第 ${E[k].ch} 章 · 點開查看重點</small></button>`:`<div class="evidence-tile locked"><div style="height:105px;display:grid;place-items:center;font-size:32px">▱</div><strong>未取得 · 第 ${E[k].ch} 章</strong><small>${E[k].h}</small></div>`).join('')}</div>`;modal(head+content);$('#mc').querySelectorAll('[data-tab]').forEach(b=>b.onclick=()=>nbk(b.dataset.tab));$('#mc').querySelectorAll('[data-file]').forEach(b=>b.onclick=()=>{modal('<button class="file-back" id="backFiles">← 返回證物圖鑑</button>'+evidenceDetail(b.dataset.file));$('#backFiles').onclick=()=>nbk();});};
-const visualShow=show;show=function(id){visualShow(id);if(C[cur.sp]){$('#nm').innerHTML=`<span class="dialog-avatar">${portrait(cur.sp)}</span><span class="speaker-text">${C[cur.sp][0]}<small>${C[cur.sp][1]}</small></span>`;}};
-const evidenceModal=modal;modal=function(h,cb){evidenceModal(h,cb);if(h.includes('新證物已收進筆記'))document.querySelector('#cl').textContent='收進筆記，繼續故事';};
-const timelineButton=document.createElement('button');timelineButton.className='sm';timelineButton.textContent='故事時間線';document.querySelector('#bar').append(timelineButton);
-timelineButton.onclick=()=>modal('<h3>從空掉的座位，到重新站在一起</h3><p class="case-note">背景參考真實新聞；人物與畫面為小說。後續結果是架空推演。</p>'+[['2022年底—2023','縮減人力與共體時艱','night','空掉的置物櫃提醒你：承諾需要留下紀錄。'],['組織成長','從班別互助，到會員凝聚','corr','你參與既有工會，從整理問題與互相陪伴開始。'],['九月說明會','大家都相信他們','hall','滿場的期待，是後來失望的重量。先核對文件，再提出疑問。'],['十月與架空後續','簽署、重建與最終核對','dawn','阻止簽署或重新議約；最後看給付、程序與組織留下了什麼。']].map(x=>'<article style="margin:18px 0;background:#253b48;border-radius:12px;overflow:hidden"><svg style="display:block;width:100%;max-height:180px" viewBox="0 0 800 450" role="img" aria-label="'+x[1]+'">'+BG[x[2]]()+'</svg><div style="padding:18px"><small>'+x[0]+'</small><h3>'+x[1]+'</h3>'+x[3]+'</div></article>').join(''));
-let chg=[];
-const tt=m=>{const t=$('#toast');t.textContent=m;t.style.opacity=1;setTimeout(()=>t.style.opacity=0,1800)};
-function mis(){if(!st)return;const c=st.ch||1,m=MS[c],d=m[1].map(x=>x[1](st)),n=d.filter(Boolean).length,nx=m[1].find((x,i)=>!d[i]);
-$('#goal').innerHTML=`<b>📌 任務：${m[0]}</b>（${n}/${m[1].length}）<div class="pb"><i style="width:${n/m[1].length*100}%"></i></div><details ${innerWidth>700?'open':''}><summary>任務清單</summary>${m[1].map((x,i)=>(d[i]?'✅ ':'⬜ ')+x[0]).join('<br>')}</details><div class="nx">👉 下一步：${nx?nx[0]:'本章目標都完成了，繼續推進故事'}</div><div class="ab"><button class="sm" id="bgb">🎒 證物袋 ${st.ev.length}/${Object.keys(E).length}</button><button class="sm" id="ppl">👥 人物</button><button class="sm" id="sts">📋 我的狀態</button></div>`;
-$('#bgb').onclick=()=>nbk('evidence');$('#ppl').onclick=()=>nbk('people');$('#sts').onclick=status}
-function status(){const c=st.ch||1;modal(`<h3>📋 我的狀態</h3><p><b>身分</b>：雞雞HH｜台中員工<br><b>章節</b>：第${c}章〈${CT[c]}〉・${DT[c]}</p><p>♥ 信任 ${st.trust}/5：同事願意聽你說、一起核對。<br>◆ 支持 ${st.sup}/5：願意共同決定的會員有多少。<br>🔍 證物 ${st.ev.length}/${Object.keys(E).length}：打開證物袋，看每份能說什麼、不能說什麼。</p><p><small>以上都是小說裡的數值，沒有任何現實效力。</small></p><h4>最近的變化</h4>`+(chg.length?chg.map(x=>`<p>• 「${x.t}」→ ${x.d.join('、')}</p>`).join(''):'<p>還沒有。</p>'))}
-function hsR(){const o=$('#hsl');o&&o.remove();if(!cur||!cur.hs)return;const d=document.createElement('div');d.id='hsl';cur.hs.forEach(h=>{const own=st.ev.includes(h.ev),b=document.createElement('button');b.className='hs'+(own?' dn':'');b.style.left=h.x+'%';b.style.top=h.y+'%';b.textContent=(own?'✓ ':'🔍 ')+h.l;b.onclick=e=>{e.stopPropagation();own?tt('已經在證物袋裡了'):pick({t:'調查：'+h.l,g:st.id,fx:{ev:h.ev}})};d.appendChild(b)});$('#stage').appendChild(d)}
-const _pk=pick;pick=function(o){if(o.msg){const m=o.msg;delete o.msg;modal(m,()=>pick(o));return}const a=[st.trust,st.sup,st.ev.length];_pk(o);if(o.g==='RESET')return;const d=[];if(st.trust!==a[0])d.push('♥ 信任 '+(st.trust>a[0]?'+':'')+(st.trust-a[0]));if(st.sup!==a[1])d.push('◆ 支持 '+(st.sup>a[1]?'+':'')+(st.sup-a[1]));if(st.ev.length>a[2])d.push('🔍 新證物');if(o.t&&d.length){chg.unshift({t:o.t.slice(0,26),d});chg.length=Math.min(chg.length,8)}};
-const _s3=show;show=function(id){_s3(id);hsR();mis()};
-function pop(d){const L=[];if(d[0])L.push([d[0],'♥ 信任']);if(d[1])L.push([d[1],'◆ 支持']);if(d[2]>0)L.push([d[2],'🔍 新證物']);if(!L.length)return;const q=$('#pop');q&&q.remove();const p=document.createElement('div');p.id='pop';p.innerHTML=L.map(x=>`<div class="${x[0]>0?'up':'dn'}">${x[1]} ${x[0]>0?'+':'−'}${Math.abs(x[0])}</div>`).join('');document.body.appendChild(p);setTimeout(()=>p.remove(),2200)}
-const _pk2=pick;pick=function(o){const a=[st.trust,st.sup,st.ev.length];_pk2(o);if(o.g==='RESET')return;pop([st.trust-a[0],st.sup-a[1],st.ev.length-a[2]])};
-begin=function(s){$('#title').style.display='none';if(s.sup==null)s.sup=1;if(s.id==='s0'&&!s.met.length&&!s.ev.length)s.id='c7a';st=s;show(s.id)};
-reset=function(){st=mk();show('c7a')};
-const rw=document.createElement('button');rw.className='sm';rw.textContent='🌐 真實資源';rw.style.display='none';$('#bar').append(rw);
-const RL=[['光光猴守護平台','https://micronmonkey.github.io/','可查看最新公告、QA、活動與後續資訊','來源已核對'],['新工會 QA（測試版）','https://micronmonkey.github.io/Connected_Union_QA.html','兩線並進、會員與程序的常見問題；不是法律諮詢','來源已核對'],['關係企業工會入會申請','https://micron-affiliated-enterprises-union.github.io/membership-form/','開啟頁面不等於入會；頁面含個資與簽名欄','來源已核對'],['11/3 記者會暨說明會報名（公開填寫版）','https://docs.google.com/forms/d/e/1FAIpQLSd6-wvSV2brvOfbbG_FNVAtHl_MxOZdyddepiZoHQCpw0FpHg/viewform','時間地點與是否仍開放，以主辦公告為準','活動狀態以目的網站為準'],['聲援連署表單（原提供連結）','https://docs.google.com/forms/d/e/1FAIpQLSd2a1Jvw-yx5g0wJOseh3IER0SAKFGweV7Euc9fGIANadPjlQ/viewform','標題為「緊急撤銷授權與暫緩簽署連署書」，涉及身分與授權，並非單純聲援意向','用途待確認']];
+tz.setAttribute('role','status');tz.setAttribute('aria-live','polite');
+
+const timelineButton=document.createElement('button');timelineButton.className='sm';timelineButton.textContent='故事時間線';bar.append(timelineButton);
+timelineButton.onclick=()=>modal('<h3>從空掉的座位，到重新站在一起</h3><p class="case-note">背景參考真實新聞；人物與畫面為小說。後續結果是架空推演。</p>'+TL.map(x=>'<article style="margin:18px 0;background:#253b48;border-radius:12px;overflow:hidden"><svg style="display:block;width:100%;max-height:180px" viewBox="0 0 800 450" role="img" aria-label="'+x[1]+'">'+BG[x[2]]()+'</svg><div style="padding:18px"><small>'+x[0]+'</small><h3>'+x[1]+'</h3>'+x[3]+'</div></article>').join(''));
+// 真實資源：只在第 4–6 章、終章與舊版結局顯示（show 裡切換）
+const rw=document.createElement('button');rw.className='sm';rw.textContent='🌐 真實資源';rw.style.display='none';bar.append(rw);
 rw.onclick=()=>modal('<h3>🌐 真實世界資源</h3><p>你即將開啟真實世界的網站。該頁可能涉及報名、連署、入會或個人資料。是否參與由你自行決定，與遊戲進度、信任值及結局無關。活動與申請狀態以目的網站最新公告為準。</p>'+RL.map(x=>`<p><b>${x[0]}</b>（${x[3]}）<br><small>${x[2]}</small><br><a href='${x[1]}' target='_blank' rel='noopener noreferrer'>開啟網站 ↗</a></p>`).join('')+'<p><small>本作為虛構故事，與上述網站沒有背書關係，也不會預填或傳送任何資料。</small></p>');
-const _s4=show;show=function(id){_s4(id);const c=st.ch||1,n=c==7?'序章':c==8?'終章':'第'+c+'章';$('#bar b').textContent='晶片沉默者・'+n+'〈'+CT[c]+'〉・'+DT[c];const r=$('#chapterRibbon');if(r)r.textContent=n+' / '+DT[c];rw.style.display=(c>=4&&c<=6)||c==8||id==='fin'?'':'none'};
-function say(m){const q=$('#pop');q&&q.remove();const p=document.createElement('div');p.id='pop';p.innerHTML='<div class="up">'+m+'</div>';document.body.appendChild(p);setTimeout(()=>p.remove(),2600)}
-pop=function(d){if(d[2]>0)say('🔍 新證物')};
-let hi=0,lsc='';
-status=function(){modal('<h3>📋 事件回顧</h3><p>雞雞HH｜台中員工</p>'+(Object.keys(FT).filter(k=>st.fl.includes(k)).map(k=>'<p>• '+FT[k]+'</p>').join('')||'<p>還沒有需要記錄的事。</p>')+'<p><small>這些都是小說裡的事件，沒有任何現實效力。</small></p>')};
-mis=function(){if(!st)return;const c=st.ch||1,sc=st.sc||'seat',q=cur&&cur.qs;$('#goal').innerHTML='<b>📌 '+(c===1?'讓下次如何討論的問題得到處理。':MS[c][0])+'</b>'+(q?'<div class="ab"><button class="sm" id="hnt">💡 提示</button><span id="hx"></span></div>':'')+'<div class="ab"><button class="sm" id="bgb">🎒 證物袋 '+st.ev.length+'</button><button class="sm" id="ppl">👥 人物</button><button class="sm" id="sts">📋 事件回顧</button></div>';$('#bgb').onclick=()=>nbk('evidence');$('#ppl').onclick=()=>nbk('people');$('#sts').onclick=()=>status();if(q)$('#hnt').onclick=()=>{$('#hx').textContent=' '+HT[sc][Math.min(hi++,2)]}};
-function qhs(){const o=$('#hsl');o&&o.remove();if(!cur||!cur.qs)return;const d=document.createElement('div');d.id='hsl';qActs().forEach(a=>{const b=document.createElement('button');b.className='hs';b.style.left=a.x+'%';b.style.top=a.y+'%';b.textContent=a.l;b.onclick=e=>{e.stopPropagation();pick(a)};d.appendChild(b)});$('#stage').appendChild(d)}
-const _pk3=pick;pick=function(o){if(o.do){const d=o.do;delete o.do;d(st)}_pk3(o)};
-const _s5=show;show=function(id){_s5(id);if(st.sc!==lsc){lsc=st.sc;hi=0}qhs();mis()};
-status=function(){const f=k=>st.fl.includes(k),L=a=>a.filter(x=>f(x[0])).map(x=>'<p>• '+x[1]+'</p>').join('')||'<p>（尚無）</p>';modal('<h3>📋 事件回顧</h3><h4>我答應了誰</h4>'+L([['mu_with','許沐：我不把他推上台，他願意才陪我'],['mu_stay','許沐：他留在台下，我尊重他的界線'],['a_full','何岑：代表發言時保留「版本何時能看」'],['a_narrow','何岑：接受較窄的共同題目'],['b_story','許沐：只在他同意的範圍內帶入他的遭遇']])+'<h4>對方答應了什麼</h4>'+L([['hc_agree','何岑：在台上提出共同問題'],['cd_note','糖果：盯著法克的當場承諾'],['c_date','法克：十月二十日前公布下次說明會時間（未含版本）'],['c_window','窗口：十月二十日前回覆版本與時間'],['c_shareable','糖果：提供可轉述的短回覆'],['c_next','糖果：約下一次共同確認'],['c_verbal','口頭說明，尚未取得可公開版本'],['c_none','法克：無法當場答覆，沒有承諾']])+'<h4>誰知道</h4>'+(f('q_pub')?'<p>• 全場聽到你的問題'+(f('b_story')?'（含許沐同意的遭遇）':'')+'</p>':f('q_priv')?'<p>• 只有小圈知道，其他會員不知道</p>':'<p>（尚無）</p>')+'<h4>何時再確認</h4>'+L([['p_hc','何岑會追蹤說明時間'],['p_cd','糖果說下一輪會列入你的問題']])+'<p><small>小說事件，沒有現實效力。</small></p>')};
-const bgb2=document.createElement('button');bgb2.className='sm';bgb2.textContent='📰 背景與虛構界線';$('#bar').append(bgb2);
-bgb2.onclick=()=>modal('<h3>📰 真實背景與小說的界線</h3><p><b>【新聞記載】</b>2022 年 11 月美光公告因市場轉弱減少晶圓投片；2026 年 9 月中央社報導工會主張營業利益 15% 分潤制度；2026 年 10 月底報導台中協議與會員質疑。只作背景，不能推定個別員工的遭遇。</p><p><b>【當事方主張】</b>2023 年 2 月報導中，工會抗議裁員，公司稱員工自願離職；雙方說法並存，遊戲不裁定。遊戲中的 15% 是虛構談判目標，不是已達成的制度。</p><p><b>【小說創作】</b>所有人物、「九人」小組、私下對話、文件、簽署前後的決定與結局都是虛構，九人是小說設定。九月會場口號、誰隱瞞或背叛，目前沒有足夠來源可當史實。11/3 活動截至 2026-11-01 仍是未來活動。</p><p>'+[['美光 2022-11-16 公告','https://investors.micron.com/news/press-release/2022/Micron-Announces-Further-Actions-to-Address-Market-Conditions-11-16-2022/default.aspx'],['華視 2023-02-20 報導（全文需再核對）','https://news.cts.com.tw/cts/society/202302/202302202144678.html'],['中央社 2026-09-15','https://www.cna.com.tw/news/afe/202609150087.aspx'],['中央社 2026-10-28','https://www.cna.com.tw/news/ahel/202610280194.aspx']].map(x=>`<a href='${x[1]}' target='_blank' rel='noopener noreferrer'>${x[0]} ↗</a>`).join('<br>')+'</p>');
-const st1=status;status=function(){st1();const m=$('#mc'),h=m.innerHTML;if(st.ch>=3)m.innerHTML=h.replace('<h4>何時再確認</h4>','<h4>已結束的追蹤（改記為結果）</h4>').replace('何岑會追蹤說明時間','追蹤已結束，是否履行見結局').replace('糖果說下一輪會列入你的問題','追蹤已結束，是否履行見結局')};
-const _s6=show;show=function(id){_s6(id);const sv=$('#art svg');if(!sv||!sv.insertAdjacentHTML)return;const f=k=>st.fl.includes(k),n=cur;let h='';
-if(n.b==='lounge'||(n.qs&&st.sc==='seat'))h+=R(60,300,56,26,'#d9c9a3',4)+R(66,306,44,5,'#8a6a3a',2);
-if(n.b==='chairs2'&&f('v1_sit'))h+=R(40,330,36,26,'#c9a02f',6);
-const em=(x,k)=>{if(!k)return'';const t=n.sp===k?'💬':k==='mu'&&f('mu_stay')?'…':k==='mu'&&f('v4_leave')?'↗':'⋯';return '<text x="'+(x+50)+'" y="205" font-size="34">'+t+'</text>'};
-sv.insertAdjacentHTML('beforeend',h+em(170,n.l)+em(630,n.r))};
-document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#mod').classList.contains('on')){const c=$('#cl');c&&c.click()}});
+const bgb2=document.createElement('button');bgb2.className='sm';bgb2.textContent='📰 背景與虛構界線';bar.append(bgb2);
+bgb2.onclick=()=>modal(NEWS_NOTE+'<p>'+NEWS.map(x=>`<a href='${x[1]}' target='_blank' rel='noopener noreferrer'>${x[0]} ↗</a>`).join('<br>')+'</p>');
