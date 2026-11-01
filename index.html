@@ -46,7 +46,7 @@ button{font:inherit;cursor:pointer}
  <div id="goal"></div>
  <div id="stage">
   <div id="art"></div>
-  <div id="title"><h1>晶片沉默者：九人的協議</h1><p><b>玩法：</b>🔍 蒐集證物、♥ 取得同事信任、◆ 爭取會員支持。請依據對話與證物判斷，選擇之後才會顯示實際影響；上方「筆記」可看全部證物與人物。</p><p>全六章。你只是基層員工「雞雞HH」，想把一件小事問清楚。點一下畫面或按空白鍵繼續，選項可按數字鍵。</p><p>本作為虛構故事，公司與角色皆為虛構，不證明任何真實人物的行為。約 20 分鐘，自動存檔。</p><div><button class="pri" id="go">開始</button><button class="pri" id="ct" style="display:none">繼續</button></div></div>
+  <div id="title"><h1>晶片沉默者：九人的協議</h1><p><b>玩法：</b>🔍 蒐集證物、♥ 取得同事信任、◆ 爭取會員支持。玩法只有四件事：觀察、移動、使用物品、邀請合作。點畫面上發光的人與物件；沒有標準答案，每個決定都會改變現場。</p><p>序章＋六章＋終章。你只是基層員工「雞雞HH」，想把一件小事問清楚。點一下畫面或按空白鍵繼續，選項可按數字鍵。</p><p>本作為虛構故事，公司與角色皆為虛構，不證明任何真實人物的行為。約 20 分鐘，自動存檔。</p><div><button class="pri" id="go">開始</button><button class="pri" id="ct" style="display:none">繼續</button></div></div>
   <div id="panel"><span id="nm"></span><div id="tx"></div><div id="cs"></div><div id="hint"></div></div>
  </div>
 </div>
@@ -250,4 +250,134 @@ const visualShow=show;show=function(id){visualShow(id);if(C[cur.sp]){$('#nm').in
 <style>#stage:after{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse at top,transparent 35%,#07111d50);z-index:0}#panel{z-index:2}#art{transition:filter .4s}.dialog-avatar{animation:portraitIn .35s ease-out}@keyframes portraitIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}@media(prefers-reduced-motion:reduce){.dialog-avatar{animation:none}}</style><script>const evidenceModal=modal;modal=function(h,cb){evidenceModal(h,cb);if(h.includes('新證物已收進筆記'))document.querySelector('#cl').textContent='收進筆記，繼續故事';};</script><script>
 const timelineButton=document.createElement('button');timelineButton.className='sm';timelineButton.textContent='故事時間線';document.querySelector('#bar').append(timelineButton);
 timelineButton.onclick=()=>modal('<h3>從空掉的座位，到重新站在一起</h3><p class="case-note">背景參考真實新聞；人物與畫面為小說。後續結果是架空推演。</p>'+[['2022年底—2023','縮減人力與共體時艱','night','空掉的置物櫃提醒你：承諾需要留下紀錄。'],['組織成長','從班別互助，到會員凝聚','corr','你參與既有工會，從整理問題與互相陪伴開始。'],['九月說明會','大家都相信他們','hall','滿場的期待，是後來失望的重量。先核對文件，再提出疑問。'],['十月與架空後續','簽署、重建與最終核對','dawn','阻止簽署或重新議約；最後看給付、程序與組織留下了什麼。']].map(x=>'<article style="margin:18px 0;background:#253b48;border-radius:12px;overflow:hidden"><svg style="display:block;width:100%;max-height:180px" viewBox="0 0 800 450" role="img" aria-label="'+x[1]+'">'+BG[x[2]]()+'</svg><div style="padding:18px"><small>'+x[0]+'</small><h3>'+x[1]+'</h3>'+x[3]+'</div></article>').join(''));
-</script></body></html>
+</script><style>
+.hs{position:absolute;z-index:2;transform:translate(-50%,-50%);padding:6px 12px;border-radius:999px;border:2px solid #ffd27a;background:rgba(10,15,22,.78);color:#ffe9b8;font-size:14px;animation:pl 1.6s infinite}
+.hs.dn{opacity:.55;animation:none}
+@keyframes pl{50%{box-shadow:0 0 0 8px rgba(255,210,122,.25)}}
+@media(prefers-reduced-motion:reduce){.hs{animation:none}}
+#pzo{position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:10;display:flex;align-items:center;justify-content:center;padding:12px}
+.pr{border-top:1px solid var(--mut);padding:8px 0}
+.pc{margin:3px 4px 3px 0;padding:5px 10px;border-radius:999px;border:1px solid var(--mut);background:transparent;color:var(--fg)}
+.pc.on{background:var(--ac);color:#111;border-color:var(--ac)}
+.pb{height:8px;border-radius:6px;background:rgba(128,128,128,.35);margin:6px 0;overflow:hidden}
+.pb i{display:block;height:100%;background:var(--ac)}
+.nx{margin-top:6px;font-weight:700}
+.ab{margin-top:6px;display:flex;gap:6px;flex-wrap:wrap}
+#goal details{margin-top:4px}
+#pop{position:fixed;left:50%;top:42%;transform:translate(-50%,-50%);z-index:30;pointer-events:none;text-align:center;animation:pp 2.2s ease-out forwards}
+#pop div{font-size:clamp(30px,8vw,56px);font-weight:900;padding:8px 26px;margin:8px auto;border-radius:16px;color:#fff;text-shadow:0 2px 6px rgba(0,0,0,.5);width:max-content;max-width:92vw}
+#pop .up{background:rgba(28,150,78,.94)}
+#pop .dn{background:rgba(204,52,52,.94)}
+@keyframes pp{0%{opacity:0;transform:translate(-50%,-40%) scale(.8)}12%{opacity:1;transform:translate(-50%,-50%) scale(1.06)}80%{opacity:1;transform:translate(-50%,-50%) scale(1)}100%{opacity:0;transform:translate(-50%,-62%)}}
+@media(prefers-reduced-motion:reduce){#pop{animation:none}}
+</style><script>
+const MS={
+1:['弄清楚說明會的疑點',[['🔍 保存 2 份以上文件',s=>s.ev.filter(k=>E[k].ch==1).length>=2],['🧩 完成「兩份文件比對」',s=>s.fl.includes('pz1')],['💬 出示證物去問糖果',s=>s.fl.includes('ask1')]]],
+2:['說服同事一起核對',[['👥 找 2 個人談',s=>['g1','g2','g3'].filter(k=>s.fl.includes(k)).length>=2],['🔍 薪資試算＋備忘錄＋討論版',s=>['pay','memo','draft'].every(k=>s.ev.includes(k))],['🧩 分清草案、共識、簽署',s=>s.fl.includes('pz2')]]],
+3:['簽字前的最後機會',[['🔍 證物 5 份以上',s=>s.ev.length>=5],['◆ 支持 4 格以上',s=>s.sup>=4],['💬 在核對會提出具體要求',s=>s.ev.includes('recv')]]],
+4:['簽字之後的說明會',[['🧩 分清台上哪些問題沒答',s=>s.fl.includes('pz4')],['🔍 取得會議筆記',s=>s.ev.includes('minutes')],['♥ 信任維持 2 顆以上',s=>s.trust>=2]]],
+5:['重新站在一起',[['👥 建立可監督的組織',s=>s.fl.includes('org')],['🔍 取得章程草案',s=>s.ev.includes('charter')],['◆ 支持 4 格以上',s=>s.sup>=4]]],
+6:['把選擇交還給大家',[['🔍 取得方案全文',s=>s.ev.includes('plan')],['🧩 核對方案寫了什麼',s=>s.fl.includes('pz6')],['🗳 公開表決',s=>s.fl.includes('vote')]]]};
+let chg=[];
+const tt=m=>{const t=$('#toast');t.textContent=m;t.style.opacity=1;setTimeout(()=>t.style.opacity=0,1800)};
+function mis(){if(!st)return;const c=st.ch||1,m=MS[c],d=m[1].map(x=>x[1](st)),n=d.filter(Boolean).length,nx=m[1].find((x,i)=>!d[i]);
+$('#goal').innerHTML=`<b>📌 任務：${m[0]}</b>（${n}/${m[1].length}）<div class="pb"><i style="width:${n/m[1].length*100}%"></i></div><details ${innerWidth>700?'open':''}><summary>任務清單</summary>${m[1].map((x,i)=>(d[i]?'✅ ':'⬜ ')+x[0]).join('<br>')}</details><div class="nx">👉 下一步：${nx?nx[0]:'本章目標都完成了，繼續推進故事'}</div><div class="ab"><button class="sm" id="bgb">🎒 證物袋 ${st.ev.length}/${Object.keys(E).length}</button><button class="sm" id="ppl">👥 人物</button><button class="sm" id="sts">📋 我的狀態</button></div>`;
+$('#bgb').onclick=()=>nbk('evidence');$('#ppl').onclick=()=>nbk('people');$('#sts').onclick=status}
+function status(){const c=st.ch||1;modal(`<h3>📋 我的狀態</h3><p><b>身分</b>：雞雞HH｜台中員工<br><b>章節</b>：第${c}章〈${CT[c]}〉・${DT[c]}</p><p>♥ 信任 ${st.trust}/5：同事願意聽你說、一起核對。<br>◆ 支持 ${st.sup}/5：願意共同決定的會員有多少。<br>🔍 證物 ${st.ev.length}/${Object.keys(E).length}：打開證物袋，看每份能說什麼、不能說什麼。</p><p><small>以上都是小說裡的數值，沒有任何現實效力。</small></p><h4>最近的變化</h4>`+(chg.length?chg.map(x=>`<p>• 「${x.t}」→ ${x.d.join('、')}</p>`).join(''):'<p>還沒有。</p>'))}
+function hsR(){const o=$('#hsl');o&&o.remove();if(!cur||!cur.hs)return;const d=document.createElement('div');d.id='hsl';cur.hs.forEach(h=>{const own=st.ev.includes(h.ev),b=document.createElement('button');b.className='hs'+(own?' dn':'');b.style.left=h.x+'%';b.style.top=h.y+'%';b.textContent=(own?'✓ ':'🔍 ')+h.l;b.onclick=e=>{e.stopPropagation();own?tt('已經在證物袋裡了'):pick({t:'調查：'+h.l,g:st.id,fx:{ev:h.ev}})};d.appendChild(b)});$('#stage').appendChild(d)}
+S.c2l.n='pz2';
+S.c6c=S.c6b;
+S.hub.hs=[{x:50,y:24,l:'投影片',ev:'slide'},{x:18,y:56,l:'會後通知',ev:'notice'},{x:80,y:42,l:'議程註記',ev:'agenda'}];
+{const h=S.hub.t;S.hub.t=s=>h(s)+'點場景裡發光的物件調查，下面的選項也可以用。'}
+const _pk=pick;pick=function(o){if(o.msg){const m=o.msg;delete o.msg;modal(m,()=>pick(o));return}const a=[st.trust,st.sup,st.ev.length];_pk(o);if(o.g==='RESET')return;const d=[];if(st.trust!==a[0])d.push('♥ 信任 '+(st.trust>a[0]?'+':'')+(st.trust-a[0]));if(st.sup!==a[1])d.push('◆ 支持 '+(st.sup>a[1]?'+':'')+(st.sup-a[1]));if(st.ev.length>a[2])d.push('🔍 新證物');if(o.t&&d.length){chg.unshift({t:o.t.slice(0,26),d});chg.length=Math.min(chg.length,8)}};
+const _s3=show;show=function(id){_s3(id);hsR();mis()};
+function pop(d){const L=[];if(d[0])L.push([d[0],'♥ 信任']);if(d[1])L.push([d[1],'◆ 支持']);if(d[2]>0)L.push([d[2],'🔍 新證物']);if(!L.length)return;const q=$('#pop');q&&q.remove();const p=document.createElement('div');p.id='pop';p.innerHTML=L.map(x=>`<div class="${x[0]>0?'up':'dn'}">${x[1]} ${x[0]>0?'+':'−'}${Math.abs(x[0])}</div>`).join('');document.body.appendChild(p);setTimeout(()=>p.remove(),2200)}
+const _pk2=pick;pick=function(o){const a=[st.trust,st.sup,st.ev.length];_pk2(o);if(o.g==='RESET')return;pop([st.trust-a[0],st.sup-a[1],st.ev.length-a[2]])};
+BG.lounge=()=>G('#2b3544','#10161d')+R(0,330,800,120,'#161d26')+[0,1,2,3,4,5].map(i=>R(40+i*68,70,58,200,'#3d4b5c',4)+R(48+i*68,84,42,60,'#0f151c',3)+R(70+i*68,200,6,16,'#9fb0c2',2)).join('')+R(450,270,300,16,'#6a5444')+R(470,286,10,60,'#6a5444')+R(720,286,10,60,'#6a5444')+R(500,250,70,20,'#e6eef5',6)+R(600,250,70,20,'#e6eef5',6)+R(690,262,36,10,'#2d6a9f',3)+'<circle cx="708" cy="257" r="26" fill="#9bd0ff" opacity=".18"/>';
+BG.locker=()=>G('#202a36','#0b1016')+R(250,50,300,340,'#46566a',8)+R(266,70,268,300,'#0d1218',4)+R(300,90,200,6,'#6c7d92',3)+'<path d="M400 96v40" stroke="#9fb0c2" stroke-width="6"/>'+R(330,28,140,26,'#e6eef5',3)+T(400,47,'林澄',16,'#333',700)+R(280,330,240,8,'#1e2833',2)+R(0,400,800,50,'#0a0f14');
+BG.chairs=(f=.25)=>G('#223548','#0e1822')+R(250,60,300,110,'#e6eef5',6,.9)+T(400,125,'班別聯絡小組',22,'#17324a',700)+[0,1,2].map(r=>N12.map(i=>{const x=40+i*60+(r%2)*28,y=250+r*54,f2=((i*5+r*7)%10)/10<f;return(f2?`<circle cx="${x+18}" cy="${y-12}" r="${11+r*2}" fill="#0a1017"/>`:'')+R(x,y,36,26,f2?'#2f6f8f':'#203245',6)}).join('')).join('');
+BG.chairs2=()=>BG.chairs(1.1);
+BG.pay=()=>G('#27211d','#14100d')+R(200,50,400,350,'#f1ece2',4)+T(400,92,'薪資單（去識別）',20,'#444',700)+[0,1,2,3].map(i=>R(240,130+i*52,320,10,'#c9c2b4',2)+R(240,150+i*52,200,8,'#d9d3c6',2)).join('')+'<rect x="236" y="340" width="328" height="34" rx="4" fill="none" stroke="#2f8f6a" stroke-width="3"/>'+T(400,363,'入帳金額：與約定公式一致',15,'#2f6f4a',700);
+S.s0.f=s=>{s.ch=1};
+CT[7]='冬天的通知與空掉的位置';DT[7]='2022 年底〜2023 年';CT[8]='第一筆入帳';DT[8]='協議後三個月（小說推演）';
+MS[7]=['序章：認識這個工作場所',[['🧩 分清公告與猜測',s=>s.fl.includes('pz0')],['💬 決定怎麼使用林澄的備忘錄',s=>s.fl.includes('anon')||s.fl.includes('lcdone')],['🧩 參加會員活動、整理問題',s=>s.fl.includes('pz02')]]];
+MS[8]=['終章：確認有沒有做到',[['🧩 核對入帳與約定',s=>s.fl.includes('pz9')]]];
+Object.assign(S,{
+c7a:{b:'lounge',l:'mu',sp:'旁白',t:'2022 年底，夜班休息室。空餐盤、手機通知、半開的置物櫃。許沐把購物車裡的東西，一件件移除。',n:'c7b'},
+c7b:{b:'lounge',l:'mu',sp:'mu',t:'「公司說市場降溫、要縮減成本。你覺得……會輪到我們嗎？」',n:'c7c'},
+c7d:{b:'lounge',l:'mu',sp:'旁白',t:'你要怎麼提醒同事？',c:[{t:'立刻轉傳群組：「大家小心！」',g:'c7e',fx:{sup:1}},{t:'先問來源，再整理成一則清楚的提醒',g:'c7e',fx:{trust:1}}]},
+c7e:{b:'locker',sp:'旁白',t:'2023 年。林澄抱著紙箱離開，置物櫃空了，名牌還貼在上面。你留下來，也留下一個問題：下一次是誰？',n:'c7f'},
+c7f:{b:'locker',r:'lc',sp:'lc',t:'「我當時最怕的不是少一筆，是不知道下次要犧牲什麼。備忘錄你可以用，但別說出我的名字。」',c:[{t:'「謝謝。我只會用去識別的版本。」',g:'c7g',fx:{trust:1,flag:'anon'}},{t:'「我先拍下來，之後再決定怎麼用。」',g:'c7g',fx:{trust:-1,flag:'lcdone'}}]},
+c7g:{b:'lounge',r:'fk',sp:'fk',t:'「別怕，把疑問寫下來，我們一起整理。」法克替同事安排了諮詢。糖果端著便當走來：「先吃，冷了更難吞。」',n:'c7h'},
+c7h:{b:'lounge',r:'cd',sp:'cd',t:'這些人，在你最慌的時候陪過你，這也是你後來相信他們的原因。你決定……',c:[{t:'參加會員活動，幫忙整理問題',g:'c7i',fx:{sup:1}},{t:'先觀望，下次再說',g:'c7i'}]},
+c7i:{b:'chairs',sp:'旁白',t:'班別聯絡小組從六個人，慢慢變成幾十個人。空椅子，一排一排被坐滿。',n:'c7j'},
+c7k:{b:'chairs2',l:'mu',sp:'mu',t:'「我也想帶新同事來。」椅子坐滿了。九月說明會的燈，亮了。',n:'s0'}});
+S.c6c.n='c8a';
+begin=function(s){$('#title').style.display='none';if(s.sup==null)s.sup=1;if(s.id==='s0'&&!s.met.length&&!s.ev.length)s.id='c7a';st=s;show(s.id)};
+reset=function(){st=mk();show('c7a')};
+const rw=document.createElement('button');rw.className='sm';rw.textContent='🌐 真實資源';rw.style.display='none';$('#bar').append(rw);
+const RL=[['光光猴守護平台','https://micronmonkey.github.io/','可查看最新公告、QA、活動與後續資訊','來源已核對'],['新工會 QA（測試版）','https://micronmonkey.github.io/Connected_Union_QA.html','兩線並進、會員與程序的常見問題；不是法律諮詢','來源已核對'],['關係企業工會入會申請','https://micron-affiliated-enterprises-union.github.io/membership-form/','開啟頁面不等於入會；頁面含個資與簽名欄','來源已核對'],['11/3 記者會暨說明會報名（公開填寫版）','https://docs.google.com/forms/d/e/1FAIpQLSd6-wvSV2brvOfbbG_FNVAtHl_MxOZdyddepiZoHQCpw0FpHg/viewform','時間地點與是否仍開放，以主辦公告為準','活動狀態以目的網站為準'],['聲援連署表單（原提供連結）','https://docs.google.com/forms/d/e/1FAIpQLSd2a1Jvw-yx5g0wJOseh3IER0SAKFGweV7Euc9fGIANadPjlQ/viewform','標題為「緊急撤銷授權與暫緩簽署連署書」，涉及身分與授權，並非單純聲援意向','用途待確認']];
+rw.onclick=()=>modal('<h3>🌐 真實世界資源</h3><p>你即將開啟真實世界的網站。該頁可能涉及報名、連署、入會或個人資料。是否參與由你自行決定，與遊戲進度、信任值及結局無關。活動與申請狀態以目的網站最新公告為準。</p>'+RL.map(x=>`<p><b>${x[0]}</b>（${x[3]}）<br><small>${x[2]}</small><br><a href='${x[1]}' target='_blank' rel='noopener noreferrer'>開啟網站 ↗</a></p>`).join('')+'<p><small>本作為虛構故事，與上述網站沒有背書關係，也不會預填或傳送任何資料。</small></p>');
+const _s4=show;show=function(id){_s4(id);const c=st.ch||1,n=c==7?'序章':c==8?'終章':'第'+c+'章';$('#bar b').textContent='晶片沉默者・'+n+'〈'+CT[c]+'〉・'+DT[c];const r=$('#chapterRibbon');if(r)r.textContent=n+' / '+DT[c];rw.style.display=(c>=4&&c<=6)||c==8||id==='fin'?'':'none'};
+</script>
+<style>#stats{display:none}#pop .up{font-size:clamp(18px,4.4vw,28px)}</style><script>
+const pf=(s,a)=>a.forEach(k=>{if(!s.fl.includes(k))s.fl.push(k)});
+function say(m){const q=$('#pop');q&&q.remove();const p=document.createElement('div');p.id='pop';p.innerHTML='<div class="up">'+m+'</div>';document.body.appendChild(p);setTimeout(()=>p.remove(),2600)}
+pop=function(d){if(d[2]>0)say('🔍 新證物')};
+C.mb=['小蔡','最後登記提問的會員','#7a6a3a','#2a2a2a'];
+BG.desk=()=>G('#243040','#0e141b')+R(0,330,800,120,'#161d26')+R(120,230,560,40,'#6a5444')+R(120,270,560,70,'#4a3b32')+R(180,190,70,40,'#e6eef5',3)+R(300,196,120,34,'#e6eef5',3)+R(460,170,22,60,'#2c3a4b',4)+R(560,205,80,25,'#f0b84a',3)+T(400,130,'提問登記・候補單',22,'#e6eef5',700);
+BG.door=()=>G('#101a26','#06090d')+R(300,60,200,300,'#ffe9b0',6,.9)+R(340,100,120,260,'#fff6d8',4,.8)+R(0,360,800,90,'#0a1118')+R(110,200,60,160,'#1b2a3a',8)+R(630,200,60,160,'#1b2a3a',8);
+BG.pay1=()=>BG.pay().replace('入帳金額：與約定公式一致','入帳：部分改善，其餘未載明').replace(/#2f8f6a/g,'#c9a02f').replace(/#2f6f4a/g,'#9a7a1f');
+BG.pay0=()=>BG.pay().replace('入帳金額：與約定公式一致','本期沒有新增給付').replace(/#2f8f6a/g,'#c0392b').replace(/#2f6f4a/g,'#c0392b');
+const O=(t,fn,g='qs')=>({t,g,do:fn}),F=(k,m)=>q=>{pf(q,[k]);m&&say(m)},BK=()=>O('先回到場上',()=>{});
+const QB={seat:'hall',aisle:'corr',desk:'desk',door:'door'},QT={seat:'座位區。台上法克正準備結束這一輪，主持人說還有最後一輪提問。',aisle:'側邊走道。何岑低頭整理著會員的共同問題。',desk:'服務台。糖果在核對提問登記與候補單。',door:'會場門口。最後一位登記提問的小蔡站在這裡，手裡握著寫好的問題。'};
+const QN={
+muc:q=>({b:'hall',l:'mu',sp:'mu',t:q.fl.includes('mu_with')?'「我跟著你。不過我只想在台下，不想被推上去。」':'「我在這裡。需要的時候，我會舉手。」',c:[BK()]}),
+mu:q=>({b:'hall',l:'mu',sp:'mu',t:'「他剛剛說大家會一起決定，可是接下來什麼時候再開會？我想問，但我不想一個人站到台前。」',c:[O('「一起去找何岑，把你的疑問併進共同提問。」',F('mu_with','許沐願意跟在你身邊')),O('「你在台下支持我就好。」',F('mu_stay','你尊重了他的界線，許沐留在座位上')),BK()]}),
+plan:q=>({b:'docs',sp:'旁白',t:'流程表：21:00 起有會後小組討論，在服務台旁；最後一輪提問由會員代表與候補者輪流。',c:[Object.assign(O('帶著這張流程表',F('saw_plan')),{fx:{ev:'agenda'}}),BK()]}),
+hc:q=>{const w=q.fl.includes('mu_with');return{b:'corr',l:w?'mu':undefined,r:'hc',sp:'hc',t:w?'「許沐也在。你們的疑問，正好和共同問題的第三題重疊，我會在台上一起提。」':'「我整理了本輪的共同問題。你的疑問，是不是和第三題重複？」',c:[O(w?'「麻煩你，請你在台上問出來。」':'「是重複的，併進去吧。」',F('hc_agree','何岑答應在台上提出你們的問題')),O('「我想自己問。」',()=>{}),BK()]}},
+cd:q=>({b:'desk',r:'cd',sp:'cd',t:'「提問已排定，不能插隊。想補位，在候補單寫名字，還要最後一位登記的人同意合併重複題目。」',c:[O('「請把我排進候補。」',F('wl','糖果把你排進候補單')),O('「空手先問：會後有沒有公開的安排？」',F('saw_plan','糖果說：會後 21:00 有小組討論')),...(q.ev.includes('agenda')?[O('出示流程表：「最後一輪結束後，法克會回覆，對嗎？」',F('cd_note','糖果答應盯著法克的當場承諾'))]:[]),BK()]}),
+mb:q=>({b:'door',r:'mb',sp:'mb',t:'「我也想問下一次開會的事，但我只想講我自己的版本。」',c:[O('「重複的部分合併，你的那題仍由你問。」',F('mb_merge','小蔡同意合併重複的部分，保留自己的題目')),O('「那就各問各的。」',()=>{}),BK()]}),
+cmA:q=>({b:'hall',sp:'旁白',t:'主持人準備結束提問。確定現在加入這輪提問？',c:[O('確定',()=>{},'qA'),O('再看看',()=>{})]}),
+cmB:q=>({b:'desk',sp:'旁白',t:'最後一輪即將結束。確定現在上前補位發言？',c:[O('確定',()=>{},'qB'),O('再看看',()=>{})]}),
+cmC:q=>({b:'door',sp:'旁白',t:'今晚不搶這個位置，改去會後小組。全場今晚不會聽到你的問題。確定？',c:[O('確定',()=>{},'qC'),O('再看看',()=>{})]})};
+function qActs(){const s=st,f=k=>s.fl.includes(k),sc=s.sc||'seat',A=[],w=f('mu_with');
+const ex=(to,l,x)=>A.push({t:l,l:'→ '+l,x,y:50,g:'qs',do:q=>{q.sc=to}}),ta=(id,l,x,y,i)=>A.push({t:l,l:i+' '+l,x,y,g:'qd',do:q=>{S.qd=QN[id](q)}});
+if(w)ta('muc','許沐（同行）',30,60,'🧍');
+if(sc==='seat'){if(!w)ta(f('mu_stay')?'muc':'mu',f('mu_stay')?'許沐（在台下）':'許沐',22,42,'🗣');ta('plan','流程表',72,28,'📄');ex('aisle','走道',90);ex('desk','服務台',55);if(f('hc_agree'))ta('cmA','加入這輪提問',50,14,'🎤')}
+if(sc==='aisle'){ta('hc','何岑',50,40,'🗣');ex('seat','座位區',12);ex('desk','服務台',88);if(f('hc_agree'))ta('cmA','加入這輪提問（與何岑）',50,14,'🎤')}
+if(sc==='desk'){ta('cd','糖果',50,40,'🗣');ex('seat','座位區',12);ex('door','會場門口',88);if(f('wl')&&f('mb_merge'))ta('cmB','上前補位發言',50,14,'🎤')}
+if(sc==='door'){ta('mb','小蔡',50,40,'🗣');ex('desk','服務台',12);if(f('saw_plan'))ta('cmC','等到會後的小組討論',50,14,'🚪')}
+return A}
+S.qs={qs:1,sp:'旁白',c:[],f:s=>{const sc=s.sc||'seat';S.qs.b=QB[sc];S.qs.l=s.fl.includes('mu_with')||sc==='seat'?'mu':undefined;S.qs.r={aisle:'hc',desk:'cd',door:'mb'}[sc];S.qs.t=QT[sc]}};
+S.qd={sp:'旁白',t:'',c:[]};
+S.qA={b:'hall',r:'hc',sp:'hc',f:s=>{pf(s,['q_pub','rt_A','p_hc']);S.qA.l=s.fl.includes('mu_with')?'mu':undefined},t:'何岑舉手，糖果按流程把她帶上前，兩個疑問一起問出來。法克回答：「下一次說明會，十月二十日前會公開時間與版本。」許沐把日期記進手機。（代表發言，你不能追加所有個人疑問；何岑的承諾需要追蹤。）',n:'c2a'};
+S.qB={b:'hall',r:'cd',sp:'旁白',f:s=>{pf(s,['q_pub','rt_B','known','p_cd']);S.qB.l=s.fl.includes('mu_with')?'mu':undefined},t:'你走到台前，說出一句短問題。群眾安靜，法克必須回應：「這一點，下一輪說明會會談，細節現在還不完整。」回答不完整，但問題已公開留下，糖果把它列入下一輪。從此有人記得你，也有人不想和你扯上關係。',n:'c2a'};
+S.qC={b:'corr',r:'cd',sp:'cd',f:s=>pf(s,['q_priv','rt_C','p_cd']),t:'你去了會後小組。糖果在小圈裡聽完：「我寫進會後紀錄，下週給你書面答覆。」今晚全場沒有聽到，但你保住了和許沐的關係，也拿到第一個明確的回覆。',n:'c2a'};
+S.s0.t='九月說明會，台中廠。全場剛喊完口號。你是台中員工「雞雞HH」。這一輪，你想讓一個問題被聽見。';
+S.s3={b:'hall',l:'mu',r:'cd',sp:'cd',f:s=>{s.sc='seat'},t:'糖果主持：「最後一輪提問，已登記的會員依序發言。」許沐低聲說：「他剛剛說大家會一起決定，可是接下來什麼時候再開會？」',n:'qs'};
+S.c2a.t='散場後，下一次通知換了問題標題。你想：「同一個問題，為什麼換了名字？」接下來幾週，你一個個去找人談。';
+Object.assign(S,{
+c7c:{b:'lounge',l:'mu',sp:'旁白',t:'休息室裡，手機同時亮起兩則訊息：群組有人說「下個月夜班會被裁」，林澄傳來一句「你還好嗎」。你先回哪一則？',c:s=>[{t:'先陪許沐，把群組的傳聞念給他聽',g:'c7d',do:q=>{pf(q,['pre_mu']);say('許沐說：「謝謝你沒笑我。」')}},{t:'先回林澄，問她現在好不好',g:'c7d',do:q=>{pf(q,['pre_lc']);say('林澄回：「還撐得住，你自己小心。」')}}]},
+c7j:{b:'chairs',sp:'旁白',t:'會員活動需要人手。你能承接哪件具體的事？',c:s=>[{t:'整理夜班的會議摘要',g:'c7k',do:q=>{pf(q,['task_note']);say('夜班同事第一次看得到會議摘要')}},{t:'幫不同班別協調開會時間',g:'c7k',do:q=>{pf(q,['task_time']);say('一位育兒的同事，第一次能來開會')}},{t:'公布小組收支',g:'c7k',do:q=>{pf(q,['task_fee']);say('有人說：這樣我比較放心')}}]},
+pz2:{b:'docs',l:'mu',r:'jj',sp:'jj',t:'許沐陪你坐在婕貽對面。她逐頁說明：這份是討論中的草案，這份是雙方同意的文字，簽署才會生效。三種狀態，已自動記進你的筆記。',n:'c2m'},
+c3f:{b:'sign',r:'fk',sp:'fk',t:'法克：「我如果什麼都拿回去重來，公司不一定還給這個條件。」你有兩件不同的事要問：版本是否定稿，以及誰授權接受。',c:s=>[{t:'問版本：請他說明現在流傳的是哪一版',g:'c3b'},{t:'問授權：請何岑調出會員授權的紀錄',g:'c3b',do:q=>pf(q,['ask_auth'])},{t:'先不問，直接進公開核對會',g:'c3b'}]},
+c4c:{b:'hall',l:'mu',sp:'旁白',t:'台上的回答沒有解決會員的疑問。人群分成幾堆：生氣的、沉默的、想離開的。你只能先陪一邊。',c:s=>[{t:'陪生氣的同事，把問題寫在紙上，請糖果收進下一輪',g:'c4e',fx:{ev:'minutes'},do:q=>pf(q,['p_cd2'])},{t:'邀何岑上台，回應還沒解決的疑問',g:'c4e',do:q=>pf(q,['p_hc2'])},{t:'先陪想離開的同事走出會場',g:'c4e',do:q=>pf(q,['p_mu2'])}]},
+c6b:{b:'vote',sp:'旁白',t:'會員說明現場，方案送到大家手上。你不能替會員投票，但可以決定誰來回應還沒解決的疑問。',c:s=>[{t:'邀對應窗口回應尚未解決的疑問',g:'c6c',do:q=>pf(q,['asked_win'])},{t:'保留異議，請會員自己看完再決定',g:'c6c',do:q=>pf(q,['dissent'])}]},
+c8a:{b:'pay',sp:'旁白',t:'小說推演：協議後三個月。你打開薪資單。',f:s=>{s.res=s.fl.includes('lone')||s.fl.includes('stop')||!s.fl.includes('vote')?'none':s.fl.includes('org')&&s.fl.includes('q_pub')&&!s.fl.includes('solo')?'full':'part'},c:s=>[{t:'翻開薪資單',g:{full:'c8f',part:'c8p',none:'c8n'}[s.res]}]},
+c8f:{b:'pay',sp:'旁白',t:'補充給付已依約定公式入帳，數字與文件逐項對得上。',n:'fin2'},
+c8p:{b:'pay1',sp:'旁白',t:'只有部分改善入帳，其餘條款文件沒有寫，仍待追問。',n:'fin2'},
+c8n:{b:'pay0',sp:'旁白',t:'這一期沒有新增給付。會議紀錄停在簽署那天，沒有人再回覆你。',n:'fin2'},
+fin2:{b:'dawn',sp:'旁白',f:s=>{const r=s.res,d=s.fl.includes('delay');S.fin2.ti=r==='full'?(d?'簽前改變':'簽後挽回'):r==='part'?'有限改善':'行動瓦解';S.fin2.t=(r==='full'?'協議：'+(d?'舊草案未簽，新方案經會員批准':'已簽，後續補充協議經會員批准')+'。入帳：已依公式入帳。組織：會員會議持續運作。許沐留了下來；林澄的名字始終沒有公開。':r==='part'?'協議：已簽，部分改善入帳，其餘仍待追問。入帳：部分。組織：維持，但下一次談判要重來。許沐說他還願意再看一次文件；林澄仍匿名。':'協議：照原條件執行。入帳：沒有新增給付。組織：散了。許沐退出了聯絡小組；林澄關上了聯絡方式。')+'（以上皆為小說推演。）'},t:'',c:[{t:'重新開始',g:'RESET'},{t:'翻閱證物袋',g:'NB'}]}});
+S.c3r.f=s=>{if(s.fl.includes('q_pub')&&(s.fl.includes('mu_with')||s.fl.includes('hc_agree'))&&s.ev.includes('recv')&&!s.fl.includes('delay'))s.fl.push('delay')};
+S.c3r.t=s=>s.fl.includes('delay')?'何岑宣布：「版本、授權與會員確認補齊前，暫緩簽署，改開公開審議。」這不是勝負，只是把決定留給會員。':'協議仍在隔天簽署。不是 Game Over：你保留了同伴、紀錄，以及下一步能做的事。';
+const HT={seat:['看看誰也在意這個問題。','許沐有話想說，但他不想一個人站出來。','可以請許沐一起找何岑，或到服務台看候補。'],aisle:['何岑手上有本輪的發言安排。','她在整理會員的共同問題。','把疑問併進共同提問，或回座位另找方法。'],desk:['糖果負責排定發言順序。','已排定的人不能插隊，但候補單可以登記。','登記候補，再到門口找最後一位登記的會員談合併。'],door:['最後登記提問的會員在這裡。','他想保留自己的題目。','重複的部分可以合併，他仍問自己的那題。']};
+const FT={mu_with:'許沐願意留在你身邊',mu_stay:'你尊重了許沐不上台的界線',hc_agree:'何岑答應把你的疑問帶上台',wl:'糖果把你排進候補',mb_merge:'小蔡同意合併重複題目',saw_plan:'你知道會後 21:00 有小組討論',cd_note:'糖果答應盯著法克的當場承諾',q_pub:'你的問題在全場被公開提出',q_priv:'你在會後小組得到書面回覆的承諾',p_hc:'待追蹤：何岑要追蹤法克承諾的說明時間',p_cd:'待追蹤：糖果說下一輪會列入你的問題',pre_mu:'你先陪了許沐',pre_lc:'你先回了林澄'};
+let hi=0,lsc='';
+status=function(){modal('<h3>📋 事件回顧</h3><p>雞雞HH｜台中員工</p>'+(Object.keys(FT).filter(k=>st.fl.includes(k)).map(k=>'<p>• '+FT[k]+'</p>').join('')||'<p>還沒有需要記錄的事。</p>')+'<p><small>這些都是小說裡的事件，沒有任何現實效力。</small></p>')};
+mis=function(){if(!st)return;const c=st.ch||1,sc=st.sc||'seat',q=cur&&cur.qs;$('#goal').innerHTML='<b>📌 '+(c===1?'讓這個問題在散場前被聽見。':MS[c][0])+'</b>'+(q?'<div class="ab"><button class="sm" id="hnt">💡 提示</button><span id="hx"></span></div>':'')+'<div class="ab"><button class="sm" id="bgb">🎒 證物袋 '+st.ev.length+'</button><button class="sm" id="ppl">👥 人物</button><button class="sm" id="sts">📋 事件回顧</button></div>';$('#bgb').onclick=()=>nbk('evidence');$('#ppl').onclick=()=>nbk('people');$('#sts').onclick=()=>status();if(q)$('#hnt').onclick=()=>{$('#hx').textContent=' '+HT[sc][Math.min(hi++,2)]}};
+function qhs(){const o=$('#hsl');o&&o.remove();if(!cur||!cur.qs)return;const d=document.createElement('div');d.id='hsl';qActs().forEach(a=>{const b=document.createElement('button');b.className='hs';b.style.left=a.x+'%';b.style.top=a.y+'%';b.textContent=a.l;b.onclick=e=>{e.stopPropagation();pick(a)};d.appendChild(b)});$('#stage').appendChild(d)}
+const _pk3=pick;pick=function(o){if(o.do){const d=o.do;delete o.do;d(st)}_pk3(o)};
+const _s5=show;show=function(id){_s5(id);if(st.sc!==lsc){lsc=st.sc;hi=0}qhs();mis()};
+</script>
+</body></html>
