@@ -18,6 +18,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: Validate game scripts and baseline tests
+        run: |
+          node --check game/cinematic.js
+          node --check game/caseboard.js
+          node --check game/upgrade.js
+          node --check game/engine.js
+          node tests/smoke.cjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
