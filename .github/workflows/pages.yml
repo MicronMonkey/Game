@@ -20,11 +20,19 @@ jobs:
       - uses: actions/checkout@v4
       - name: Validate game scripts and baseline tests
         run: |
+          node --check game/art.js
+          node --check game/characters.js
+          node --check game/evidence.js
+          node --check game/story.js
+          node --check game/chapters.js
+          node --check game/scenery.js
+          node --check game/navigation.js
           node --check game/cinematic.js
           node --check game/caseboard.js
           node --check game/upgrade.js
           node --check game/engine.js
           node tests/smoke.cjs
+          node tests/director.cjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
