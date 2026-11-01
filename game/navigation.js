@@ -48,7 +48,7 @@ function scene(){
  else if(ch===6&&scUsed&&['floor','table'].includes(sc))p=sc;
  else if(ch===7)p=bg==='chairs2'?'chairs':bg;
  else if(ch===4&&bg==='boardroom')p='boardroom';
- else if(ch===5)p=bg==='desk'?'plan':bg==='night'?'night':bg;
+ else if(ch===5)p=bg==='desk'?'plan':bg==='night'?'night':bg==='dayShift'?'day':bg==='otherFab'?'other':bg;
  else if(ch===8)p=bg==='dawn'?'dawn':'pay';
  else p=bg;
  const matches=(atlas.find(x=>x[0]===ch)||[0,[]])[1];
