@@ -10,9 +10,9 @@ DOCUMENTS.signedF=['簽署訊息紀錄','10 / 21 先簽署','日期背景參考�
 DOCUMENTS.authorizedF=['會員授權紀錄','10 / 22 後授權','小說虛構・現實待查'];
 function addEvidence(k,s){if(!s.ev.includes(k))s.ev.push(k)}
 function mark(k){if(!st.fl.includes(k))st.fl.push(k)}
-const earlier=S.c4a;
+const earlierHandler=S.c4a.f;
 S.c4a.t='【架空故事・10 月 21 日】會議室裡，九個人的身影消失在玻璃反光後。公司與工會已簽署一份協議。你卻仍拿不到會員正式授權紀錄。公開新聞中的簽署日期是真實背景，秘密會議與人物關係均屬小說。';
-S.c4a.f=function(s){s.ch=4;addEvidence('signedF',s);if(earlier.f)earlier.f(s)};
+S.c4a.f=function(s){s.ch=4;addEvidence('signedF',s);if(earlierHandler)earlierHandler(s)};
 S.c4a.n='c4auth';
 S.c4auth={
  b:'boardroom',sp:'旁白',
