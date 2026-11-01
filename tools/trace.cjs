@@ -5,7 +5,7 @@
 const fs=require('fs'),vm=require('vm'),path=require('path'),crypto=require('crypto');
 const args=process.argv.slice(2),opt=k=>{const i=args.indexOf(k);return i<0?null:args[i+1]};
 const file=args.find((a,i)=>!a.startsWith('--')&&!(i&&args[i-1].startsWith('--')))||'index.html';
-const RUNS=+(opt('--runs')||400),SEED=+(opt('--seed')||12345),OUT=opt('--out'),FULL=opt('--full');
+const RUNS=+(opt('--runs')||400),STEPS=+(opt('--steps')||400),SEED=+(opt('--seed')||12345),OUT=opt('--out'),FULL=opt('--full');
 const html=fs.readFileSync(file,'utf8');
 const scripts=[...html.matchAll(/<script(?:\s+src="([^"]+)")?>([\s\S]*?)<\/script>/g)].map(m=>m[1]?{name:m[1],code:fs.readFileSync(path.join(path.dirname(file),m[1]),'utf8')}:{name:'inline',code:m[2]});
 let seed=SEED>>>0;const rnd=()=>{seed=(seed+0x6D2B79F5)>>>0;let t=seed;t=Math.imul(t^t>>>15,t|1);t^=t+Math.imul(t^t>>>7,t|61);return((t^t>>>14)>>>0)/4294967296},ri=n=>Math.floor(rnd()*n);
@@ -72,7 +72,7 @@ for(let r=0;r<RUNS;r++){
  const how=r%3;
  if(how===0)g.reg.go.click();else if(how===1)g.run('st=mk();chg=[];show("c7a")');else{g.reg.rs.click()}
  let L='r'+r+' s0';rec(g,L);let ok=0;
- for(let k=0;k<400;k++){
+ for(let k=0;k<STEPS;k++){
   L='r'+r+' s'+(k+1);
   if(r%4===3&&k===15){g=boot();rec(g,L+' reboot');g.reg.ct.click();rec(g,L+' continue');continue}
   if(g.reg.mod.cls.has('on')){closeModal(g,L);continue}
