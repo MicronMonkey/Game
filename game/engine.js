@@ -78,7 +78,7 @@ const tz=document.createElement('div');tz.id='toast';$('#stage').appendChild(tz)
 $('#goal').textContent=INTRO_GOAL;
 $('#ec').parentNode.onclick=()=>st&&nbk();
 $('#tr').parentNode.onclick=()=>st&&modal('<h3>♥ 信任</h3><p>同事願意相信你的程度（0〜5）。拿出具體問題、承認自己說太快會上升；沒有證據就指控、嘲笑別人會下降。信任太低，同事不會跟你一起查證。</p>');
-$('#sp').parentNode.onclick=()=>st&&modal('<h3>◆ 支持</h3><p>願意一起核對、一起決定的會員有多少（0〜5）。傾聽、公開可核對的資料會上升；私下決定、替別人做決定會下降。第 3 章要 4 格以上，才有機會暫緩簽約。</p>');
+$('#sp').parentNode.onclick=()=>st&&modal('<h3>◆ 支持</h3><p>願意一起核對、一起決定的會員有多少（0〜5）。傾聽、公開可核對的資料會上升；私下決定、替別人做決定會下降。支持越高，越容易有人協助你蒐集證據及參與後續公開討論；10/21 簽署是固定劇情，不能靠數值阻止。</p>');
 
 // ── 上方工具列（依序：配樂、對話紀錄、文字速度、存檔燈、時間線、真實資源、背景說明）──
 const bar=$('#bar'),audio=document.createElement('div');audio.className='audioControl';audio.innerHTML='<button class="sm" id="music" aria-pressed="false">♫ 開啟配樂</button><input id="volume" type="range" min="0" max="60" value="25" aria-label="音樂音量">';bar.append(audio);
