@@ -1,12 +1,12 @@
 # 晶片沉默者：九人的協議
 
-第一章《共體時艱》繁體中文試玩版：四間可旋轉 CSS 3D 房間、角色對話、七份證據、三道推理、三種章節結局及三種失敗結局、本機自動存檔。約 10–20 分鐘，尚未做玩家時長測試。
+《晶片沉默者》繁體中文劇情試玩版（導演強化版，約 30 分鐘）：四間可旋轉 CSS 3D 房間、角色對話、七份證據、三道推理、三種章節結局及三種失敗結局、本機自動存檔。設計目標約 30 分鐘；實際玩家測時仍待驗證。
 
 直接開啟 index.html 即可遊玩；建議在此目錄執行 `python -m http.server 8080`，再開啟 http://localhost:8080 。不需安裝套件或編譯。Google Fonts 無法載入時會使用系統字型。存檔限同裝置瀏覽器，部分瀏覽器會限制 file:// 存檔。
 
 GitHub Pages：Settings → Pages → Source 選 GitHub Actions。推送 main 或手動執行附帶工作流程。預期網址 https://micronmonkey.github.io/Game/ ，以 Actions 成功回報為準，未成功前不代表已上線。相對資源路徑支援 /Game/ 子目錄。
 
-完整設計見 [DESIGN.md](DESIGN.md)。驗證指令：`node tests/smoke.cjs`。
+包含序章、六章與終章；10/21 簽署為固定事件，玩家只能讓虛構幹部動搖、保留證據與影響後續組織。CG 場景新增夜班、日班、跨廠、會場、辦公室及簽署會議室；遊戲提供場景地圖、已去過與已交談標記，對話有新內容才可再次點擊。\n\n完整設計見 [DESIGN.md](DESIGN.md)。驗證指令：`node tests/smoke.cjs`（另有 GitHub Actions 腳本語法檢查及新導覽測試）。
 
 ## 史實與虛構
 
