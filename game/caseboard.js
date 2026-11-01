@@ -20,14 +20,15 @@ S.c4auth={
  f:function(s){addEvidence('authorizedF',s)},
  c:function(s){
  return s.fl.includes('dateverified')?[
- {t:'帶著核對過的時間線進入隔日說明會',g:'c4b',fx:{flag:'asked_authority'}},
+ {t:'帶著核對過的時間線找糖果與法克當面對質',g:'c4confront',fx:{flag:'asked_authority'}},
  {t:'再次查看 10/21 → 10/22 證據板',g:'c4auth',do:function(){setTimeout(openBoard,120)}}
  ]:[
  {t:'打開證據板，比對簽署日和授權日',g:'c4auth',do:function(){setTimeout(openBoard,120)}},
- {t:'暫時保留疑點，進入公開說明會',g:'c4b',fx:{flag:'unverified_authority'}}
+ {t:'暫時保留疑點，找糖果與法克問清楚',g:'c4confront',fx:{flag:'unverified_authority'}}
  ];
  }
 };
+S.c4confront={b:'boardroom',l:'cd',r:'fk',sp:'cd',t:'【小說・翌日晚間】糖果把一份回覆放到桌上，法克的手邊竟有字句完全相同的另一份。兩份都帶著公司幕僚高興的修訂標記。你終於看見他們私下聯繫的痕跡；但聯繫、協商與不當勾結仍是三件不同的事。法克冷冷地問：「你要拿什麼來證明？」',c:[{t:'展示 10/21 簽署、10/22 授權及版本來源，要求逐項說明',g:'c4b',fx:{trust:1,sup:1,flag:'challenge_documented'}},{t:'沒有原件也當眾指控所有人拿錢背叛',g:'c4b',fx:{trust:-2,sup:-1,flag:'challenge_reckless'},do:function(s){s.exposure=Math.min(5,(s.exposure||0)+2)}},{t:'不公布身分資訊，保留問題清單給會員共同核對',g:'c4b',fx:{trust:1,flag:'challenge_protected'}}]};
 function frame(html){modal('<div class="case-kicker">CASE 021–022 / EVIDENCE BOARD</div><h3>先簽署？後授權？</h3>'+html)}
 function answer(ok){
  if(!ok){
