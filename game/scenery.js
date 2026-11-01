@@ -76,7 +76,7 @@ BG.vote=function(){
  +'<path d="M0 247L400 143L800 247V319H0Z" fill="#385165"/>'
  +R(249,49,302,118,'#e5e9e3',4)+T(400,101,'會員自主表決',28,'#20475b',700)+T(400,137,'DISCUSS • VERIFY • VOTE',14,'#426379',600)
  +[0,1,2,3,4,5].map(i=>'<g transform="translate('+(48+i*121)+' 0)"><circle cx="42" cy="284" r="19" fill="#132635"/><path d="M6 360Q8 315 42 315Q76 315 79 360Z" fill="'+(i%2?'#2e4a60':'#1d374b')+'"/><rect x="14" y="362" width="65" height="75" rx="5" fill="#254053"/></g>').join('')
- +R(322,215,155,120,'#3c697e',6)+R(358,204,85,12,'#081b2c',2)+T(400,284,'投票箱',23,'#f5efde',700);
+ +R(322,215,155,120,'#3c697e',6)+R(358,204,85,12,'#081b2c',2)+T(400,284,'投票箱',23,'#f5efde',700);};
 const oldSign=BG.sign;
 BG.sign=function(){return BG.boardroom()+R(258,307,281,17,'#e6d9c2',2,.7)+'<path d="M382 289L458 304" stroke="#161b25" stroke-width="6" stroke-linecap="round"/>'+T(400,374,'AGREEMENT / 虛構簽署現場',14,'#e7cb99',700)};
 const oldChairs=BG.chairs;
