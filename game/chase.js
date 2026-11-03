@@ -301,7 +301,12 @@ function Chase(layer,onEnd,LV){
   const gt=L(150,1125);text('大門 GATE',gt.x,gt.y,14,'#fff',800);
   solids.forEach(building);
   pickups.forEach(p=>{ctx.fillStyle='#fff8';ctx.beginPath();ctx.arc(p.x,p.y,p.r*1.3,0,7);ctx.fill();text('📝',p.x,p.y,19,'#fff');});
-  crowd.forEach(c=>{ctx.fillStyle='#16242e';ctx.beginPath();ctx.arc(c.x,c.y+2,c.r,0,7);ctx.fill();ctx.fillStyle=c.c;ctx.beginPath();ctx.arc(c.x,c.y,c.r,0,7);ctx.fill();if(c.alert>0)text('！',c.x,c.y-17,17,'#ffd23f',900);});
+  // 圍觀同事：灰色小人（頭＋身體），避免被誤會成可以吃的點數
+  crowd.forEach(c=>{ctx.fillStyle='#0005';ctx.beginPath();ctx.ellipse(c.x,c.y+11,8,3.2,0,0,7);ctx.fill();
+   ctx.fillStyle=c.alert>0?'#9aa4ab':'#6b757c';ctx.strokeStyle='#2a3137';ctx.lineWidth=1.6;
+   ctx.beginPath();ctx.moveTo(c.x-8,c.y+11);ctx.quadraticCurveTo(c.x-8,c.y-3,c.x,c.y-3);ctx.quadraticCurveTo(c.x+8,c.y-3,c.x+8,c.y+11);ctx.closePath();ctx.fill();ctx.stroke();
+   ctx.beginPath();ctx.arc(c.x,c.y-9,5.4,0,7);ctx.fill();ctx.stroke();
+   if(c.alert>0)text('！',c.x,c.y-24,17,'#ffd23f',900);});
   const hid=hidden(),near=dist(P,F)<100;
   if(!hid||near)person(F,'#b5432e','#e2e1dd','法克',hid?.55:1);
   else if(F.seenT>0&&F.seen){ctx.globalAlpha=Math.min(1,F.seenT);ctx.strokeStyle='#ffd23f';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(F.seen.x,F.seen.y,F.r*1.6,0,7);ctx.stroke();ctx.setLineDash([]);text('？',F.seen.x,F.seen.y,16,'#ffd23f');ctx.globalAlpha=1;}
