@@ -31,6 +31,7 @@ jobs:
           node --check game/caseboard.js
           node --check game/upgrade.js
           node --check game/engine.js
+          node --check game/chase.js
           node --check game/drill.js
           node --check game/mobile.js
           node tests/smoke.cjs

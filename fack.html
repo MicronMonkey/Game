@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>全民找法克｜11/3 疏散演練小遊戲</title>
+<meta name="description" content="11/3 台中廠區疏散演練，神隱很久的法克出現了！你是桃園會長，抱著一箱連署書，75 秒內追上他。手機就能玩。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="全民找法克｜11/3 疏散演練小遊戲">
+<meta property="og:description" content="神隱很久的法克在集合區出現了！抱著連署書，75 秒內追上他。你能拿到「法克剋星」嗎？">
+<meta property="og:url" content="https://micronmonkey.github.io/Game/fack.html">
+<meta property="og:image" content="https://micronmonkey.github.io/Game/fack-og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0b1620">
+<style>
+:root{--bg:#0b1620;--fg:#f3eee4;--ac:#f1d09a;--mut:#a9c3cf}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:radial-gradient(ellipse at 50% 0,#294152,#0b1620 70%);color:var(--fg);font-family:system-ui,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;overflow:hidden}
+#wrap{height:100dvh;display:flex;flex-direction:column;max-width:980px;margin:0 auto;padding:env(safe-area-inset-top,0px) 0 env(safe-area-inset-bottom,0px)}
+header{display:flex;align-items:center;gap:8px;padding:8px 12px}
+header b{flex:1;font-size:15px;color:#ffd98f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header a,header button{font:600 13px system-ui;color:#eef3f5;background:#1d3747;border:1px solid #4f7385;border-radius:999px;padding:7px 12px;text-decoration:none;white-space:nowrap;cursor:pointer}
+#stage{position:relative;flex:1;min-height:0;margin:0 8px 8px;border:1px solid #496070;border-radius:12px;overflow:hidden;background:#0b1620}
+#hero{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:24px;gap:8px;overflow-y:auto;background:linear-gradient(0deg,#07111df5 35%,#07111d99),url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><path d='M0 20H40M20 0V40' stroke='%23ffffff10'/></svg>")}
+#hero .kick{font:12px ui-monospace,monospace;letter-spacing:3px;color:#f1b99b}
+#hero h1{margin:0;font:900 clamp(38px,11vw,72px) system-ui;color:#fff1df;text-shadow:0 4px 24px #000;letter-spacing:4px}
+#hero p{margin:2px 0;max-width:460px;line-height:1.8;color:#dce8ec;font-size:15px}
+#hero .best{font-weight:800;color:#9fe3c4}
+#hero .go{margin-top:10px;border:0;border-radius:12px;background:var(--ac);color:#102338;padding:16px 40px;font:900 20px system-ui;cursor:pointer;box-shadow:0 8px 30px #0008}
+#hero small{color:var(--mut);font-size:11px;line-height:1.7;max-width:460px;margin-top:10px}
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 60px);transform:translateX(-50%);background:var(--ac);color:#111;font-weight:800;padding:8px 16px;border-radius:999px;z-index:50;opacity:0;transition:opacity .3s;pointer-events:none}
+</style>
+</head><body>
+<div id="wrap">
+ <header><b>🏃 全民找法克・11/3 疏散演練</b><button id="share-top" type="button">分享</button><a href="./">完整劇情版</a></header>
+ <div id="stage">
+  <div id="hero">
+   <div class="kick">11.03 / 台中廠區疏散演練</div>
+   <h1>全民找法克</h1>
+   <p>警報響起，大家往集合區移動。<br>神隱很久的法克，竟然出現在人群另一頭！</p>
+   <p>你是桃園會長，抱著一箱連署書。<br><b>75 秒內追上他，把連署書交到他手上。</b></p>
+   <p class="best" id="best"></p>
+   <button class="go" id="go" type="button">開始追法克</button>
+   <small>本遊戲為虛構創作，人物、事件與廠區地圖皆為想像，不代表任何真實人物的行為或真實廠區配置。也是《晶片沉默者：九人的協議》第 5 章的一段。</small>
+  </div>
+ </div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="game/chase.js"></script>
+<script>
+(function(){
+'use strict';
+const KEY='fack-chase-best',URL_='https://micronmonkey.github.io/Game/fack.html';
+const $=s=>document.querySelector(s);
+let best=null;try{best=JSON.parse(localStorage.getItem(KEY)||'null')}catch(e){}
+function showBest(){$('#best').textContent=best?'你的最佳紀錄：'+best.used+' 秒・'+FackChase.rank(best.used)+(best.plays?'（玩了 '+best.plays+' 次）':''):'';}
+showBest();
+function toast(t){const e=$('#toast');e.textContent=t;e.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.opacity=0,2200);}
+async function share(r){
+ const text=r&&r.win?'我在「全民找法克」花 '+r.used+' 秒追上法克，拿到「'+FackChase.rank(r.used).replace(/^\S+\s/,'')+'」！你要幾秒？':'11/3 疏散演練，法克出現了！一起來「全民找法克」：';
+ try{if(navigator.share){await navigator.share({title:'全民找法克',text,url:URL_});return;}}catch(e){if(e&&e.name==='AbortError')return;}
+ try{await navigator.clipboard.writeText(text+' '+URL_);toast('已複製分享文字與連結');}catch(e){prompt('複製這段文字分享：',text+' '+URL_);}
+}
+$('#share-top').onclick=()=>share(null);
+let game=null;
+function start(){
+ $('#hero').style.display='none';
+ if(game)game.close();
+ game=FackChase.mount($('#stage'),{
+  introExtra:best?'<p style="color:#9fe3c4;font-weight:800">最佳紀錄：'+best.used+' 秒</p>':'',
+  onQuit:api=>{api.close();game=null;$('#hero').style.display='';},
+  onEnd:r=>{
+   const plays=(best&&best.plays||0)+1;
+   if(r.win&&(!best||!best.used||r.used<best.used)){if(best&&best.used)r.best='🎉 新紀錄！（之前 '+best.used+' 秒）';best={used:r.used,plays};}
+   else{best=Object.assign(best||{},{plays});if(r.win&&best.used)r.best='最佳紀錄 '+best.used+' 秒';}
+   try{localStorage.setItem(KEY,JSON.stringify(best))}catch(e){}
+   showBest();
+  },
+  buttons:r=>[
+   {label:r.win?'再玩一次':'再追一次',onClick:(r,api)=>api.retry()},
+   {label:'分享成績',alt:true,onClick:r=>share(r)},
+   {label:'玩完整劇情版 →',alt:true,onClick:()=>{location.href='./';}}
+  ]
+ });
+}
+$('#go').onclick=start;
+window.fackChaseState=()=>game?game.state():null;
+})();
+</script>
+</body></html>
