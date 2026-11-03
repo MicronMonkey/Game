@@ -21,7 +21,10 @@ assert.equal(typeof cw.FackChase.mount,'function','小遊戲引擎要能被主�
 assert.equal(cw.FackChase.TIME,75);
 assert.deepEqual(Object.keys(cw.FackChase.LEVELS),['easy','normal','hard','hell'],'簡單、中等、難、地獄四種難度');
 assert(cw.FackChase.LEVELS.easy.spd<cw.FackChase.LEVELS.normal.spd&&cw.FackChase.LEVELS.normal.spd<cw.FackChase.LEVELS.hard.spd&&cw.FackChase.LEVELS.hard.spd<cw.FackChase.LEVELS.hell.spd,'越難法克越快');
-assert.match(cw.FackChase.rank(10),/法克剋星/);assert.match(cw.FackChase.rank(70),/有追到就是贏/);
+assert.match(cw.FackChase.rank(10),/法克剋星/);
+for(const l of Object.values(cw.FackChase.LEVELS))assert(l.candy>0&&l.cspd>0,'每個難度都有糖糖');
+assert.equal(typeof cw.FackChase.Sound.sfx,'function','有音效');
+const cs=read('game/chase.js');assert.match(cs,/cz-joy/,'手機用右下角搖桿');assert.doesNotMatch(cs,/function pt\(e\)/,'不再用點畫面移動');assert.match(cw.FackChase.rank(70),/有追到就是贏/);
 const page=read('fack.html');assert.match(page,/game\/chase\.js/);assert.match(page,/og:title/);assert.doesNotMatch(page,/game\/story\.js/,'獨立頁不載入主劇情');
 assert.doesNotMatch(page,/href="\.\/"|location\.href/,'獨立頁先不導流到完整劇情版');assert.doesNotMatch(read('index.html'),/fack\.html/,'主遊戲先不導流到小遊戲');
 assert.match(read('index.html'),/game\/chase\.js[\s\S]*game\/drill\.js/,'引擎要在 drill.js 之前載入');
