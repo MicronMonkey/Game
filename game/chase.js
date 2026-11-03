@@ -24,9 +24,9 @@ const WW=760,WH=1150,VIEW=430,TIME=75;
 // 難易度：spd 法克一般速度、spr 衝刺速度、st 衝刺秒數、tired 喘氣秒數、tsp 喘氣速度、hide 最久躲幾秒、time 限時、pick 連署書出現間隔、see 同事發現距離
 const LEVELS={
  easy:{id:'easy',n:'簡單',e:'🌱',spd:116,spr:172,st:1.2,tired:2.8,tsp:55,hide:3,time:90,pick:3,see:120},
- normal:{id:'normal',n:'中等',e:'🏃',spd:134,spr:198,st:1.8,tired:2.0,tsp:65,hide:5,time:75,pick:4,see:100},
- hard:{id:'hard',n:'難',e:'🔥',spd:146,spr:220,st:2.4,tired:1.4,tsp:85,hide:8,time:70,pick:6,see:80},
- hell:{id:'hell',n:'地獄',e:'💀',spd:158,spr:242,st:3.2,tired:0.9,tsp:105,hide:11,time:60,pick:8,see:60}
+ normal:{id:'normal',n:'中等',e:'🏃',spd:124,spr:186,st:1.5,tired:2.4,tsp:60,hide:4,time:80,pick:3.5,see:110},
+ hard:{id:'hard',n:'難',e:'🔥',spd:136,spr:205,st:2.0,tired:1.8,tsp:72,hide:6,time:70,pick:5,see:90},
+ hell:{id:'hell',n:'地獄',e:'💀',spd:150,spr:232,st:2.8,tired:1.1,tsp:95,hide:10,time:60,pick:7,see:65}
 };
 const cars=[];[660,775,890].forEach((y,r)=>[0,1,2,3].forEach(i=>{if(!(r===1&&i===2))cars.push({t:'car',n:'',x:96+i*70,y,w:42,h:72,c:['#d8dde2','#5b6f86','#a33c3c','#2f3a46','#e6d7b8'][(i+r*2)%5]});}));
 const SOLIDS=[
