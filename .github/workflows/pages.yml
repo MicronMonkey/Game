@@ -31,8 +31,12 @@ jobs:
           node --check game/caseboard.js
           node --check game/upgrade.js
           node --check game/engine.js
+          node --check game/chase.js
+          node --check game/drill.js
+          node --check game/mobile.js
           node tests/smoke.cjs
           node tests/director.cjs
+          node tests/drill.cjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
