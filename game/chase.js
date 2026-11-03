@@ -14,20 +14,28 @@ const CSS='.cz-layer{position:absolute;inset:0;z-index:15;background:#0b1620;col
 +'.cz-card{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:22px;background:#07111bea;gap:6px;overflow-y:auto}'
 +'.cz-card h2{margin:0;font:800 clamp(24px,6vw,38px) system-ui;color:#ffd98f}.cz-card p{margin:4px 0;line-height:1.7;font-size:15px;max-width:440px}'
 +'.cz-card ul{text-align:left;font-size:14px;line-height:1.8;padding-left:20px;margin:6px 0 10px;max-width:440px}'
++'.cz-levels{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:440px}.cz-levels button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 8px!important}.cz-levels button b{font-size:17px}.cz-levels button small{font-size:12px;font-weight:600;opacity:.8}.cz-levels button:not(.on){background:#20394c!important;color:#f7f4ea!important;border:1px solid #8297a4!important}'
 +'.cz-card .rank{font:800 20px system-ui;color:#9fe3c4;margin:4px 0}'
 +'.cz-card .row{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:6px}'
 +'.cz-card button{border:0;border-radius:10px;background:#f1d09a;color:#102338;padding:13px 22px;font-weight:800;font-size:16px;cursor:pointer}.cz-card button.alt{background:#20394c;color:#f7f4ea;border:1px solid #8297a4}';
 
 // ── 地圖（直式座標 760 × 1150；橫向螢幕時整張轉 90 度）──
 const WW=760,WH=1150,VIEW=430,TIME=75;
-const cars=[];[660,775,890].forEach((y,r)=>[0,1,2,3].forEach(i=>{if(!(r===1&&i===2))cars.push({t:'car',n:'',x:44+i*76,y,w:42,h:72,c:['#d8dde2','#5b6f86','#a33c3c','#2f3a46','#e6d7b8'][(i+r*2)%5]});}));
+// 難易度：spd 法克一般速度、spr 衝刺速度、st 衝刺秒數、tired 喘氣秒數、tsp 喘氣速度、hide 最久躲幾秒、time 限時、pick 連署書出現間隔、see 同事發現距離
+const LEVELS={
+ easy:{id:'easy',n:'簡單',e:'🌱',spd:116,spr:172,st:1.2,tired:2.8,tsp:55,hide:3,time:90,pick:3,see:120},
+ normal:{id:'normal',n:'中等',e:'🏃',spd:134,spr:198,st:1.8,tired:2.0,tsp:65,hide:5,time:75,pick:4,see:100},
+ hard:{id:'hard',n:'難',e:'🔥',spd:146,spr:220,st:2.4,tired:1.4,tsp:85,hide:8,time:70,pick:6,see:80},
+ hell:{id:'hell',n:'地獄',e:'💀',spd:158,spr:242,st:3.2,tired:0.9,tsp:105,hide:11,time:60,pick:8,see:60}
+};
+const cars=[];[660,775,890].forEach((y,r)=>[0,1,2,3].forEach(i=>{if(!(r===1&&i===2))cars.push({t:'car',n:'',x:96+i*70,y,w:42,h:72,c:['#d8dde2','#5b6f86','#a33c3c','#2f3a46','#e6d7b8'][(i+r*2)%5]});}));
 const SOLIDS=[
- {t:'fab',n:'FAB 無塵室廠房',x:30,y:30,w:440,h:250},
- {t:'gas',n:'氣體站',x:540,y:30,w:190,h:110},
- {t:'tower',n:'冷卻水塔',x:540,y:170,w:190,h:95},
- {t:'office',n:'辦公大樓',x:30,y:430,w:300,h:140},
- {t:'canteen',n:'員工餐廳',x:430,y:410,w:300,h:110},
- {t:'shed',n:'機車棚',x:645,y:770,w:85,h:165},
+ {t:'fab',n:'FAB 無塵室廠房',x:80,y:30,w:390,h:250},
+ {t:'gas',n:'氣體站',x:530,y:30,w:160,h:110},
+ {t:'tower',n:'冷卻水塔',x:530,y:170,w:160,h:95},
+ {t:'office',n:'辦公大樓',x:80,y:430,w:250,h:140},
+ {t:'canteen',n:'員工餐廳',x:430,y:410,w:260,h:110},
+ {t:'shed',n:'機車棚',x:640,y:770,w:70,h:165},
  {t:'truck',n:'消防車',x:450,y:800,w:150,h:46},
  {t:'guard',n:'警衛室',x:560,y:1050,w:130,h:62}
 ].concat(cars);
@@ -36,6 +44,7 @@ const PLAZA={x:575,y:670,rx:125,ry:78};
 const SHOUT=['「法克在{}！」','「往{}那邊跑了！」','「我看到他了，在{}！」','「{}！快！」'];
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 
+const LDESC={easy:'法克跑得慢、常喘氣',normal:'剛剛好的追逐',hard:'跑得快、很會躲',hell:'比你還快，只能靠衝刺和堵死角'};
 function rank(sec){return sec<=15?'🏆 法克剋星':sec<=30?'🥇 追緝高手':sec<=50?'🥈 連署書快遞':'🥉 有追到就是贏';}
 
 function mount(host,opts){
@@ -45,28 +54,33 @@ function mount(host,opts){
  layer.innerHTML='<div class="cz-top"><div><b>🏃 全民找法克</b><small>'+(opts.subtitle||'追上法克，把連署書交到他手上')+'</small></div><div class="cz-stats"><span class="cz-time">⏱ '+TIME+'</span><span class="cz-sheets">📦 120 份</span></div><button class="cz-quit" aria-label="不追了">✕</button></div><canvas class="cz-cv" role="img" aria-label="台中廠區追逐畫面"></canvas><div class="cz-msg" aria-live="polite"></div>';
  host.append(layer);
  let game=null;
- const api={layer,close(){if(game)game.stop();game=null;layer.remove();},retry(){clearCard();game=new Chase(layer,end);},state(){return game&&game.state?game.state():null;}};
+ let lv=LEVELS[opts.level]||LEVELS.normal;
+ const api={layer,get level(){return lv;},close(){if(game)game.stop();game=null;layer.remove();},retry(level){if(level&&LEVELS[level])lv=LEVELS[level];clearCard();game=new Chase(layer,end,lv);},state(){return game&&game.state?game.state():null;}};
  layer.querySelector('.cz-quit').onclick=()=>{if(game)game.end(false,true);else if(opts.onQuit)opts.onQuit(api);};
  function clearCard(){const o=layer.querySelector('.cz-card');if(o)o.remove();}
  function card(html){clearCard();const d=document.createElement('div');d.className='cz-card';d.innerHTML=html;layer.append(d);return d;}
  function end(r){
   r.rank=r.win?rank(r.used):'';
   if(opts.onEnd)opts.onEnd(r,api);
-  const d=card(r.win?'<h2>追到了！</h2><div class="rank">'+r.rank+'</div><p>花了 <b>'+r.used+'</b> 秒，手上有 <b>'+r.sheets+'</b> 份連署書。'+(r.best?'<br>'+r.best:'')+'</p><div class="row"></div>'
-   :'<h2>'+(r.quit?'先不追了':'演練結束')+'</h2><p>'+(r.quit?'你停下腳步，喘了口氣。':'廣播響起，人群散去。')+'<br>法克又神隱了。</p><div class="row"></div>');
+  const d=card(r.win?'<h2>追到了！</h2><div class="rank">'+r.rank+'</div><p>難度 <b>'+r.level.e+' '+r.level.n+'</b>・花了 <b>'+r.used+'</b> 秒，手上有 <b>'+r.sheets+'</b> 份連署書。'+(r.best?'<br>'+r.best:'')+'</p><div class="row"></div>'
+   :'<h2>'+(r.quit?'先不追了':'演練結束')+'</h2><p>難度 '+r.level.e+' '+r.level.n+'<br>'+(r.quit?'你停下腳步，喘了口氣。':'廣播響起，人群散去。')+'<br>法克又神隱了。</p><div class="row"></div>');
   const row=d.querySelector('.row');
-  (opts.buttons?opts.buttons(r,api):[{label:'再追一次',onClick:()=>api.retry()}]).forEach((b,i)=>{const el=document.createElement('button');el.textContent=b.label;if(b.alt)el.className='alt';el.onclick=()=>b.onClick(r,api);row.append(el);if(i===0)setTimeout(()=>el.focus(),0);});
+  (opts.buttons?opts.buttons(r,api):[{label:'再追一次',onClick:()=>api.retry()},{label:'換難度',alt:true,onClick:()=>api.menu()}]).forEach((b,i)=>{const el=document.createElement('button');el.textContent=b.label;if(b.alt)el.className='alt';el.onclick=()=>b.onClick(r,api);row.append(el);if(i===0)setTimeout(()=>el.focus(),0);});
  }
- const d=card('<h2>全民找法克</h2><p>'+(opts.intro||'你是桃園會長，抱著一箱連署書。<br>法克會逃、也會躲，追上他就算成功。')+'</p><ul><li><b>手機：</b>手指點或拖曳畫面，會長就往那裡跑。</li><li><b>電腦：</b>方向鍵或 WASD。</li><li>法克躲進🌳樹叢就看不見；同事看到他會喊「！」，畫面邊緣的箭頭會指向他。</li><li>撿起同事遞來的 📝 連署書，會長會衝刺一下。</li><li>法克衝刺完會喘 💦，那就是你的機會。</li></ul>'+(opts.introExtra||'')+'<div class="row"><button class="cz-start">開始追！</button></div>');
- d.querySelector('.cz-start').onclick=()=>api.retry();
- setTimeout(()=>d.querySelector('.cz-start').focus(),0);
+ function menu(){
+  const d=card('<h2>全民找法克</h2><p>'+(opts.intro||'你是桃園會長，抱著一箱連署書。<br>法克會逃、也會躲，追上他就算成功。')+'</p><ul><li><b>手機：</b>手指點或拖曳畫面，會長就往那裡跑。</li><li><b>電腦：</b>方向鍵或 WASD。</li><li>法克躲進🌳樹叢就看不見；同事看到他會喊「！」，畫面邊緣的箭頭會指向他。</li><li>撿起同事遞來的 📝 連署書，會長會衝刺一下。</li><li>法克衝刺完會喘 💦，那就是你的機會。</li></ul>'+(opts.introExtra?opts.introExtra(lv):'')+'<p><b>選擇難易度</b></p><div class="cz-levels">'+Object.values(LEVELS).map(L=>'<button class="cz-start'+(L.id===lv.id?' on':'')+'" data-lv="'+L.id+'"><b>'+L.e+' '+L.n+'</b><small>'+L.time+' 秒・'+LDESC[L.id]+'</small></button>').join('')+'</div>');
+  d.querySelectorAll('.cz-start').forEach(b=>b.onclick=()=>api.retry(b.dataset.lv));
+  setTimeout(()=>(d.querySelector('.cz-start.on')||d.querySelector('.cz-start')).focus(),0);
+ }
+ api.menu=menu;menu();
  return api;
 }
 
-function Chase(layer,onEnd){
+function Chase(layer,onEnd,LV){
+ LV=LV||LEVELS.normal;
  const cv=layer.querySelector('.cz-cv'),ctx=cv.getContext('2d'),self=this;
- let VW=0,VH=0,k=1,rot=false,W=WW,H=WH,camX=0,camY=0,raf=0,last=0,over=false,time=TIME,sheets=120,boost=0,msgT=0,pickT=3,shoutCD=0;
- const P={x:0,y:0,r:15},F={x:0,y:0,r:15,dx:0,dy:-1,st:2.0,tired:0,mode:'run',bush:null,seen:null,seenT:0,hideT:0,hideCD:0},target={on:false,x:0,y:0},keys={};
+ let VW=0,VH=0,k=1,rot=false,W=WW,H=WH,camX=0,camY=0,raf=0,last=0,over=false,time=LV.time,sheets=120,boost=0,msgT=0,pickT=3,shoutCD=0;
+ const P={x:0,y:0,r:15},F={x:0,y:0,r:15,dx:0,dy:-1,st:LV.st,tired:0,mode:'run',bush:null,seen:null,seenT:0,hideT:0,hideCD:0},target={on:false,x:0,y:0},keys={};
  let solids=[],bushes=[],crowd=[],pickups=[],plaza=null;
  // 直式座標 → 目前世界座標
  const L=(x,y)=>rot?{x:y,y:WW-x}:{x,y};
@@ -97,23 +111,45 @@ function Chase(layer,onEnd){
  function nearest(p){let best='集合點',bd=dist(p,plaza)-60;solids.forEach(s=>{const d=dist(p,{x:s.x+s.w/2,y:s.y+s.h/2})-Math.max(s.w,s.h)/2;if(d<bd){bd=d;best=s.t==='car'?'停車場':s.n}});bushes.forEach(b=>{const d=dist(p,b)-b.r;if(d<bd){bd=d;best='樹叢'}});return best;}
  function msg(t){const m=layer.querySelector('.cz-msg');if(!m)return;m.textContent=t;m.classList.add('on');msgT=2.2;}
  // 法克的逃跑 AI：16 個方向中挑「離會長遠、四周開闊、不撞牆」的路線；甩開了就找樹叢躲。
+ // ── 法克的逃跑 AI：格子尋路 ──
+ // 地圖切成 20×20 的格子；每格記錄「離障礙物多遠」(clear)。
+ // 每隔一下算出法克與會長走到每格要幾步，挑「法克明顯先到、四周開闊、離會長遠」的格子當目標，沿著路徑跑，不會鑽進死巷。
+ const CS=20,N8=[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]];
+ let GW=0,GH=0,blocked=null,clear=null,dT=null,planT=0,goal=-1,gridRot=null;
+ function buildGrid(){
+  GW=Math.ceil(W/CS);GH=Math.ceil(H/CS);blocked=new Uint8Array(GW*GH);clear=new Float32Array(GW*GH);const q=[];
+  for(let j=0;j<GH;j++)for(let i=0;i<GW;i++){const x=i*CS+CS/2,y=j*CS+CS/2,id=j*GW+i;if(x<14||y<14||x>W-14||y>H-14||inSolid(x,y,12)){blocked[id]=1;clear[id]=0;q.push(id);}else clear[id]=1e9;}
+  for(let h=0;h<q.length;h++){const id=q[h],i=id%GW,j=(id/GW)|0;for(let k=0;k<4;k++){const a=i+N8[k][0],b=j+N8[k][1];if(a<0||b<0||a>=GW||b>=GH)continue;const n=b*GW+a;if(clear[n]>clear[id]+1){clear[n]=clear[id]+1;q.push(n);}}}
+  dT=null;goal=-1;
+ }
+ function cellOf(x,y){const i=Math.max(0,Math.min(GW-1,Math.floor(x/CS))),j=Math.max(0,Math.min(GH-1,Math.floor(y/CS)));let id=j*GW+i;if(!blocked[id])return id;
+  for(let r=1;r<4;r++)for(let dj=-r;dj<=r;dj++)for(let di=-r;di<=r;di++){const a=i+di,b=j+dj;if(a<0||b<0||a>=GW||b>=GH)continue;const n=b*GW+a;if(!blocked[n])return n;}return id;}
+ function bfs(src){const d=new Float32Array(GW*GH).fill(1e9),q=[src];d[src]=0;
+  for(let h=0;h<q.length;h++){const id=q[h],i=id%GW,j=(id/GW)|0;for(let k=0;k<8;k++){const a=i+N8[k][0],b=j+N8[k][1];if(a<0||b<0||a>=GW||b>=GH)continue;const n=b*GW+a;if(blocked[n])continue;
+   if(k>=4&&(blocked[j*GW+a]||blocked[b*GW+i]))continue;const c=d[id]+(k>=4?1.41:1);if(c<d[n]){d[n]=c;q.push(n);}}}
+  return d;}
+ function plan(){
+  if(F.mode==='hide'&&F.bush){goal=cellOf(F.bush.x,F.bush.y);dT=bfs(goal);return;}
+  // 逃跑地圖：先給每格「−1.2 × 離會長步數 − 開闊加分」，再沿著可走路徑擴散（Dijkstra 鬆弛），法克往數值最低的鄰格走。
+  const dP=bfs(cellOf(P.x,P.y)),N=GW*GH,S=new Float32Array(N);
+  for(let id=0;id<N;id++)S[id]=blocked[id]?1e9:-1.2*Math.min(dP[id],70)-2.2*Math.min(clear[id],4)+(dP[id]<3?6:0);
+  for(let pass=0;pass<24;pass++){let ch=false;
+   for(let dir=0;dir<2;dir++){
+    for(let t=0;t<N;t++){const id=dir?N-1-t:t;if(blocked[id])continue;const i=id%GW,j=(id/GW)|0;let v=S[id];
+     for(let k=0;k<8;k++){const a=i+N8[k][0],b=j+N8[k][1];if(a<0||b<0||a>=GW||b>=GH)continue;const n=b*GW+a;if(blocked[n])continue;if(k>=4&&(blocked[j*GW+a]||blocked[b*GW+i]))continue;const c=S[n]+(k>=4?1.41:1);if(c<v)v=c;}
+     if(v<S[id]-1e-3){S[id]=v;ch=true;}}}
+   if(!ch)break;}
+  dT=S;
+ }
  function fleeDir(){
-  const dP=dist(F,P);let best=null,bs=-1e9;
   if(F.mode==='hide'&&F.bush&&dist(F,F.bush)<F.bush.r*.35)return{x:0,y:0};
-  for(let i=0;i<16;i++){
-   const a=i/16*Math.PI*2,dx=Math.cos(a),dy=Math.sin(a),cx=F.x+dx*60,cy=F.y+dy*60;
-   if(cx<F.r||cy<F.r||cx>W-F.r||cy>H-F.r||inSolid(cx,cy,F.r*.8))continue;
-   if(F.mode==='hide'&&F.bush){const hs=-dist({x:cx,y:cy},F.bush)*1.5+dist({x:cx,y:cy},P)*.3+Math.random()*4;if(hs>bs){bs=hs;best={x:dx,y:dy};}continue;}
-   let s=dist({x:cx,y:cy},P);
-   s+=Math.min(cx,W-cx,cy,H-cy,160)*1.1-Math.hypot(cx-W/2,cy-H/2)*.18;
-   s+=(dx*F.dx+dy*F.dy)*14;
-   if(dP<100){const tx=(P.x-F.x)/dP,ty=(P.y-F.y)/dP;s+=Math.abs(dx*ty-dy*tx)*55;}
-   let open=0;for(let j=0;j<8;j++){const b=j/8*Math.PI*2,ox=cx+Math.cos(b)*55,oy=cy+Math.sin(b)*55;if(ox>F.r&&oy>F.r&&ox<W-F.r&&oy<H-F.r&&!inSolid(ox,oy,F.r*.8))open++;}
-   let run=60;while(run<240){const rx=F.x+dx*(run+20),ry=F.y+dy*(run+20);if(rx<F.r||ry<F.r||rx>W-F.r||ry>H-F.r||inSolid(rx,ry,F.r*.8))break;run+=20;}
-   s+=open*9+Math.min(run,160)*.25+dist({x:F.x+dx*run,y:F.y+dy*run},P)*.45+Math.random()*8;
-   if(s>bs){bs=s;best={x:dx,y:dy};}
-  }
-  return best||{x:-F.dx,y:-F.dy};
+  if(!dT)return{x:0,y:0};
+  const c=cellOf(F.x,F.y),i=c%GW,j=(c/GW)|0;let best=c,bd=dT[c];
+  for(let k=0;k<8;k++){const a=i+N8[k][0],b=j+N8[k][1];if(a<0||b<0||a>=GW||b>=GH)continue;const n=b*GW+a;if(!blocked[n]&&dT[n]<bd){bd=dT[n];best=n;}}
+  let tx=(best%GW)*CS+CS/2,ty=((best/GW)|0)*CS+CS/2;
+  if(best===c){if(F.mode==='hide'&&F.bush){tx=F.bush.x;ty=F.bush.y;}else return{x:0,y:0};}
+  const dx=tx-F.x,dy=ty-F.y,l=Math.hypot(dx,dy);if(l<1)return{x:0,y:0};
+  return{x:dx/l,y:dy/l};
  }
  function step(dt){
   time-=dt;if(time<=0){time=0;self.end(false);return;}
@@ -125,13 +161,15 @@ function Chase(layer,onEnd){
   collide(P);
   const dP=dist(F,P);
   if(F.tired>0)F.tired-=dt;
-  else if(dP<110&&F.st>0){F.st-=dt;if(F.st<=0){F.st=0;F.tired=1.8;msg('法克喘不過氣了 💦 快追！');}}
-  else F.st=Math.min(2.0,F.st+dt*(F.mode==='hide'?.6:time>35?.45:.3));
+  else if(dP<110&&F.st>0){F.st-=dt;if(F.st<=0){F.st=0;F.tired=LV.tired;msg('法克喘不過氣了 💦 快追！');}}
+  else F.st=Math.min(LV.st,F.st+dt*(F.mode==='hide'?.6:time>35?.45:.3));
   const sprint=F.tired<=0&&dP<110&&F.st>0;
-  F.hideCD=Math.max(0,F.hideCD-dt);if(hidden()){F.hideT+=dt;if(F.hideT>6){F.mode='run';F.hideT=0;F.hideCD=4;msg('法克待不住，從樹叢衝出來了！');}}
+  F.hideCD=Math.max(0,F.hideCD-dt);if(hidden()){F.hideT+=dt;if(F.hideT>LV.hide){F.mode='run';F.hideT=0;F.hideCD=4;msg('法克待不住，從樹叢衝出來了！');}}
   if(F.mode!=='hide'&&F.hideCD<=0&&dP>230&&!sprint){const c=bushes.filter(b=>dist(b,P)>220&&openness(b)>=7).sort((a,b)=>(dist(a,F)-dist(a,P)*.5)-(dist(b,F)-dist(b,P)*.5))[0];if(c){F.mode='hide';F.bush=c;}}
   if(F.mode==='hide'&&dP<130)F.mode='run';
-  const spd=F.tired>0?70:sprint?215:150;
+  const spd=F.tired>0?LV.tsp:sprint?LV.spr:LV.spd;
+  if(!blocked||gridRot!==rot||GW!==Math.ceil(W/CS)){buildGrid();gridRot=rot;}
+  planT-=dt;if(planT<=0||!dT){plan();planT=dP<160?.15:.35;}
   const d=fleeDir();F.x+=d.x*spd*dt;F.y+=d.y*spd*dt;if(d.x||d.y){F.dx=d.x;F.dy=d.y;}
   collide(F);
   if(F.mode==='run')F.bush=null;
@@ -140,10 +178,10 @@ function Chase(layer,onEnd){
    c.t-=dt;if(c.t<=0){c.a+=(Math.random()-.5)*2;c.t=1+Math.random()*2;}
    const ex=c.x+Math.cos(c.a)*18*dt,ey=c.y+Math.sin(c.a)*18*dt;c.x=ex;c.y=ey;collide(c);if(Math.abs(ex-c.x)>.01||Math.abs(ey-c.y)>.01)c.a+=Math.PI;
    c.alert=Math.max(0,c.alert-dt);
-   if(dist(c,F)<(hid?100:75)){c.alert=1.2;if(hid){F.seen={x:F.x,y:F.y};F.seenT=1.8;}if(shoutCD<=0&&dist(F,P)>150){shoutCD=4;msg(SHOUT[Math.floor(Math.random()*SHOUT.length)].replace('{}',nearest(F)));}}
+   if(dist(c,F)<(hid?LV.see:LV.see*.75)){c.alert=1.2;if(hid){F.seen={x:F.x,y:F.y};F.seenT=1.8;}if(shoutCD<=0&&dist(F,P)>150){shoutCD=4;msg(SHOUT[Math.floor(Math.random()*SHOUT.length)].replace('{}',nearest(F)));}}
   });
   if(!hid){F.seen={x:F.x,y:F.y};F.seenT=1.8;}else F.seenT-=dt;
-  pickT-=dt;if(pickT<=0&&pickups.length<3){const q=free();if(dist(q,P)<VIEW*.9)pickups.push(Object.assign(q,{r:13}));pickT=4+Math.random()*3;}
+  pickT-=dt;if(pickT<=0&&pickups.length<3){const q=free();if(dist(q,P)<VIEW*.9)pickups.push(Object.assign(q,{r:13}));pickT=LV.pick+Math.random()*3;}
   pickups=pickups.filter(p=>{if(dist(p,P)<P.r+p.r){sheets+=30;boost=2.6;msg('同事塞來 30 份連署書！會長衝刺 💨');return false;}return true;});
   if(dist(P,F)<P.r+F.r*.95)self.end(true);
  }
@@ -192,7 +230,7 @@ function Chase(layer,onEnd){
   ctx.fillStyle='#6f8a6a';ctx.fillRect(0,0,W,H);
   // 鋪面、道路、停車格
   const pave=(x,y,w,h,c)=>{const a=L(x,y),b=L(x+w,y+h);ctx.fillStyle=c;ctx.fillRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(b.x-a.x),Math.abs(b.y-a.y));};
-  pave(0,290,WW,580,'#8d9aa0');pave(20,640,330,320,'#55636b');pave(0,1000,WW,150,'#8d9aa0');
+  pave(0,290,WW,580,'#8d9aa0');pave(70,640,290,320,'#55636b');pave(0,1000,WW,150,'#8d9aa0');
   road(0,300,WW,60);road(360,360,52,790);road(0,1090,WW,52);
   ctx.strokeStyle='#ffffff55';ctx.lineWidth=2;cars.forEach(c=>{const a=L(c.x-8,c.y-6),b=L(c.x+c.w+8,c.y+c.h+6);ctx.strokeRect(Math.min(a.x,b.x),Math.min(a.y,b.y),Math.abs(b.x-a.x),Math.abs(b.y-a.y));});
   ctx.setLineDash([14,10]);ctx.strokeStyle='#f1d27acc';ctx.lineWidth=4;ctx.beginPath();ctx.ellipse(plaza.x,plaza.y,plaza.rx,plaza.ry,0,0,7);ctx.stroke();ctx.setLineDash([]);text('集合點 A',plaza.x,plaza.y,20,'#fff3c4',800);
@@ -225,10 +263,10 @@ function Chase(layer,onEnd){
  const rs=()=>layout();
  window.addEventListener('keydown',kd,true);window.addEventListener('keyup',ku,true);window.addEventListener('resize',rs);
  this.stop=()=>{over=true;cancelAnimationFrame(raf);window.removeEventListener('keydown',kd,true);window.removeEventListener('keyup',ku,true);window.removeEventListener('resize',rs);};
- this.end=(win,quit)=>{if(over)return;this.stop();if(!win)draw();onEnd({win,quit:!!quit,used:Math.max(1,Math.round(TIME-time)),sheets});};
+ this.end=(win,quit)=>{if(over)return;this.stop();if(!win)draw();onEnd({win,quit:!!quit,used:Math.max(1,Math.round(LV.time-time)),sheets,level:LV});};
  // 測試用：唯讀的位置資訊（螢幕座標與世界座標）
  this.state=()=>({px:(P.x-camX)*k,py:(P.y-camY)*k,fx:(F.x-camX)*k,fy:(F.y-camY)*k,wx:P.x,wy:P.y,time,hidden:hidden(),d:dist(P,F),mode:F.mode,tired:F.tired,st:F.st,fwx:F.x,fwy:F.y});
  raf=requestAnimationFrame(loop);
 }
-window.FackChase={mount,rank,TIME};
+window.FackChase={mount,rank,TIME,LEVELS};
 })();

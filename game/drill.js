@@ -42,7 +42,7 @@ function launch(){
   intro:'你是桃園會長，抱著一箱連署書。<br>法克在台中廠區的集合區現身，會逃也會躲，追上他就算成功。',
   onQuit:api=>{api.close();chase=null;},
   buttons:r=>r.win?[{label:'把連署書交給法克 →',onClick:()=>finish(true)}]
-   :[{label:'再追一次',onClick:(r,api)=>api.retry()},{label:'接受結果，繼續故事',alt:true,onClick:()=>finish(false)}]
+   :[{label:'再追一次',onClick:(r,api)=>api.retry()},{label:'換難度',alt:true,onClick:(r,api)=>api.menu()},{label:'接受結果，繼續故事',alt:true,onClick:()=>finish(false)}]
  });
 }
 function finish(win){
