@@ -24,11 +24,11 @@ const atlas=[
 [2,[['corr','廠區通道'],['hall','人資說明會'],['docs','文件比對桌']]],
 [3,[['rest','廠區夜班休息室'],['board','公告欄'],['office','工會辦公室'],['gate','會議室門口'],['hall','公開核對會']]],
 [4,[['boardroom','10/21 私下簽署現場（小說）'],['stage','10/22 說明會・台前'],['left','說明會・左側'],['back','說明會・後排'],['exit','說明會・出口']]],
-[5,[['plan','跨廠協作辦公室'],['night','夜班工作區'],['day','日班交接處'],['other','另一個廠區']]],
+[5,[['plan','跨廠協作辦公室'],['night','夜班工作區'],['day','日班交接處'],['other','另一個廠區'],['drill','11/3 疏散演練集合區']]],
 [6,[['table','協商會議室'],['floor','會員表決現場']]],
 [8,[['pay','薪資核對處'],['dawn','結局・清晨']]]
 ];
-const fallback={hall:'大會會場',corr:'廠區通道',docs:'文件核對桌',lounge:'夜班休息室',locker:'員工置物區',chairs:'班別聯絡小組',chairs2:'班別聯絡小組',night:'廠區夜班',dawn:'清晨廠區',door:'會場門口',desk:'工會辦公室',boardroom:'私下簽署現場',sign:'協商桌',vote:'會員表決現場',pay:'薪資核對處',pay1:'薪資核對處',pay0:'薪資核對處'};
+const fallback={hall:'大會會場',corr:'廠區通道',docs:'文件核對桌',lounge:'夜班休息室',locker:'員工置物區',chairs:'班別聯絡小組',chairs2:'班別聯絡小組',night:'廠區夜班',dawn:'清晨廠區',door:'會場門口',desk:'工會辦公室',boardroom:'私下簽署現場',sign:'協商桌',vote:'會員表決現場',pay:'薪資核對處',pay1:'薪資核對處',pay0:'薪資核對處',drill:'疏散演練集合區'};
 function state(){return typeof st==='object'&&st&&Array.isArray(st.ev)?st:null}
 function init(){
  const s=state();if(!s)return null;
