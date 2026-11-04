@@ -19,7 +19,8 @@ const CSS='.cz-layer{position:absolute;inset:0;z-index:15;background:#0b1620;col
 +'.cz-levels{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:440px}.cz-levels button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 8px!important}.cz-levels button b{font-size:17px}.cz-levels button small{font-size:12px;font-weight:600;opacity:.8}.cz-levels button:not(.on){background:#20394c!important;color:#f7f4ea!important;border:1px solid #8297a4!important}'
 +'.cz-card .rank{font:800 20px system-ui;color:#9fe3c4;margin:4px 0}'
 +'.cz-card .row{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:6px}'
-+'.cz-card button{border:0;border-radius:10px;background:#f1d09a;color:#102338;padding:13px 22px;font-weight:800;font-size:16px;cursor:pointer}.cz-card button.alt{background:#20394c;color:#f7f4ea;border:1px solid #8297a4}';
++'.cz-card button{border:0;border-radius:10px;background:#f1d09a;color:#102338;padding:13px 22px;font-weight:800;font-size:16px;cursor:pointer}.cz-card button.alt{background:#20394c;color:#f7f4ea;border:1px solid #8297a4}'
++'.cz-buffs{position:absolute;z-index:3;left:10px;top:56px;display:flex;flex-direction:column;gap:5px;pointer-events:none}.cz-buffs span{display:block;min-width:110px;background:#102638e8;color:#fff6d9;border:1px solid #a4b9bb88;border-radius:8px;padding:5px 9px;font:800 12px system-ui;box-shadow:0 3px 12px #0005}.cz-buffs:empty{display:none}.cz-card .cz-new{color:#ffe1a0;font-size:13px;font-weight:800}.cz-card .cz-small{font-size:12px;color:#b6cdd4}';
 
 // ── 地圖（直式座標 760 × 1150；橫向螢幕時整張轉 90 度）──
 const WW=760,WH=1150,VIEW=430,TIME=75;
@@ -92,7 +93,7 @@ function mount(host,opts){
  opts=opts||{};
  if(!document.getElementById('cz-css')){const s=document.createElement('style');s.id='cz-css';s.textContent=CSS;document.head.append(s);}
  const layer=document.createElement('div');layer.className='cz-layer';
- layer.innerHTML='<div class="cz-top"><div><b>🏃 全民找法克</b><small>'+(opts.subtitle||'追上法克，把連署書交到他手上')+'</small></div><div class="cz-stats"><span class="cz-time">⏱ '+TIME+'</span><span class="cz-sheets">📦 120 份</span></div><button class="cz-mute" aria-label="音樂開關">🔊</button><button class="cz-quit" aria-label="不追了">✕</button></div><canvas class="cz-cv" role="img" aria-label="台中廠區追逐畫面"></canvas><div class="cz-msg" aria-live="polite"></div><div class="cz-joy" aria-label="移動搖桿"><i></i><b>搖桿</b></div>';
+ layer.innerHTML='<div class="cz-top"><div><b>🏃 全民找法克</b><small>'+(opts.subtitle||'追上法克，把連署書交到他手上')+'</small></div><div class="cz-stats"><span class="cz-time">⏱ '+TIME+'</span><span class="cz-sheets">📦 260 份</span></div><button class="cz-mute" aria-label="音樂開關">🔊</button><button class="cz-quit" aria-label="不追了">✕</button></div><canvas class="cz-cv" role="img" aria-label="台中廠區追逐畫面"></canvas><div class="cz-msg" aria-live="polite"></div><div class="cz-buffs" aria-live="off"></div><div class="cz-joy" aria-label="移動搖桿"><i></i><b>搖桿</b></div>';
  host.append(layer);
  let game=null;
  let lv=LEVELS[opts.level]||LEVELS.normal;
@@ -104,13 +105,13 @@ function mount(host,opts){
  function end(r){
   r.rank=r.win?rank(r.used):'';
   if(opts.onEnd)opts.onEnd(r,api);
-  const d=card(r.win?'<h2>追到了！</h2><div class="rank">'+r.rank+'</div><p>難度 <b>'+r.level.e+' '+r.level.n+'</b>・花了 <b>'+r.used+'</b> 秒，手上有 <b>'+r.sheets+'</b> 份連署書。'+(r.best?'<br>'+r.best:'')+'</p><div class="row"></div>'
-   :'<h2>'+(r.quit?'先不追了':'演練結束')+'</h2><p>難度 '+r.level.e+' '+r.level.n+'<br>'+(r.quit?'你停下腳步，喘了口氣。':'廣播響起，人群散去。')+'<br>法克又神隱了。</p><div class="row"></div>');
+  const d=card(r.win?'<h2>追到了！</h2><div class="rank">'+r.rank+'</div><p>難度 <b>'+r.level.e+' '+r.level.n+'</b>・花了 <b>'+r.used+'</b> 秒，手上有 <b>'+r.sheets+'</b> 份連署書。'+(r.best?'<br>'+r.best:'')+'</p><p class="cz-small">本局撿到 '+r.papers+' 份連署書・道具 '+r.powerTotal+' 個・最高連續撿取 '+r.maxCombo+' 次</p>'+(r.awards&&r.awards.length?'<p class="cz-new">🏆 解鎖成就：'+r.awards.slice(0,3).join('、')+(r.awards.length>3?' 等 '+r.awards.length+' 項':'')+'</p>':'')+'<div class="row"></div>'
+   :'<h2>'+(r.quit?'先不追了':'演練結束')+'</h2><p>難度 '+r.level.e+' '+r.level.n+'<br>'+(r.quit?'你停下腳步，喘了口氣。':'廣播響起，人群散去。')+'<br>法克又神隱了。</p><p class="cz-small">本局撿到 '+r.papers+' 份連署書，取得 '+r.powerTotal+' 個道具。'+(r.awards&&r.awards.length?'🏆 新成就：'+r.awards.join('、'):'')+'</p><div class="row"></div>');
   const row=d.querySelector('.row');
   (opts.buttons?opts.buttons(r,api):[{label:'再追一次',onClick:()=>api.retry()},{label:'換難度',alt:true,onClick:()=>api.menu()}]).forEach((b,i)=>{const el=document.createElement('button');el.textContent=b.label;if(b.alt)el.className='alt';el.onclick=()=>b.onClick(r,api);row.append(el);if(i===0)setTimeout(()=>el.focus(),0);});
  }
  function menu(){
-  const d=card('<h2>全民找法克</h2><p>'+(opts.intro||'你是桃園會長，抱著一箱連署書。<br>法克會逃、也會躲，追上他就算成功。')+'</p><ul><li><b>手機：</b>用右下角的 🕹️ 搖桿控制方向。</li><li><b>電腦：</b>方向鍵或 WASD（也可以用滑鼠拖搖桿）。</li><li>🍬 <b>糖糖</b>會突然橫越畫面：粉紅色的會<b>黏住你拖著走</b>，其他的會<b>擋路</b>。</li><li>法克躲進🌳樹叢就看不見；同事看到他會喊「！」，畫面邊緣的箭頭會指向他。</li><li>撿起同事遞來的 📝 連署書，會長會衝刺一下。</li><li>法克衝刺完會喘 💦，那就是你的機會。</li></ul>'+(opts.introExtra?opts.introExtra(lv):'')+'<p><b>選擇難易度</b></p><div class="cz-levels">'+Object.values(LEVELS).map(L=>'<button class="cz-start'+(L.id===lv.id?' on':'')+'" data-lv="'+L.id+'"><b>'+L.e+' '+L.n+'</b><small>'+L.time+' 秒・'+LDESC[L.id]+'</small></button>').join('')+'</div>');
+  const d=card('<h2>全民找法克</h2><p>'+(opts.intro||'你是桃園會長，抱著一箱連署書。<br>法克會逃、也會躲，追上他就算成功。')+'</p><ul><li><b>手機：</b>用右下角的 🕹️ 搖桿控制方向。</li><li><b>電腦：</b>方向鍵或 WASD（也可以用滑鼠拖搖桿）。</li><li>🍬 <b>糖糖</b>會突然橫越畫面：粉紅色的會<b>黏住你拖著走</b>，其他的會<b>擋路</b>。</li><li>法克躲進🌳樹叢就看不見；同事看到他會喊「！」，畫面邊緣的箭頭會指向他。</li><li>地圖上有更多 📝 連署書可撿，撿到就累積份數並短暫衝刺。</li><li>隨機道具：⚡ 疾速鞋加速、🧊 定身貼定住法克、🧲 磁鐵吸連署書、🛡️ 防糖護盾擋糖糖。</li><li>每局收集成就，跨局解鎖稱號，挑戰四難度與最佳秒數。</li><li>法克衝刺完會喘 💦，那就是你的機會。</li></ul>'+(opts.introExtra?opts.introExtra(lv):'')+'<p><b>選擇難易度</b></p><div class="cz-levels">'+Object.values(LEVELS).map(L=>'<button class="cz-start'+(L.id===lv.id?' on':'')+'" data-lv="'+L.id+'"><b>'+L.e+' '+L.n+'</b><small>'+L.time+' 秒・'+LDESC[L.id]+'</small></button>').join('')+'</div>');
   d.querySelectorAll('.cz-start').forEach(b=>b.onclick=()=>api.retry(b.dataset.lv));
   setTimeout(()=>(d.querySelector('.cz-start.on')||d.querySelector('.cz-start')).focus(),0);
  }
@@ -121,9 +122,11 @@ function mount(host,opts){
 function Chase(layer,onEnd,LV){
  LV=LV||LEVELS.normal;
  const cv=layer.querySelector('.cz-cv'),ctx=cv.getContext('2d'),self=this;
- let VW=0,VH=0,k=1,rot=false,W=WW,H=WH,camX=0,camY=0,raf=0,last=0,over=false,time=LV.time,sheets=120,boost=0,msgT=0,pickT=3,shoutCD=0,candyT=2.5;
+ let VW=0,VH=0,k=1,rot=false,W=WW,H=WH,camX=0,camY=0,raf=0,last=0,over=false,time=LV.time,sheets=260,boost=0,msgT=0,pickT=1.2,shoutCD=0,candyT=2.5,powerT=5,papers=0,paperPickups=0,combo=0,maxCombo=0,comboT=0,candyHits=0,shieldBlocks=0,freezeCatch=false;
  const P={x:0,y:0,r:15},F={x:0,y:0,r:15,dx:0,dy:-1,st:LV.st,tired:0,mode:'run',bush:null,seen:null,seenT:0,hideT:0,hideCD:0},target={on:false,x:0,y:0},keys={};
- let solids=[],bushes=[],crowd=[],pickups=[],candies=[],plaza=null;
+ let solids=[],bushes=[],crowd=[],pickups=[],candies=[],powers=[],plaza=null;
+  const POWER_TYPES={speed:{icon:'⚡',name:'疾速鞋',duration:5},freeze:{icon:'🧊',name:'定身貼',duration:3.2},magnet:{icon:'🧲',name:'吸紙磁鐵',duration:7},shield:{icon:'🛡️',name:'防糖護盾',duration:6}};
+  const buffs={speed:0,freeze:0,magnet:0,shield:0},powerStats={speed:0,freeze:0,magnet:0,shield:0};
  const stick={x:0,y:0,on:false},drag={vx:0,vy:0,t:0};
  // 直式座標 → 目前世界座標
  const L=(x,y)=>rot?{x:y,y:WW-x}:{x,y};
@@ -137,11 +140,14 @@ function Chase(layer,onEnd,LV){
   const r=cv.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);
   VW=Math.max(200,r.width);VH=Math.max(200,r.height);cv.width=VW*dpr;cv.height=VH*dpr;ctx.setTransform(dpr,0,0,dpr,0,0);
   k=Math.min(VW,VH)/VIEW;
-  const nowRot=VW>VH;if(!solids.length||nowRot!==rot){const had=solids.length;build();if(had){[P,F,target,...crowd,...pickups].forEach(e=>{const q=rot?{x:e.y,y:WW-e.x}:{x:WW-e.y,y:e.x};e.x=q.x;e.y=q.y;});F.bush=null;F.mode='run';}}
+  const nowRot=VW>VH;if(!solids.length||nowRot!==rot){const had=solids.length;build();if(had){[P,F,target,...crowd,...pickups,...powers,...candies].forEach(e=>{const q=rot?{x:e.y,y:WW-e.x}:{x:WW-e.y,y:e.x};e.x=q.x;e.y=q.y;});F.bush=null;F.mode='run';}}
  }
  layout();
  Object.assign(P,L(385,1120));Object.assign(F,L(PLAZA.x,PLAZA.y));
  for(let i=0;i<28;i++){const p=free();crowd.push({x:p.x,y:p.y,r:7,a:Math.random()*6.28,t:0,alert:0,c:['#e8edf0','#f1d36b','#9cc0cf'][i%3]});}
+  // 更多連署書散落場地，重新遊玩時分布不同。
+  for(let i=0;i<15;i++){const p=free();pickups.push({...p,r:13,value:40+Math.floor(Math.random()*4)*20});}
+  spawnPower(true);spawnPower(true);
  function inSolid(x,y,pad){return solids.some(s=>x>s.x-pad&&x<s.x+s.w+pad&&y>s.y-pad&&y<s.y+s.h+pad);}
  function free(){for(let n=0;n<80;n++){const x=W*(.04+Math.random()*.92),y=H*(.04+Math.random()*.92);if(!inSolid(x,y,20)&&dist({x,y},P)>80)return{x,y};}return{x:plaza.x,y:plaza.y};}
  function collide(e){
@@ -149,7 +155,17 @@ function Chase(layer,onEnd,LV){
   for(const s of solids){const cx=Math.max(s.x,Math.min(e.x,s.x+s.w)),cy=Math.max(s.y,Math.min(e.y,s.y+s.h)),dx=e.x-cx,dy=e.y-cy,d=Math.hypot(dx,dy);
    if(d<e.r){if(d>0.01){e.x=cx+dx/d*e.r;e.y=cy+dy/d*e.r;}else{const l=e.x-s.x,r=s.x+s.w-e.x,t=e.y-s.y,b=s.y+s.h-e.y,m=Math.min(l,r,t,b);if(m===l)e.x=s.x-e.r;else if(m===r)e.x=s.x+s.w+e.r;else if(m===t)e.y=s.y-e.r;else e.y=s.y+s.h+e.r;}}}
  }
- function openness(b){if(b.open!=null)return b.open;let n=0;for(let j=0;j<8;j++){const t=j/8*Math.PI*2,x=b.x+Math.cos(t)*(b.r+70),y=b.y+Math.sin(t)*(b.r+70);if(x>30&&y>30&&x<W-30&&y<H-30&&!inSolid(x,y,18))n++;}return b.open=n;}
+ function spawnPower(near){
+   if(powers.length>=3)return;
+   const types=Object.keys(POWER_TYPES),type=types[Math.floor(Math.random()*types.length)];
+   for(let j=0;j<70;j++){
+    const a=Math.random()*Math.PI*2,d=near?85+Math.random()*170:110+Math.random()*300;
+    const x=Math.max(35,Math.min(W-35,P.x+Math.cos(a)*d)),y=Math.max(35,Math.min(H-35,P.y+Math.sin(a)*d));
+    if(inSolid(x,y,22)||dist({x,y},F)<35||powers.some(p=>dist(p,{x,y})<70))continue;
+    powers.push({x,y,r:18,type,life:0});return;
+   }
+  }
+  function openness(b){if(b.open!=null)return b.open;let n=0;for(let j=0;j<8;j++){const t=j/8*Math.PI*2,x=b.x+Math.cos(t)*(b.r+70),y=b.y+Math.sin(t)*(b.r+70);if(x>30&&y>30&&x<W-30&&y<H-30&&!inSolid(x,y,18))n++;}return b.open=n;}
  function hidden(){return !!(F.bush&&dist(F,F.bush)<F.bush.r*.75);}
  function nearest(p){let best='集合點',bd=dist(p,plaza)-60;solids.forEach(s=>{const d=dist(p,{x:s.x+s.w/2,y:s.y+s.h/2})-Math.max(s.w,s.h)/2;if(d<bd){bd=d;best=s.t==='car'?'停車場':s.n}});bushes.forEach(b=>{const d=dist(p,b)-b.r;if(d<bd){bd=d;best='樹叢'}});return best;}
  function msg(t){const m=layer.querySelector('.cz-msg');if(!m)return;m.textContent=t;m.classList.add('on');msgT=2.2;}
@@ -204,16 +220,18 @@ function Chase(layer,onEnd,LV){
  function step(dt){
   time-=dt;if(time<=0){time=0;self.end(false);return;}
   Sound.setFast(time<15);
-  boost=Math.max(0,boost-dt);msgT-=dt;shoutCD-=dt;
+  boost=Math.max(0,boost-dt);msgT-=dt;shoutCD-=dt;comboT=Math.max(0,comboT-dt);if(comboT<=0)combo=0;
+   Object.keys(buffs).forEach(k=>buffs[k]=Math.max(0,buffs[k]-dt));
   if(msgT<=0){const m=layer.querySelector('.cz-msg');m&&m.classList.remove('on');}
   let mx=(keys.ArrowRight||keys.d?1:0)-(keys.ArrowLeft||keys.a?1:0),my=(keys.ArrowDown||keys.s?1:0)-(keys.ArrowUp||keys.w?1:0);
   if(!mx&&!my&&target.on){const d=dist(target,P);if(d>4){mx=(target.x-P.x)/d;my=(target.y-P.y)/d;}else target.on=false;}
   let mag=1;if(!mx&&!my&&stick.on){const m=Math.hypot(stick.x,stick.y);if(m>.18){mx=stick.x;my=stick.y;mag=Math.min(1,m*1.25);}}
-  const ml=Math.hypot(mx,my);if(ml){const sp=(boost>0?215:152)*mag*(drag.t>0?.35:1)*dt;P.x+=mx/ml*sp;P.y+=my/ml*sp;}
+  const ml=Math.hypot(mx,my);if(ml){const sp=(buffs.speed>0?310:boost>0?230:152)*mag*(drag.t>0?.35:1)*dt;P.x+=mx/ml*sp;P.y+=my/ml*sp;}
   if(drag.t>0){drag.t-=dt;P.x+=drag.vx*dt;P.y+=drag.vy*dt;}
   collide(P);
   const dP=dist(F,P);
-  if(F.tired>0)F.tired-=dt;
+  if(buffs.freeze<=0){
+   if(F.tired>0)F.tired-=dt;
   else if(dP<110&&F.st>0){F.st-=dt;if(F.st<=0){F.st=0;F.tired=LV.tired;msg('法克喘不過氣了 💦 快追！');Sound.sfx('puff');}}
   else F.st=Math.min(LV.st,F.st+dt*(F.mode==='hide'?.6:time>35?.45:.3));
   const sprint=F.tired<=0&&dP<110&&F.st>0;
@@ -226,6 +244,7 @@ function Chase(layer,onEnd,LV){
   const d=fleeDir();F.x+=d.x*spd*dt;F.y+=d.y*spd*dt;if(d.x||d.y){F.dx=d.x;F.dy=d.y;}
   collide(F);
   if(F.mode==='run')F.bush=null;
+  }else{F.mode='run';F.bush=null;F.seen={x:F.x,y:F.y};F.seenT=1.8;}
   const hid=hidden();
   crowd.forEach(c=>{
    c.t-=dt;if(c.t<=0){c.a+=(Math.random()-.5)*2;c.t=1+Math.random()*2;}
@@ -234,19 +253,22 @@ function Chase(layer,onEnd,LV){
    if(dist(c,F)<(hid?LV.see:LV.see*.75)){c.alert=1.2;if(hid){F.seen={x:F.x,y:F.y};F.seenT=1.8;}if(shoutCD<=0&&dist(F,P)>150){shoutCD=4;Sound.sfx('shout');msg(SHOUT[Math.floor(Math.random()*SHOUT.length)].replace('{}',nearest(F)));}}
   });
   if(!hid){F.seen={x:F.x,y:F.y};F.seenT=1.8;}else F.seenT-=dt;
-  pickT-=dt;if(pickT<=0&&pickups.length<3){const q=free();if(dist(q,P)<VIEW*.9)pickups.push(Object.assign(q,{r:13}));pickT=LV.pick+Math.random()*3;}
-  pickups=pickups.filter(p=>{if(dist(p,P)<P.r+p.r){sheets+=30;boost=2.6;msg('同事塞來 30 份連署書！會長衝刺 💨');Sound.sfx('coin');return false;}return true;});
+  pickT-=dt;if(pickT<=0&&pickups.length<16){const q=free();pickups.push({...q,r:13,value:40+Math.floor(Math.random()*4)*20});pickT=Math.max(.65,LV.pick*.34)+Math.random()*.75;}
+  pickups=pickups.filter(p=>{if(dist(p,P)<P.r+p.r+(buffs.magnet>0?78:0)){const n=p.value||40;sheets+=n;papers+=n;paperPickups++;boost=Math.max(boost,1.4);combo=comboT>0?combo+1:1;comboT=5;maxCombo=Math.max(maxCombo,combo);if(combo===5||combo===10)msg('📃 連續撿取 '+combo+' 次！');else if(paperPickups<=2)msg('收到 '+n+' 份連署書！衝刺 💨');Sound.sfx('coin');return false;}return true;});
+  powerT-=dt;if(powerT<=0){if(powers.length<3)spawnPower(false);powerT=6+Math.random()*4;}
+  powers=powers.filter(p=>{p.life+=dt;if(dist(p,P)<P.r+p.r){buffs[p.type]=POWER_TYPES[p.type].duration;powerStats[p.type]++;if(p.type==='freeze'){F.mode='run';F.bush=null;F.tired=0;}msg(POWER_TYPES[p.type].icon+' '+POWER_TYPES[p.type].name+' '+POWER_TYPES[p.type].duration+' 秒！');Sound.sfx('coin');return false;}return p.life<24;});
   // 🍬 糖糖：從畫面某一邊冒出來，沿固定直線橫越畫面，直到離開畫面
   candyT-=dt;if(candyT<=0){candyT=LV.candy*(.7+Math.random()*.6);spawnCandy();}
   const vx0=camX,vy0=camY,vw=VW/k,vh=VH/k;
   candies=candies.filter(c=>{c.x+=c.vx*dt;c.y+=c.vy*dt;c.rot+=dt*5;c.life+=dt;c.cd=Math.max(0,c.cd-dt);
    const out=c.x<vx0-90||c.y<vy0-90||c.x>vx0+vw+90||c.y>vy0+vh+90;if(c.life>1.2&&out||c.life>14)return false;
-   const d=dist(c,P);if(d<c.r+P.r){const nx=(P.x-c.x)/(d||1),ny=(P.y-c.y)/(d||1);P.x=c.x+nx*(c.r+P.r+.5);P.y=c.y+ny*(c.r+P.r+.5);
-    if(c.sticky){drag.vx=c.vx;drag.vy=c.vy;drag.t=1.1;if(c.cd<=0){msg('被糖糖黏住，拖著走！🍬');Sound.sfx('slide');}}
+   const d=dist(c,P);if(d<c.r+P.r){if(buffs.shield>0){if(c.cd<=0){shieldBlocks++;msg('🛡️ 防糖護盾彈開糖糖！');Sound.sfx('boing');}c.cd=1.2;return false;}const nx=(P.x-c.x)/(d||1),ny=(P.y-c.y)/(d||1);P.x=c.x+nx*(c.r+P.r+.5);P.y=c.y+ny*(c.r+P.r+.5);
+    if(c.cd<=0)candyHits++;
+     if(c.sticky){drag.vx=c.vx;drag.vy=c.vy;drag.t=1.1;if(c.cd<=0){msg('被糖糖黏住，拖著走！🍬');Sound.sfx('slide');}}
     else if(c.cd<=0){msg('糖糖擋路！🍬');Sound.sfx('boing');}
     c.cd=1.2;collide(P);}
    return true;});
-  if(dist(P,F)<P.r+F.r*.95)self.end(true);
+  if(dist(P,F)<P.r+F.r*.95){freezeCatch=buffs.freeze>0;self.end(true);}
  }
  // ── 繪圖 ──
  function rr(x,y,w,h,r){ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
@@ -300,7 +322,9 @@ function Chase(layer,onEnd,LV){
   const g1=L(300,1112),g2=L(560,1112);ctx.strokeStyle='#e8c34a';ctx.lineWidth=6;ctx.setLineDash([16,10]);ctx.beginPath();ctx.moveTo(g1.x,g1.y);ctx.lineTo(g2.x,g2.y);ctx.stroke();ctx.setLineDash([]);
   const gt=L(150,1125);text('大門 GATE',gt.x,gt.y,14,'#fff',800);
   solids.forEach(building);
-  pickups.forEach(p=>{ctx.fillStyle='#fff8';ctx.beginPath();ctx.arc(p.x,p.y,p.r*1.3,0,7);ctx.fill();text('📝',p.x,p.y,19,'#fff');});
+  pickups.forEach(p=>{ctx.fillStyle='#fff8';ctx.beginPath();ctx.arc(p.x,p.y,p.r*1.45,0,7);ctx.fill();text('📝',p.x,p.y,20,'#fff');text('+'+p.value,p.x,p.y+21,10,'#fff8ca',900);});
+   powers.forEach(p=>{const t=performance.now()/450,rrr=p.r+6+Math.sin(t)*2;ctx.fillStyle='#f9dd7f55';ctx.beginPath();ctx.arc(p.x,p.y,rrr,0,7);ctx.fill();ctx.strokeStyle='#ffe09c';ctx.lineWidth=2;ctx.stroke();text(POWER_TYPES[p.type].icon,p.x,p.y,27,'#fff');});
+   if(buffs.magnet>0){ctx.strokeStyle='#ffe28a99';ctx.lineWidth=2;ctx.setLineDash([5,8]);ctx.beginPath();ctx.arc(P.x,P.y,94,0,7);ctx.stroke();ctx.setLineDash([]);}
   // 圍觀同事：灰色小人（頭＋身體），避免被誤會成可以吃的點數
   crowd.forEach(c=>{ctx.fillStyle='#0005';ctx.beginPath();ctx.ellipse(c.x,c.y+11,8,3.2,0,0,7);ctx.fill();
    ctx.fillStyle=c.alert>0?'#9aa4ab':'#6b757c';ctx.strokeStyle='#2a3137';ctx.lineWidth=1.6;
@@ -311,7 +335,8 @@ function Chase(layer,onEnd,LV){
   if(!hid||near)person(F,'#b5432e','#e2e1dd','法克',hid?.55:1);
   else if(F.seenT>0&&F.seen){ctx.globalAlpha=Math.min(1,F.seenT);ctx.strokeStyle='#ffd23f';ctx.lineWidth=2;ctx.setLineDash([4,4]);ctx.beginPath();ctx.arc(F.seen.x,F.seen.y,F.r*1.6,0,7);ctx.stroke();ctx.setLineDash([]);text('？',F.seen.x,F.seen.y,16,'#ffd23f');ctx.globalAlpha=1;}
   if(F.tired>0&&(!hid||near))text('💦',F.x+F.r,F.y-F.r,16,'#fff');
-  person(P,boost>0?'#4f8fd6':'#3d6fa8','#1d1a17','會長',1);text('📦',P.x+P.r*.9,P.y+P.r*.2,16,'#fff');
+   if(buffs.freeze>0){ctx.strokeStyle='#9ae7ff';ctx.lineWidth=3;ctx.beginPath();ctx.arc(F.x,F.y,F.r+8,0,7);ctx.stroke();text('🧊',F.x+F.r+7,F.y-F.r-10,20,'#fff');}
+  person(P,buffs.speed>0?'#e8b84f':boost>0?'#4f8fd6':'#3d6fa8','#1d1a17','會長',1);text('📦',P.x+P.r*.9,P.y+P.r*.2,16,'#fff');
   if(drag.t>0)text('🍯',P.x-P.r,P.y-P.r,14,'#fff');
   candies.forEach(c=>{const sp=Math.hypot(c.vx,c.vy)||1;ctx.strokeStyle=c.sticky?'#ff7ac699':'#ffffff55';ctx.lineWidth=6;ctx.setLineDash([6,8]);ctx.beginPath();ctx.moveTo(c.x,c.y);ctx.lineTo(c.x-c.vx/sp*70,c.y-c.vy/sp*70);ctx.stroke();ctx.setLineDash([]);
    ctx.fillStyle=c.sticky?'#ff5fb855':'#ffffff30';ctx.beginPath();ctx.arc(c.x,c.y,c.r+4,0,7);ctx.fill();
@@ -325,6 +350,7 @@ function Chase(layer,onEnd,LV){
   ctx.restore();
   if(!hid)arrow(F,'法克','#ff8a7a');else if(F.seenT>0&&F.seen)arrow(F.seen,'目擊？','#ffd23f');
   const te=layer.querySelector('.cz-time');te.textContent='⏱ '+Math.ceil(time);te.classList.toggle('low',time<15);layer.querySelector('.cz-sheets').textContent='📦 '+sheets+' 份';
+   layer.querySelector('.cz-buffs').innerHTML=Object.keys(buffs).filter(k=>buffs[k]>.05).map(k=>'<span>'+POWER_TYPES[k].icon+' '+POWER_TYPES[k].name+' '+buffs[k].toFixed(1)+'s</span>').join('');
  }
  function loop(t){if(over)return;const dt=Math.min(.05,(t-(last||t))/1000);last=t;step(dt);if(!over)draw();raf=requestAnimationFrame(loop);}
  // 右下角搖桿：按住拖曳，方向與力道決定會長怎麼跑
@@ -341,10 +367,10 @@ function Chase(layer,onEnd,LV){
  const rs=()=>layout();
  window.addEventListener('keydown',kd,true);window.addEventListener('keyup',ku,true);window.addEventListener('resize',rs);
  this.stop=()=>{over=true;Sound.stop();joyEnd();layer.classList.remove('playing');cancelAnimationFrame(raf);window.removeEventListener('keydown',kd,true);window.removeEventListener('keyup',ku,true);window.removeEventListener('resize',rs);};
- this.end=(win,quit)=>{if(over)return;this.stop();Sound.sfx(win?'win':'lose');if(!win)draw();onEnd({win,quit:!!quit,used:Math.max(1,Math.round(LV.time-time)),sheets,level:LV});};
+ this.end=(win,quit)=>{if(over)return;this.stop();Sound.sfx(win?'win':'lose');if(!win)draw();onEnd({win,quit:!!quit,used:Math.max(1,Math.round(LV.time-time)),sheets,level:LV,papers,paperPickups,maxCombo,candyHits,shieldBlocks,freezeCatch,powerStats:{...powerStats},powerTotal:Object.values(powerStats).reduce((a,b)=>a+b,0)});};
  // 測試用：唯讀的位置資訊（螢幕座標與世界座標）
- this.state=()=>({px:(P.x-camX)*k,py:(P.y-camY)*k,fx:(F.x-camX)*k,fy:(F.y-camY)*k,wx:P.x,wy:P.y,time,hidden:hidden(),d:dist(P,F),mode:F.mode,tired:F.tired,st:F.st,fwx:F.x,fwy:F.y});
- layer.classList.add('playing');Sound.start();Sound.sfx('siren');msg('🚨 疏散演練開始！找到法克！');
+ this.state=()=>({px:(P.x-camX)*k,py:(P.y-camY)*k,fx:(F.x-camX)*k,fy:(F.y-camY)*k,wx:P.x,wy:P.y,time,hidden:hidden(),d:dist(P,F),mode:F.mode,tired:F.tired,st:F.st,fwx:F.x,fwy:F.y,pickups:pickups.length,papers,boost,buffs:{...buffs},powerStats:{...powerStats},powerPickups:powers.length});
+ layer.classList.add('playing');Sound.start();Sound.sfx('siren');msg('🚨 開始追法克！撿 📝、⚡、🧊、🧲、🛡️！');
  raf=requestAnimationFrame(loop);
 }
 window.FackChase={mount,rank,TIME,LEVELS,Sound};
