@@ -1,0 +1,113 @@
+{
+  "method": "headless Chrome keyboard-driven automated bot",
+  "runs": [
+    {
+      "difficulty": "easy",
+      "trial": 1,
+      "won": true,
+      "finished": true,
+      "remaining": 20.7,
+      "sheets": 6970,
+      "elapsed_wall_seconds": 6.0
+    },
+    {
+      "difficulty": "easy",
+      "trial": 2,
+      "won": true,
+      "finished": true,
+      "remaining": 3.0,
+      "sheets": 3950,
+      "elapsed_wall_seconds": 7.5
+    },
+    {
+      "difficulty": "easy",
+      "trial": 3,
+      "won": false,
+      "finished": true,
+      "remaining": 0,
+      "sheets": 3720,
+      "elapsed_wall_seconds": 7.8
+    },
+    {
+      "difficulty": "normal",
+      "trial": 1,
+      "won": false,
+      "finished": true,
+      "remaining": 0,
+      "sheets": 4830,
+      "elapsed_wall_seconds": 7.0
+    },
+    {
+      "difficulty": "normal",
+      "trial": 2,
+      "won": false,
+      "finished": true,
+      "remaining": 0,
+      "sheets": 4310,
+      "elapsed_wall_seconds": 7.0
+    },
+    {
+      "difficulty": "normal",
+      "trial": 3,
+      "won": false,
+      "finished": true,
+      "remaining": 0,
+      "sheets": 6140,
+      "elapsed_wall_seconds": 7.1
+    },
+    {
+      "difficulty": "hard",
+      "trial": 1,
+      "won": false,
+      "finished": true,
+      "remaining": 0,
+      "sheets": 4090,
+      "elapsed_wall_seconds": 6.6
+    },
+    {
+      "difficulty": "hard",
+      "trial": 2,
+      "won": false,
+      "finished": true,
+      "remaining": 0,
+      "sheets": 6570,
+      "elapsed_wall_seconds": 6.6
+    },
+    {
+      "difficulty": "hard",
+      "trial": 3,
+      "won": false,
+      "finished": true,
+      "remaining": 0,
+      "sheets": 4050,
+      "elapsed_wall_seconds": 6.6
+    },
+    {
+      "difficulty": "hell",
+      "trial": 1,
+      "won": false,
+      "finished": true,
+      "remaining": 0,
+      "sheets": 3580,
+      "elapsed_wall_seconds": 5.3
+    },
+    {
+      "difficulty": "hell",
+      "trial": 2,
+      "won": false,
+      "finished": true,
+      "remaining": 0,
+      "sheets": 4640,
+      "elapsed_wall_seconds": 5.3
+    },
+    {
+      "difficulty": "hell",
+      "trial": 3,
+      "won": false,
+      "finished": true,
+      "remaining": 0,
+      "sheets": 4450,
+      "elapsed_wall_seconds": 5.2
+    }
+  ]
+}
