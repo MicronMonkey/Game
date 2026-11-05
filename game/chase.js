@@ -25,12 +25,21 @@ const CSS='.cz-layer{position:absolute;inset:0;z-index:15;background:#0b1620;col
 // ── 地圖（直式座標 760 × 1150；橫向螢幕時整張轉 90 度）──
 const WW=760,WH=1150,VIEW=430,TIME=75;
 // 難易度：spd 法克一般速度、spr 衝刺速度、st 衝刺秒數、tired 喘氣秒數、tsp 喘氣速度、hide 最久躲幾秒、time 限時、pick 連署書出現間隔、see 同事發現距離
+// 全難度挑戰提升 15%：逃跑/衝刺/糖糖速度與續航 +15%；喘氣、限時、支援距離減少；
+// 連署書與糖糖出現間隔依難度調整。地獄級糖糖額外 ×2 出現頻率。
+const DIFFICULTY_FACTOR=1.15;
 const LEVELS={
  easy:{id:'easy',n:'簡單',e:'🌱',spd:116,spr:172,st:1.2,tired:2.8,tsp:55,hide:3,time:90,pick:3,see:120,candy:7,cspd:110},
  normal:{id:'normal',n:'中等',e:'🏃',spd:124,spr:186,st:1.5,tired:2.4,tsp:60,hide:4,time:80,pick:3.5,see:110,candy:5.5,cspd:130},
  hard:{id:'hard',n:'難',e:'🔥',spd:130,spr:198,st:1.8,tired:2.0,tsp:66,hide:5,time:75,pick:4.5,see:95,candy:4.5,cspd:150},
  hell:{id:'hell',n:'地獄',e:'💀',spd:150,spr:232,st:2.8,tired:1.1,tsp:95,hide:10,time:60,pick:7,see:65,candy:3.5,cspd:170}
 };
+Object.values(LEVELS).forEach(lv=>{
+ ['spd','spr','st','tsp','hide','cspd'].forEach(key=>lv[key]=+(lv[key]*DIFFICULTY_FACTOR).toFixed(3));
+ ['tired','time','pick','see'].forEach(key=>lv[key]=+(lv[key]/DIFFICULTY_FACTOR).toFixed(3));
+ // 糖糖出現越密集越難；地獄在本次加難後再倍增數量。
+ lv.candy=+(lv.candy/DIFFICULTY_FACTOR/(lv.id==='hell'?2:1)).toFixed(3);
+});
 const cars=[];[660,775,890].forEach((y,r)=>[0,1,2,3].forEach(i=>{if(!(r===1&&i===2))cars.push({t:'car',n:'',x:96+i*70,y,w:42,h:72,c:['#d8dde2','#5b6f86','#a33c3c','#2f3a46','#e6d7b8'][(i+r*2)%5]});}));
 const SOLIDS=[
  {t:'fab',n:'FAB 無塵室廠房',x:80,y:30,w:390,h:250},
@@ -125,7 +134,7 @@ function Chase(layer,onEnd,LV){
  let VW=0,VH=0,k=1,rot=false,W=WW,H=WH,camX=0,camY=0,raf=0,last=0,over=false,time=LV.time,sheets=260,boost=0,msgT=0,pickT=1.2,shoutCD=0,candyT=2.5,powerT=5,papers=0,paperPickups=0,combo=0,maxCombo=0,comboT=0,candyHits=0,shieldBlocks=0,freezeCatch=false;
  const P={x:0,y:0,r:15},F={x:0,y:0,r:15,dx:0,dy:-1,st:LV.st,tired:0,mode:'run',bush:null,seen:null,seenT:0,hideT:0,hideCD:0},target={on:false,x:0,y:0},keys={};
  let solids=[],bushes=[],crowd=[],pickups=[],candies=[],powers=[],plaza=null;
-  const POWER_TYPES={speed:{icon:'⚡',name:'疾速鞋',duration:5},freeze:{icon:'🧊',name:'定身貼',duration:3.2},magnet:{icon:'🧲',name:'吸紙磁鐵',duration:7},shield:{icon:'🛡️',name:'防糖護盾',duration:6}};
+  const POWER_TYPES={speed:{icon:'⚡',name:'疾速鞋',duration:5},freeze:{icon:'🧊',name:'定身貼',duration:0.5},magnet:{icon:'🧲',name:'吸紙磁鐵',duration:7},shield:{icon:'🛡️',name:'防糖護盾',duration:6}};
   const buffs={speed:0,freeze:0,magnet:0,shield:0},powerStats={speed:0,freeze:0,magnet:0,shield:0};
  const stick={x:0,y:0,on:false},drag={vx:0,vy:0,t:0};
  // 直式座標 → 目前世界座標
