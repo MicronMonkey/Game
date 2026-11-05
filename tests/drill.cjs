@@ -25,7 +25,7 @@ assert.match(cw.FackChase.rank(10),/法克剋星/);
 for(const l of Object.values(cw.FackChase.LEVELS))assert(l.candy>0&&l.cspd>0,'每個難度都有糖糖');
 assert.equal(typeof cw.FackChase.Sound.sfx,'function','有音效');
 const cs=read('game/chase.js');assert.match(cs,/cz-joy/,'手機用右下角搖桿');assert.doesNotMatch(cs,/function pt\(e\)/,'不再用點畫面移動');assert.match(cw.FackChase.rank(70),/有追到就是贏/);
-const page=read('fack.html');assert.match(page,/game\/chase\.js/);assert.match(page,/og:title/);assert.doesNotMatch(page,/game\/story\.js/,'獨立頁不載入主劇情');
+const page=read('fack.html');assert.match(page,/game\/chase(?:_v2)?\.js(?:\?[^"']*)?["']/,'獨立頁應載入原版或 V2 追逐引擎');assert.match(page,/og:title/);assert.doesNotMatch(page,/game\/story\.js/,'獨立頁不載入主劇情');
 assert.doesNotMatch(page,/href="\.\/"|location\.href/,'獨立頁先不導流到完整劇情版');assert.doesNotMatch(read('index.html'),/fack\.html/,'主遊戲先不導流到小遊戲');
 assert.match(read('index.html'),/game\/chase\.js[\s\S]*game\/drill\.js/,'引擎要在 drill.js 之前載入');
 console.log('PASS: 11/3 drill nodes, chase launch, skip path, return to chapter 6, petition evidence, shared chase engine and standalone page.');
