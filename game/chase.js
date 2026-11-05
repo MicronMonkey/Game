@@ -134,7 +134,7 @@ function Chase(layer,onEnd,LV){
  let VW=0,VH=0,k=1,rot=false,W=WW,H=WH,camX=0,camY=0,raf=0,last=0,over=false,time=LV.time,sheets=260,boost=0,msgT=0,pickT=1.2,shoutCD=0,candyT=2.5,powerT=5,papers=0,paperPickups=0,combo=0,maxCombo=0,comboT=0,candyHits=0,shieldBlocks=0,freezeCatch=false;
  const P={x:0,y:0,r:15},F={x:0,y:0,r:15,dx:0,dy:-1,st:LV.st,tired:0,mode:'run',bush:null,seen:null,seenT:0,hideT:0,hideCD:0},target={on:false,x:0,y:0},keys={};
  let solids=[],bushes=[],crowd=[],pickups=[],candies=[],powers=[],plaza=null;
-  const POWER_TYPES={speed:{icon:'⚡',name:'疾速鞋',duration:5},freeze:{icon:'🧊',name:'定身貼',duration:0.5},magnet:{icon:'🧲',name:'吸紙磁鐵',duration:7},shield:{icon:'🛡️',name:'防糖護盾',duration:6}};
+  const POWER_TYPES={speed:{icon:'⚡',name:'疾速鞋',duration:2.5},freeze:{icon:'🧊',name:'定身貼',duration:0.5},magnet:{icon:'🧲',name:'吸紙磁鐵',duration:7},shield:{icon:'🛡️',name:'防糖護盾',duration:6}};
   const buffs={speed:0,freeze:0,magnet:0,shield:0},powerStats={speed:0,freeze:0,magnet:0,shield:0};
  const stick={x:0,y:0,on:false},drag={vx:0,vy:0,t:0};
  // 直式座標 → 目前世界座標
