@@ -239,7 +239,7 @@ function Chase(layer,onEnd,LV){
   let mx=(keys.ArrowRight||keys.d?1:0)-(keys.ArrowLeft||keys.a?1:0),my=(keys.ArrowDown||keys.s?1:0)-(keys.ArrowUp||keys.w?1:0);
   if(!mx&&!my&&target.on){const d=dist(target,P);if(d>4){mx=(target.x-P.x)/d;my=(target.y-P.y)/d;}else target.on=false;}
   let mag=1;if(!mx&&!my&&stick.on){const m=Math.hypot(stick.x,stick.y);if(m>.18){mx=stick.x;my=stick.y;mag=Math.min(1,m*1.25);}}
-  const ml=Math.hypot(mx,my);if(ml){const sp=(buffs.speed>0?310:boost>0?230:152)*mag*(drag.t>0?.35:1)*dt;P.x+=mx/ml*sp;P.y+=my/ml*sp;}
+  const ml=Math.hypot(mx,my);if(ml){const sp=(buffs.speed>0?310:boost>0?191:152)*mag*(drag.t>0?.35:1)*dt;P.x+=mx/ml*sp;P.y+=my/ml*sp;}
   if(drag.t>0){drag.t-=dt;P.x+=drag.vx*dt;P.y+=drag.vy*dt;}
   collide(P);
   const dP=dist(F,P);
