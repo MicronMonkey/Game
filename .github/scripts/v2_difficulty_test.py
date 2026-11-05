@@ -97,4 +97,5 @@ for level in ['easy','normal','hard','hell']:
   results.append(record)
   print(json.dumps(record,ensure_ascii=False),flush=True)
 print('SUMMARY',json.dumps(results,ensure_ascii=False),flush=True)
+with open('v2-test-results.json','w',encoding='utf-8') as fp:json.dump({'method':'headless Chrome keyboard-driven automated bot','runs':results},fp,ensure_ascii=False,indent=2)
 driver.quit()
