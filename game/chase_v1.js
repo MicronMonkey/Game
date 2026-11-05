@@ -21,6 +21,7 @@ const CSS='.cz-layer{position:absolute;inset:0;z-index:15;background:#0b1620;col
 +'.cz-card .rank{font:800 20px system-ui;color:#9fe3c4;margin:4px 0}'
 +'.cz-card .row{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;margin-top:6px}'
 +'.cz-card button{border:0;border-radius:10px;background:#f1d09a;color:#102338;padding:13px 22px;font-weight:800;font-size:16px;cursor:pointer}.cz-card button.alt{background:#20394c;color:#f7f4ea;border:1px solid #8297a4}'
++'.cz-scoreboard{width:min(100%,380px);background:#112f3de8;border:1px solid #a88f52;border-radius:14px;padding:12px 14px;margin:5px auto;box-shadow:0 6px 20px #0005}.cz-score-title{font-size:14px;font-weight:900;color:#ffdf99;margin-bottom:8px}.cz-score-line,.cz-score-total{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 3px;text-align:left;font-size:13px}.cz-score-line{opacity:.2;transform:translateY(7px);transition:opacity .28s,transform .28s}.cz-score-line.show{opacity:1;transform:translateY(0)}.cz-score-line b{color:#a7ffd6;font-size:18px;font-variant-numeric:tabular-nums}.cz-score-total{border-top:1px solid #e4bd7755;margin-top:5px;font-weight:900;opacity:.3;transition:opacity .3s}.cz-score-total.show{opacity:1}.cz-score-total strong{font-size:29px;color:#ffd98f;font-variant-numeric:tabular-nums}.cz-score-total.done strong{animation:czScorePop .4s ease-out}@keyframes czScorePop{0%{transform:scale(.9)}60%{transform:scale(1.14)}100%{transform:scale(1)}}'
 +'.cz-buffs{position:absolute;z-index:3;left:10px;top:56px;display:flex;flex-direction:column;gap:5px;pointer-events:none}.cz-buffs span{display:block;min-width:110px;background:#102638e8;color:#fff6d9;border:1px solid #a4b9bb88;border-radius:8px;padding:5px 9px;font:800 12px system-ui;box-shadow:0 3px 12px #0005}.cz-buffs:empty{display:none}.cz-card .cz-new{color:#ffe1a0;font-size:13px;font-weight:800}.cz-card .cz-small{font-size:12px;color:#b6cdd4}';
 
 // ── 地圖（直式座標 760 × 1150；橫向螢幕時整張轉 90 度）──
@@ -37,7 +38,8 @@ const LEVELS={
 };
 Object.values(LEVELS).forEach(lv=>{
  ['spd','spr','st','tsp','hide','cspd'].forEach(key=>lv[key]=+(lv[key]*DIFFICULTY_FACTOR).toFixed(3));
- ['tired','time','pick','see'].forEach(key=>lv[key]=+(lv[key]/DIFFICULTY_FACTOR).toFixed(3));
+ ['tired','pick','see'].forEach(key=>lv[key]=+(lv[key]/DIFFICULTY_FACTOR).toFixed(3));
+ lv.time=Math.round(lv.time/DIFFICULTY_FACTOR);
  // 糖糖出現越密集越難；地獄在本次加難後再倍增數量。
  lv.candy=+(lv.candy/DIFFICULTY_FACTOR/(lv.id==='hell'?2:1)).toFixed(3);
 });
@@ -114,14 +116,32 @@ function mount(host,opts){
  function card(html){clearCard();const d=document.createElement('div');d.className='cz-card';d.innerHTML=html;layer.append(d);return d;}
  function end(r){
   r.rank=r.win?rank(r.used):'';
+  if(r.win){r.sheetScore=+(r.sheets*0.1).toFixed(1);r.timeScore=r.remaining*10;r.score=+(r.sheetScore+r.timeScore).toFixed(1);}
   if(opts.onEnd)opts.onEnd(r,api);
-  const d=card(r.win?'<h2>追到了！</h2><div class="rank">'+r.rank+'</div><p>難度 <b>'+r.level.e+' '+r.level.n+'</b>・花了 <b>'+r.used+'</b> 秒，手上有 <b>'+r.sheets+'</b> 份連署書。'+(r.best?'<br>'+r.best:'')+'</p><p class="cz-small">本局撿到 '+r.papers+' 份連署書・道具 '+r.powerTotal+' 個・最高連續撿取 '+r.maxCombo+' 次</p>'+(r.awards&&r.awards.length?'<p class="cz-new">🏆 解鎖成就：'+r.awards.slice(0,3).join('、')+(r.awards.length>3?' 等 '+r.awards.length+' 項':'')+'</p>':'')+'<div class="row"></div>'
+  const d=card(r.win?'<h2>追到了！</h2><div class="rank">'+r.rank+'</div><p>難度 <b>'+r.level.e+' '+r.level.n+'</b>・花了 <b>'+r.used+'</b> 秒，手上有 <b>'+r.sheets+'</b> 份連署書。'+(r.best?'<br>'+r.best:'')+'</p><div class="cz-scoreboard" aria-live="polite"><div class="cz-score-title">🏆 通關積分結算</div><div class="cz-score-line" data-score-line="sheets"><span>📝 連署書 '+r.sheets+' 份 × 0.1</span><b data-score-value="sheets">+0</b></div><div class="cz-score-line" data-score-line="time"><span>⏱ 剩餘 '+r.remaining+' 秒 × 10</span><b data-score-value="time">+0</b></div><div class="cz-score-total"><span>總積分</span><strong data-score-value="total">0</strong></div></div><p class="cz-small">本局撿到 '+r.papers+' 份連署書・道具 '+r.powerTotal+' 個・最高連續撿取 '+r.maxCombo+' 次</p>'+(r.awards&&r.awards.length?'<p class="cz-new">🏆 解鎖成就：'+r.awards.slice(0,3).join('、')+(r.awards.length>3?' 等 '+r.awards.length+' 項':'')+'</p>':'')+'<div class="row"></div>'
    :'<h2>'+(r.quit?'先不追了':'演練結束')+'</h2><p>難度 '+r.level.e+' '+r.level.n+'<br>'+(r.quit?'你停下腳步，喘了口氣。':'廣播響起，人群散去。')+'<br>法克又神隱了。</p><p class="cz-small">本局撿到 '+r.papers+' 份連署書，取得 '+r.powerTotal+' 個道具。'+(r.awards&&r.awards.length?'🏆 新成就：'+r.awards.join('、'):'')+'</p><div class="row"></div>');
+  if(r.win)animateScore(d,r);
   const row=d.querySelector('.row');
   (opts.buttons?opts.buttons(r,api):[{label:'再追一次',onClick:()=>api.retry()},{label:'換難度',alt:true,onClick:()=>api.menu()}]).forEach((b,i)=>{const el=document.createElement('button');el.textContent=b.label;if(b.alt)el.className='alt';el.onclick=()=>b.onClick(r,api);row.append(el);if(i===0)setTimeout(()=>el.focus(),0);});
  }
+ function animateScore(cardEl,r){
+  const fmt=n=>Number(n).toLocaleString('zh-TW',{maximumFractionDigits:1});
+  const set=(key,value)=>{if(!cardEl.isConnected)return;const el=cardEl.querySelector('[data-score-value="'+key+'"]');if(el)el.textContent=(key==='total'?'':'+')+fmt(value);};
+  const reveal=key=>{const el=cardEl.querySelector('[data-score-line="'+key+'"]');if(el)el.classList.add('show');};
+  const tween=(key,goal,duration,done)=>{
+   const start=performance.now();
+   const tick=now=>{if(!cardEl.isConnected)return;const p=Math.min(1,(now-start)/duration);set(key,Math.round(goal*(1-Math.pow(1-p,3))*10)/10);if(p<1)requestAnimationFrame(tick);else if(done)done();};
+   requestAnimationFrame(tick);
+  };
+  setTimeout(()=>{if(!cardEl.isConnected)return;reveal('sheets');tween('sheets',r.sheetScore,600,()=>{
+   setTimeout(()=>{if(!cardEl.isConnected)return;reveal('time');tween('time',r.timeScore,600,()=>{
+    const total=cardEl.querySelector('.cz-score-total');if(total)total.classList.add('show');
+    tween('total',r.score,850,()=>{if(total)total.classList.add('done');});
+   });},150);
+  });},200);
+ }
  function menu(){
-  const d=card('<h2>全民找法克</h2><p>'+(opts.intro||'你是桃園會長，抱著一箱連署書。<br>法克會逃、也會躲，追上他就算成功。')+'</p><ul><li><b>手機：</b>用右下角的 🕹️ 搖桿控制方向。</li><li><b>電腦：</b>方向鍵或 WASD（也可以用滑鼠拖搖桿）。</li><li>🍬 <b>糖糖</b>會突然橫越畫面：粉紅色的會<b>黏住你拖著走</b>，其他的會<b>擋路</b>。</li><li>法克躲進🌳樹叢就看不見；同事看到他會喊「！」，畫面邊緣的箭頭會指向他。</li><li>地圖上有更多 📝 連署書可撿，撿到就累積份數並短暫衝刺。</li><li>隨機道具：⚡ 疾速鞋加速、🧊 定身貼定住法克、🧲 磁鐵吸連署書、🛡️ 防糖護盾擋糖糖。</li><li>每局收集成就，跨局解鎖稱號，挑戰四難度與最佳秒數。</li><li>法克衝刺完會喘 💦，那就是你的機會。</li></ul>'+(opts.introExtra?opts.introExtra(lv):'')+'<p><b>選擇難易度</b></p><div class="cz-levels">'+Object.values(LEVELS).map(L=>'<button class="cz-start'+(L.id===lv.id?' on':'')+'" data-lv="'+L.id+'"><b>'+L.e+' '+L.n+'</b><small>'+L.time+' 秒・'+LDESC[L.id]+'</small></button>').join('')+'</div>');
+  const d=card('<h2>全民找法克</h2><p>'+(opts.intro||'你是桃園會長，抱著一箱連署書。<br>法克會逃、也會躲，要集滿 2600 份連署書才能成功抓到他。')+'</p><ul><li><b>手機：</b>用右下角的 🕹️ 搖桿控制方向。</li><li><b>電腦：</b>方向鍵或 WASD（也可以用滑鼠拖搖桿）。</li><li>🍬 <b>糖糖</b>會突然橫越畫面：粉紅色的會<b>黏住你拖著走</b>，其他的會<b>擋路</b>。</li><li>法克躲進🌳樹叢就看不見；同事看到他會喊「！」，畫面邊緣的箭頭會指向他。</li><li>地圖上有更多 📝 連署書可撿，撿到就累積份數並短暫衝刺。</li><li>隨機道具：⚡ 疾速鞋加速、🧊 定身貼定住法克、🧲 磁鐵吸連署書、🛡️ 防糖護盾擋糖糖。</li><li>每局收集成就，跨局解鎖稱號，挑戰四難度與最佳秒數。</li><li>法克衝刺完會喘 💦，那就是你的機會。</li></ul>'+(opts.introExtra?opts.introExtra(lv):'')+'<p><b>選擇難易度</b></p><div class="cz-levels">'+Object.values(LEVELS).map(L=>'<button class="cz-start'+(L.id===lv.id?' on':'')+'" data-lv="'+L.id+'"><b>'+L.e+' '+L.n+'</b><small>'+L.time+' 秒・'+LDESC[L.id]+'</small></button>').join('')+'</div>');
   d.querySelectorAll('.cz-start').forEach(b=>b.onclick=()=>api.retry(b.dataset.lv));
   setTimeout(()=>(d.querySelector('.cz-start.on')||d.querySelector('.cz-start')).focus(),0);
  }
@@ -135,7 +155,7 @@ function Chase(layer,onEnd,LV){
  let VW=0,VH=0,k=1,rot=false,W=WW,H=WH,camX=0,camY=0,raf=0,last=0,over=false,time=LV.time,sheets=260,boost=0,msgT=0,pickT=1.2,shoutCD=0,candyT=2.5,powerT=5,papers=0,paperPickups=0,combo=0,maxCombo=0,comboT=0,candyHits=0,shieldBlocks=0,freezeCatch=false,tauntT=2.5,tauntText='',tauntLife=0,needMsgCD=0;
  const P={x:0,y:0,r:15},F={x:0,y:0,r:15,dx:0,dy:-1,st:LV.st,tired:0,mode:'run',bush:null,seen:null,seenT:0,hideT:0,hideCD:0},target={on:false,x:0,y:0},keys={};
  let solids=[],bushes=[],crowd=[],pickups=[],candies=[],powers=[],plaza=null;
-  const POWER_TYPES={speed:{icon:'⚡',name:'疾速鞋',duration:2.5},freeze:{icon:'🧊',name:'定身貼',duration:0.5},magnet:{icon:'🧲',name:'吸紙磁鐵',duration:7},shield:{icon:'🛡️',name:'防糖護盾',duration:6}};
+  const POWER_TYPES={speed:{icon:'⚡',name:'疾速鞋',duration:1.5},freeze:{icon:'🧊',name:'定身貼',duration:0.5},magnet:{icon:'🧲',name:'吸紙磁鐵',duration:7},shield:{icon:'🛡️',name:'防糖護盾',duration:6}};
   const buffs={speed:0,freeze:0,magnet:0,shield:0},powerStats={speed:0,freeze:0,magnet:0,shield:0};
  const stick={x:0,y:0,on:false},drag={vx:0,vy:0,t:0};
  // 直式座標 → 目前世界座標
@@ -388,7 +408,7 @@ function Chase(layer,onEnd,LV){
  const rs=()=>layout();
  window.addEventListener('keydown',kd,true);window.addEventListener('keyup',ku,true);window.addEventListener('resize',rs);
  this.stop=()=>{over=true;Sound.stop();joyEnd();layer.classList.remove('playing');cancelAnimationFrame(raf);window.removeEventListener('keydown',kd,true);window.removeEventListener('keyup',ku,true);window.removeEventListener('resize',rs);};
- this.end=(win,quit)=>{if(over)return;this.stop();Sound.sfx(win?'win':'lose');if(!win)draw();onEnd({win,quit:!!quit,used:Math.max(1,Math.round(LV.time-time)),sheets,level:LV,papers,paperPickups,maxCombo,candyHits,shieldBlocks,freezeCatch,powerStats:{...powerStats},powerTotal:Object.values(powerStats).reduce((a,b)=>a+b,0)});};
+ this.end=(win,quit)=>{if(over)return;this.stop();Sound.sfx(win?'win':'lose');if(!win)draw();onEnd({win,quit:!!quit,used:Math.max(1,LV.time-Math.ceil(time)),remaining:Math.max(0,Math.ceil(time)),sheets,level:LV,papers,paperPickups,maxCombo,candyHits,shieldBlocks,freezeCatch,powerStats:{...powerStats},powerTotal:Object.values(powerStats).reduce((a,b)=>a+b,0)});};
  // 測試用：唯讀的位置資訊（螢幕座標與世界座標）
  this.state=()=>({px:(P.x-camX)*k,py:(P.y-camY)*k,fx:(F.x-camX)*k,fy:(F.y-camY)*k,wx:P.x,wy:P.y,time,hidden:hidden(),d:dist(P,F),mode:F.mode,tired:F.tired,st:F.st,fwx:F.x,fwy:F.y,pickups:pickups.length,sheets,requiredSheets:REQUIRED_SHEETS,papers,boost,buffs:{...buffs},powerStats:{...powerStats},powerPickups:powers.length});
  layer.classList.add('playing');Sound.start();Sound.sfx('siren');msg('🚨 先收集 2600 份連署書才能抓法克！');
