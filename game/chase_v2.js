@@ -42,6 +42,8 @@ Object.values(LEVELS).forEach(lv=>{
  ['spd','spr','st','tsp','hide','cspd'].forEach(key=>lv[key]=+(lv[key]*DIFFICULTY_FACTOR).toFixed(3));
  // V2 平衡調整：法克一般、衝刺與喘氣移動速度一律再降低 5%。
  ['spd','spr','tsp'].forEach(key=>lv[key]=+(lv[key]*0.95).toFixed(3));
+ // 地獄級額外降低一般跑速 5、衝刺跑速 12（遊戲速度單位，而非百分比）。
+ if(lv.id==='hell'){lv.spd=+(lv.spd-5).toFixed(3);lv.spr=+(lv.spr-12).toFixed(3);}
  ['tired','pick','see'].forEach(key=>lv[key]=+(lv[key]/DIFFICULTY_FACTOR).toFixed(3));
  lv.time=Math.round(lv.time/DIFFICULTY_FACTOR);
  // 糖糖出現越密集越難；地獄在本次加難後再倍增數量。
