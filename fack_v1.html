@@ -26,6 +26,7 @@ header a,header button{font:600 13px system-ui;color:#eef3f5;background:#1d3747;
 #hero .best{font-weight:800;color:#9fe3c4}
 #hero .ach-btn{border:1px solid #bb9d66;background:#243e4a;color:#ffe4a5;border-radius:10px;padding:11px 20px;font:800 14px system-ui;cursor:pointer;margin:4px 0 1px}#hero .hall{color:#ffe2a6;font-weight:800;font-size:13px;line-height:1.6}#hero .go{margin-top:10px;border:0;border-radius:12px;background:var(--ac);color:#102338;padding:16px 40px;font:900 20px system-ui;cursor:pointer;box-shadow:0 8px 30px #0008}
 #hero small{color:var(--mut);font-size:11px;line-height:1.7;max-width:460px;margin-top:10px}
+#versionNotice{position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;padding:20px;background:#06101bd9}#versionNotice.open{display:flex}#versionNotice .notice-panel{width:min(400px,100%);max-height:80dvh;overflow:auto;background:linear-gradient(145deg,#223c4d,#101f30);border:1px solid #d9b875;border-radius:16px;padding:24px 20px;text-align:center;box-shadow:0 20px 60px #000b}#versionNotice h2{font-size:22px;color:#ffe1a3;margin:0 0 12px}#versionNotice p{font-size:14px;line-height:1.8;color:#e7f0f2}#versionNotice button{margin-top:10px;border:0;border-radius:10px;background:#f1d09a;color:#102338;font-size:16px;font-weight:900;padding:12px 30px;cursor:pointer}
 #toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 60px);transform:translateX(-50%);background:var(--ac);color:#111;font-weight:800;padding:8px 16px;border-radius:999px;z-index:50;opacity:0;transition:opacity .3s;pointer-events:none}
 </style>
 </head><body>
@@ -44,12 +45,36 @@ header a,header button{font:600 13px system-ui;color:#eef3f5;background:#1d3747;
  </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
+<div id="versionNotice" role="dialog" aria-modal="true" aria-labelledby="versionNoticeTitle"><div class="notice-panel"><h2 id="versionNoticeTitle">🎮 遊戲難度已更新</h2><p>為了讓新版本的分數與挑戰公平比較，已清除這台裝置上 <b>V1 測試版</b>的不相容舊紀錄，包括最佳成績、成就及稱號進度。<br>正式版遊戲紀錄不受影響。</p><button id="versionNoticeOk" type="button">了解，開始新挑戰！</button></div></div>
 <script src="game/chase_v1.js?v=20261105-v1score"></script>
-<script src="game/achievements.js?v=20261105"></script>
+<script src="game/achievements_v1.js?v=20261105-r2"></script>
 <script>
 (function(){
 'use strict';
 const KEY='fack-chase-v1-best',URL_='https://micronmonkey.github.io/Game/fack_v1.html';
+const RECORD_VERSION='v1-difficulty-score-r2',VERSION_KEY='fack-chase-v1-record-version';
+(function checkRecords(){
+ try{
+  const previous=localStorage.getItem(VERSION_KEY);
+  if(previous===RECORD_VERSION)return;
+  const oldBest=localStorage.getItem(KEY);
+  const oldLevel=localStorage.getItem('fack-v1-level');
+  const oldTrophies=localStorage.getItem('fack-chase-v1-trophies-r2');
+  const hadOldRecords=!!(oldBest&&oldBest!=='{}'||oldLevel||oldTrophies);
+  // Only V1 test records; never touch shared production achievements or preferences.
+  localStorage.removeItem(KEY);
+  localStorage.removeItem('fack-v1-level');
+  localStorage.removeItem('fack-chase-v1-trophies-r2');
+  localStorage.setItem(VERSION_KEY,RECORD_VERSION);
+  if(hadOldRecords){
+   const notice=document.getElementById('versionNotice');
+   notice.classList.add('open');
+   const ok=document.getElementById('versionNoticeOk');
+   ok.focus();
+   ok.onclick=()=>{notice.classList.remove('open');document.getElementById('go').focus();};
+  }
+ }catch(e){console.warn('V1 record migration unavailable',e);}
+})();
 const $=s=>document.querySelector(s);
 const L=FackChase.LEVELS;
 let best={};try{best=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){best={}}
