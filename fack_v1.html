@@ -44,7 +44,7 @@ header a,header button{font:600 13px system-ui;color:#eef3f5;background:#1d3747;
  </div>
 </div>
 <div id="toast" role="status" aria-live="polite"></div>
-<script src="game/chase_v1.js?v=20261105-v1b"></script>
+<script src="game/chase_v1.js?v=20261105-v1score"></script>
 <script src="game/achievements.js?v=20261105"></script>
 <script>
 (function(){
@@ -61,7 +61,7 @@ $('#achievements').onclick=()=>FackTrophies.open();
 document.addEventListener('fack-title-changed',showBest);
 function toast(t){const e=$('#toast');e.textContent=t;e.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.opacity=0,2200);}
 async function share(r){
- const text=r&&r.win?'我在「全民找法克」'+r.level.e+r.level.n+'模式花 '+r.used+' 秒追上法克！目前稱號「'+FackTrophies.title()+'」，已解鎖 '+FackTrophies.summary().got+' 項成就！你敢來挑戰嗎？':'11/3 疏散演練，法克出現了！一起來「全民找法克」：';
+ const text=r&&r.win?'我在「全民找法克」'+r.level.e+r.level.n+'模式花 '+r.used+' 秒追上法克，獲得 '+r.score+' 分！目前稱號「'+FackTrophies.title()+'」，已解鎖 '+FackTrophies.summary().got+' 項成就！你敢來挑戰嗎？':'11/3 疏散演練，法克出現了！一起來「全民找法克」：';
  try{if(navigator.share){await navigator.share({title:'全民找法克',text,url:URL_});return;}}catch(e){if(e&&e.name==='AbortError')return;}
  try{await navigator.clipboard.writeText(text+' '+URL_);toast('已複製分享文字與連結');}catch(e){prompt('複製這段文字分享：',text+' '+URL_);}
 }
