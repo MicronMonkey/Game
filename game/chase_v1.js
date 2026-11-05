@@ -15,6 +15,7 @@ const CSS='.cz-layer{position:absolute;inset:0;z-index:15;background:#0b1620;col
 +'.cz-cv{flex:1;min-height:0;width:100%;display:block;touch-action:none;cursor:crosshair}'
 +'.cz-msg{position:absolute;left:50%;top:58px;transform:translateX(-50%);background:#f1d27a;color:#1b1b1b;font-weight:800;font-size:14px;padding:6px 14px;border-radius:999px;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;max-width:94%;overflow:hidden;text-overflow:ellipsis}.cz-msg.on{opacity:1}'
 +'.cz-card{position:absolute;inset:0;z-index:5;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:22px;background:#07111bea;gap:6px;overflow-y:auto}'
++'.cz-card.cz-instructions p{font-size:14px}.cz-card.cz-instructions ul{font-size:13px}'
 +'.cz-card h2{margin:0;font:800 clamp(24px,6vw,38px) system-ui;color:#ffd98f}.cz-card p{margin:4px 0;line-height:1.7;font-size:15px;max-width:440px}'
 +'.cz-card ul{text-align:left;font-size:14px;line-height:1.8;padding-left:20px;margin:6px 0 10px;max-width:440px}'
 +'.cz-levels{display:grid;grid-template-columns:1fr 1fr;gap:8px;width:100%;max-width:440px}.cz-levels button{display:flex;flex-direction:column;align-items:center;gap:2px;padding:12px 8px!important}.cz-levels button b{font-size:17px}.cz-levels button small{font-size:12px;font-weight:600;opacity:.8}.cz-levels button:not(.on){background:#20394c!important;color:#f7f4ea!important;border:1px solid #8297a4!important}'
@@ -142,6 +143,7 @@ function mount(host,opts){
  }
  function menu(){
   const d=card('<h2>全民找法克</h2><p>'+(opts.intro||'你是桃園會長，抱著一箱連署書。<br>法克會逃、也會躲，要集滿 2600 份連署書才能成功抓到他。')+'</p><ul><li><b>手機：</b>用右下角的 🕹️ 搖桿控制方向。</li><li><b>電腦：</b>方向鍵或 WASD（也可以用滑鼠拖搖桿）。</li><li>🍬 <b>糖糖</b>會突然橫越畫面：粉紅色的會<b>黏住你拖著走</b>，其他的會<b>擋路</b>。</li><li>法克躲進🌳樹叢就看不見；同事看到他會喊「！」，畫面邊緣的箭頭會指向他。</li><li>地圖上有更多 📝 連署書可撿，撿到就累積份數並短暫衝刺。</li><li>隨機道具：⚡ 疾速鞋加速、🧊 定身貼定住法克、🧲 磁鐵吸連署書、🛡️ 防糖護盾擋糖糖。</li><li>每局收集成就，跨局解鎖稱號，挑戰四難度與最佳秒數。</li><li>法克衝刺完會喘 💦，那就是你的機會。</li></ul>'+(opts.introExtra?opts.introExtra(lv):'')+'<p><b>選擇難易度</b></p><div class="cz-levels">'+Object.values(LEVELS).map(L=>'<button class="cz-start'+(L.id===lv.id?' on':'')+'" data-lv="'+L.id+'"><b>'+L.e+' '+L.n+'</b><small>'+L.time+' 秒・'+LDESC[L.id]+'</small></button>').join('')+'</div>');
+  d.classList.add('cz-instructions');
   d.querySelectorAll('.cz-start').forEach(b=>b.onclick=()=>api.retry(b.dataset.lv));
   setTimeout(()=>(d.querySelector('.cz-start.on')||d.querySelector('.cz-start')).focus(),0);
  }
