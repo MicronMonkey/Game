@@ -31,6 +31,13 @@ function drawFack(g,c,F,o){o=o||{};g.person(F,'#b5432e','#e2e1dd',o.name||'法�
  if(F.inv>0){c.globalAlpha=.5;c.strokeStyle='#fff';c.lineWidth=2;c.beginPath();c.arc(F.x,F.y,F.r+5,0,7);c.stroke();c.globalAlpha=1;}}
 function bubble(c,text,x,y){c.font='850 13px system-ui';const w=Math.max(110,c.measureText(text).width+24);c.fillStyle='#fff3d8';rr(c,x-w/2,y-18,w,34,12);c.fill();c.strokeStyle='#8b584b';c.lineWidth=2;c.stroke();txt(c,text,x,y-1,13,'#402b28',850);}
 A.fx={fackStep,drawFack,bubble};
+// 各關依難度的細部調整（以自動玩家實測調到目標通關率）
+A.TUNE={
+ escort:{easy:{min:1},normal:{min:5},hard:{min:6,cinv:.9},hell:{min:4}},
+ tenday:{easy:{extra:0},normal:{extra:0},hard:{extra:3,range:280},hell:{extra:2,range:200}},
+ boss:{easy:{fspd:1,lim:1},normal:{fspd:1.06,lim:.55},hard:{fspd:1.12,lim:.57},hell:{fspd:1.18,lim:.47}}
+};
+const tune=(g,id)=>(A.TUNE[id]||{})[g.diff.id]||{};
 
 /* ── 第一關：深夜追蹤｜消失的法克 ── */
 const CLUE_TEXT=['法克的工作證，照片已經泛黃','一張寫著「先閃了」的便利貼','一杯還溫溫的手搖飲（半糖去冰）','打卡機紙條：只有上班、沒有下班','監視器截圖：一個背影往北邊跑'];
@@ -87,7 +94,7 @@ const night={
 const escort={
  id:'escort',icon:'📦',name:'連署書保衛戰',full:'第二關｜連署書保衛戰',kick:'STAGE 2 / ESCORT',
  story:'10 箱連署書裝上推車，要送到最上方的收件處！推車會沿著你走過的路線跟上來，但它比你慢——輸送帶、堆高機、會關閉的閘門……還有想搶連署書的法克。',
- goals:['🛒 帶領推車抵達最上方的 🏛️ 收件處','💥 推車被撞到或被法克碰到，會掉 1 箱','⭐ 送達越多箱，評價越高（10 箱＝三星）'],
+ goals:['🛒 帶領推車抵達最上方的 🏛️ 收件處','💥 推車被撞到或被法克碰到，會掉 1 箱；低於最低送達箱數就失敗（簡單 1、中等 5、難 6、地獄 4 箱）','⭐ 送達越多箱，評價越高（10 箱＝三星）'],
  tips:['推車會走「你走過的路」：先停下來看清楚再帶它過去','閘門：綠色＝開、黃色閃爍＝即將關閉、紅色＝關閉','走太遠推車會停下來等你；🧊 讓法克與堆高機停住，🛡️ 護盾保護推車'],
  view:430,noHearts:true,carry:'',theme:{floor:'#5d6a70',wall:'#46545e',grid:'#ffffff0e'},
  setup(g){g.W=800;g.H=2600;g.limit=140*g.diff.time;
@@ -104,6 +111,7 @@ const escort={
   [[720,3.6/e,0],[880,4.2/e,.5]].forEach(h=>g.hazards.push({ax:265,bx:475,ay:h[0],by:h[0],x:265,y:h[0],w:60,h:56,period:h[1],ph:h[2],name:'清潔車',icon:'🧹',color:'#8e44ad'}));
   g.gates.push({x:60,y:400,w:120,h:36,period:8,open:4,warn:1.2,off:0},{x:340,y:400,w:120,h:36,period:8,open:4,warn:1.2,off:2.7},{x:620,y:400,w:120,h:36,period:8,open:4,warn:1.2,off:5.4});
   g.P.x=400;g.P.y=2470;g.goal={x:250,y:18,w:300,h:80};
+  g.minBoxes=tune(g,'escort').min||1;
   g.cart={x:400,y:2540,r:14,dr:20,stuckT:0,boxes:10,inv:0,trail:[],wait:false,mv:0,fx:0,fy:-1};g.lastTrail={x:g.P.x,y:g.P.y};
   const slots=[[400,2125],[700,1760],[100,1760],[400,1590],[400,1010],[680,590],[120,590],[400,300]],pool=shuffle(g.rng,['shield','speed','freeze','freeze','shield','speed','magnet','freeze']);
   slots.forEach((s,i)=>g.addItem(pool[i],s[0],s[1]));
@@ -116,8 +124,8 @@ const escort={
  cartHit(g,src){const C=g.cart;if(C.inv>0||g.celebrate>0)return;
   if(g.eff.shield>0){C.inv=.8;g.msg('🛡️ 護盾保護了推車！');snd().sfx('boing');return;}
   if(g.shieldCharges>0){g.shieldCharges--;C.inv=1.3;g.msg('🛡️ 緊急護盾保護推車一次！');snd().sfx('boing');g.puff(C.x,C.y,null,'#9ae7ff',12);return;}
-  C.boxes--;C.inv=1.4;g.damage++;g.shake=.25;snd().sfx('puff');g.puff(C.x,C.y,'-1 📦','#ff8a7a',12);
-  if(C.boxes<=0)g.fail('連署書全部被弄丟了');else g.msg('💥 '+src+'！推車上剩 '+C.boxes+' 箱');},
+  C.boxes--;C.inv=tune(g,'escort').cinv||1.4;g.damage++;g.shake=.25;snd().sfx('puff');g.puff(C.x,C.y,'-1 📦','#ff8a7a',12);
+  if(C.boxes<g.minBoxes)g.fail(C.boxes<=0?'連署書全部被弄丟了':'只剩 '+C.boxes+' 箱，低於最低送達門檻 '+g.minBoxes+' 箱');else g.msg('💥 '+src+'！推車上剩 '+C.boxes+' 箱');},
  update(g,dt){const F=g.fack,P=g.P,C=g.cart;F.frozen=g.eff.freeze>0;F.walk+=dt*12;C.inv=Math.max(0,C.inv-dt);
   // 推車沿著玩家的足跡移動
   if(dist(P,g.lastTrail)>14){C.trail.push({x:P.x,y:P.y});g.lastTrail={x:P.x,y:P.y};if(C.trail.length>600)C.trail.shift();}
@@ -134,7 +142,7 @@ const escort={
   const act=C.y>F.zone[0]-40&&C.y<F.zone[1];
   if(F.frozen){F.mv=0;}
   else if(F.state==='flee'){F.t-=dt;const dx=F.x-C.x,dy=F.y-C.y,l=Math.hypot(dx,dy)||1;F.x+=dx/l*150*dt;F.y+=dy/l*150*dt;F.fx=dx/l;F.fy=dy/l;F.mv=1;g.collide(F);if(F.t<=0)F.state='wait';}
-  else if(act){if(F.state!=='chase'){F.state='chase';g.msg('🗣️ 法克：推車上的連署書交給我保管就好啦～');}g.moveTo(F,C.x,C.y,96*g.diff.enemy,dt);F.fx=Math.cos(F.ang||0);F.fy=Math.sin(F.ang||0);}
+  else if(act){if(F.state!=='chase'){F.state='chase';g.msg('🗣️ 法克：推車上的連署書交給我保管就好啦～');}g.moveTo(F,C.x,C.y,96*g.diff.enemy*(tune(g,'escort').fspd||1),dt);F.fx=Math.cos(F.ang||0);F.fy=Math.sin(F.ang||0);}
   else{F.state='wait';F.mv=0;}
   F.y=clamp(F.y,F.zone[0]-60,F.zone[1]);
   // 會長擋住法克：把他推開、讓他暈一下
@@ -153,7 +161,7 @@ const escort={
    if(C.wait)txt(c,'💬 等我！',C.x,C.y-C.dr-14,12,'#ffe09c',900);
    if(g.eff.shield>0){c.strokeStyle='#9ae7ff';c.lineWidth=3;c.beginPath();c.arc(C.x,C.y,C.dr+8,0,7);c.stroke();}}
   drawFack(g,c,F);if(F.state==='chase'&&!F.frozen)txt(c,'💢',F.x+16,F.y-34,16,'#fff');},
- hud(g){const b=g.cart.boxes;return [['📦 推車 '+b+'/10 箱',b<=3?'warn':b===10?'ok':''],['🏁 '+Math.max(0,Math.round((g.cart.y-100)/10))+' m','']];},
+ hud(g){const b=g.cart.boxes;return [['📦 推車 '+b+'/10 箱（至少 '+g.minBoxes+'）',b<=g.minBoxes+1?'warn':b===10?'ok':''],['🏁 '+Math.max(0,Math.round((g.cart.y-100)/10))+' m','']];},
  targets(g){return [{x:g.cart.x,y:g.cart.y,label:'🛒 推車',color:'#f1d09a'},{x:400,y:60,label:'🏛️ 收件處',color:'#7dffb8'}];},
  radar(g){return g.items.map(i=>({x:i.x,y:i.y,label:i.icon||A.ITEMS[i.type].icon,color:'#9ae7ff'}));},
  stars(g){const b=g.cart.boxes;return b>=10?3:b>=6?2:1;},
@@ -174,12 +182,16 @@ const tenday={
   W(0,1090,340,28);W(100,900,340,28);W(0,710,180,28);W(260,710,80,28);W(100,520,340,28);W(0,330,340,28);
   g.secrets.push({x:180,y:710,w:80,h:28,onOpen:g=>{g.flags.shortcut=true;g.msg('🕳️ 發現隱藏捷徑！好像還藏著什麼……',3);hiddenClue(g,220,672,'tenday');}});
   W(480,1000,140,28);W(780,1000,140,28);W(480,600,140,28);W(780,600,140,28);
-  g.gates.push({x:620,y:1000,w:160,h:28,period:14,open:7,warn:1.2,off:0},{x:620,y:600,w:160,h:28,period:14,open:7,warn:1.2,off:5});
+  g.gates.push({x:620,y:1000,w:160,h:28,period:14,open:7,warn:1.2,off:g.rng()*14},{x:620,y:600,w:160,h:28,period:14,open:7,warn:1.2,off:g.rng()*14});
   W(960,240,380,28);
   g.belts.push({x:960,y:300,w:440,h:240,dx:0,dy:1,spd:75},{x:960,y:760,w:440,h:240,dx:0,dy:1,spd:95});
   const e=g.diff.enemy;g.hazards.push({ax:965,bx:1330,ay:620,by:620,x:965,y:620,w:70,h:50,period:2.6/e,ph:0,name:'清潔車',icon:'🧹',color:'#8e44ad'},{ax:965,bx:1330,ay:1100,by:1100,x:965,y:1100,w:70,h:50,period:3/e,ph:.5,name:'清潔車',icon:'🧹',color:'#8e44ad'});
   g.addGuard([{x:505,y:800},{x:895,y:800}],{name:'糾察員',spd:80});g.addGuard([{x:895,y:420},{x:505,y:420}],{name:'糾察員',spd:80});
-  if(g.diff.id==='hard'||g.diff.id==='hell')g.addGuard([{x:700,y:1240},{x:700,y:660}],{name:'糾察員',spd:70});
+  const extra=[[{x:700,y:1240},{x:700,y:660}],[{x:505,y:640},{x:895,y:960}],[{x:700,y:270},{x:700,y:570}]];
+  for(let i=0;i<(tune(g,'tenday').extra||0);i++)g.addGuard(extra[i],{name:'糾察員',spd:70});
+  if(tune(g,'tenday').range)g.guards.forEach(o=>o.range=tune(g,'tenday').range);
+  // 巡邏員從路線上的隨機位置出發，每次遊玩都不同
+  g.guards.forEach(o=>{const t=g.rng(),a=o.path[0],b=o.path[1];o.x=a.x+(b.x-a.x)*t;o.y=a.y+(b.y-a.y)*t;o.i=g.rng()<.5?0:1;});
   g.P.x=700;g.P.y=1440;g.exit={x:640,y:16,w:120,h:56};
   const stamp=(x,y,route)=>g.addItem('stamp',x,y,{icon:'🟥',route,glow:'#ff6b5e44',ring:'#ff9b8f',onPick:(g,it)=>{g.stamps++;snd().sfx('coin');g.puff(it.x,it.y,'核准！'+g.stamps+'/4','#ffb3a8',14);g.msg(g.stamps>=4?'🟥 4 枚印章到手！快去最上方的封鎖線出口':'🟥 拿到印章 '+g.stamps+'/4（'+it.route+'）',3);}});
   stamp(220,800,'左路');stamp(220,420,'左路');stamp(560,700,'中路');stamp(840,480,'中路');stamp(1180,712,'右路');stamp(1180,1210,'右路');
@@ -208,7 +220,7 @@ const boss={
  goals:['第一階段：追上逃跑的法克 3 次（小心他丟下的 🚧）','第二階段：5 個分身會圍過來搗亂！認出拿「白色紙」的真法克並抓到 3 次','第三階段：用 🧊 定身貼打破「法務護盾」，再抓到 2 次'],
  tips:['紅色區域是攻擊預告，看到就閃開','法克衝刺撞牆後會頭暈 💫，這時最好抓','真正的法克拿「白色」的紙；拿彩色紙的都是分身'],
  view:430,celebrate:3.6,theme:{floor:'#4f5f57',wall:'#5d6d78',grid:'#ffffff10'},
- setup(g){g.W=1000;g.H=1000;g.limit=168*g.diff.time;
+ setup(g){g.W=1000;g.H=1000;g.tn=tune(g,'boss');g.limit=168*g.diff.time*(g.tn.lim||1);
   [[200,200],[710,200],[200,710],[710,710],[455,455]].forEach(a=>g.solids.push({x:a[0],y:a[1],w:90,h:90,kind:'pillar'}));
   g.P.x=500;g.P.y=900;g.F={x:500,y:110,r:17,phase:1,tags:0,inv:0,st:4,stMax:4,tired:0,coneT:2.5,dashT:4,dizzy:0,fx:0,fy:1,mv:0,walk:0,burst:0};
   g.clones=[];g.flags.clones=0;
@@ -222,16 +234,15 @@ const boss={
  phaseUp(g){const F=g.F;F.phase++;F.tags=0;F.inv=1.5;g.lock=2;g.teles=[];g.dyn.forEach(d=>d.gone=true);snd().sfx('siren');
   if(F.phase===2){g.banner='第二階段：分身與反擊！';g.tip('5 個分身圍過來了！拿白色紙的才是真法克',5);g.cloneT=0;boss.makeClones(g);F.dashT=3;}
   if(F.phase===3){g.banner='第三階段：法務護盾！';g.clones=[];F.zig=true;F.barT=3.5;g.tip('撿 🧊 定身貼打破護盾，再抓住法克！',5);
-   g.freezeT=0;boss.freezeNear(g);boss.freezeNear(g);}},
+   g.freezeT=0;for(let i=0;i<4;i++)boss.freezeNear(g);}},
  makeClones(g){while(g.clones.length<5)boss.addClone(g);},
  // 分身：拿不同顏色的紙，會主動圍到會長身邊搗亂（碰到會讓你踉蹌一下）
  addClone(g){const used=g.clones.map(c=>c.paper),col=CLONE_PAPERS.find(x=>!used.includes(x))||CLONE_PAPERS[g.clones.length%5];
   const p=g.free({pad:30,far:g.P,farD:240});g.clones.push({x:p.x,y:p.y,r:17,fx:0,fy:1,mv:1,walk:g.rng()*6,wob:g.rng()*6.28,paper:col,navT:0,ang:0});},
- // 第三階段：定身貼直接出現在法克附近（最多 2 張）
- freezeNear(g){const F=g.F;if(g.items.filter(i=>i.type==='freeze').length>=2)return;
-  for(let k=0;k<30;k++){const a=g.rng()*6.28,d=110+g.rng()*110,x=clamp(F.x+Math.cos(a)*d,30,970),y=clamp(F.y+Math.sin(a)*d,30,970);if(!g.inRects(x,y,22)&&dist({x,y},g.P)>60){g.addItem('freeze',x,y);return;}}
-  const p=g.free({pad:24});g.addItem('freeze',p.x,p.y);},
- onItem(g,t){if(t==='freeze'&&g.F.phase===3){g.eff.freeze=g.freezeDur(4.5);g.msg('🧊 法務護盾破了！法克被定住 '+g.eff.freeze.toFixed(1)+' 秒，快抓！');return true;}},
+ // 第三階段：定身貼隨機散落在場上（最多 4 張），不會出現在法克身邊
+ freezeNear(g){const F=g.F;if(g.items.filter(i=>i.type==='freeze').length>=4)return;
+  const p=g.free({pad:24,far:F,farD:250,avoid:g.items.filter(i=>i.type==='freeze'),gap:160});g.addItem('freeze',p.x,p.y);},
+ onItem(g,t){if(t==='freeze'&&g.F.phase===3){g.eff.freeze=g.freezeDur();g.msg('🧊 法務護盾破了！法克被定住 '+g.eff.freeze.toFixed(1)+' 秒，快抓！');return true;}},
  update(g,dt){const F=g.F,P=g.P,e=g.diff.enemy;F.inv=Math.max(0,F.inv-dt);F.frozen=g.eff.freeze>0;F.walk+=dt*12;
   g.dyn.forEach(d=>{if(d.life!=null){d.life-=dt;if(d.life<=0)d.gone=true;}});g.dyn=g.dyn.filter(d=>!d.gone);
   if(F.frozen){F.mv=0;}
@@ -240,7 +251,7 @@ const boss={
   else if(F.state==='dash'){const s=560*dt;F.x+=F.dx*s;F.y+=F.dy*s;F.left-=s;const ox=F.x,oy=F.y;g.collide(F);const hit=Math.hypot(F.x-ox,F.y-oy)>.5;
    if(dist(F,P)<F.r+P.r+4)g.hurt('被法克衝撞');
    if(F.left<=0||hit){F.state='';F.dizzy=1.8;g.puff(F.x,F.y,'💫 頭暈了！','#ffe09c',8);snd().sfx('boing');}}
-  else{fackStep(g,F,dt,(F.phase===3?158:F.phase===2?148:150)*e);}
+  else{fackStep(g,F,dt,(F.phase===3?158:F.phase===2?148:150)*e*(g.tn.fspd||1));}
   // 第一階段：丟三角錐擋路
   if(F.phase===1&&!F.frozen){F.coneT-=dt;if(F.coneT<=0&&dist(F,P)<320){F.coneT=2.6/e;const cx=F.x-F.fx*34,cy=F.y-F.fy*34;if(dist({x:cx,y:cy},P)>45&&g.dyn.length<6&&!g.inRects(cx,cy,16,g.solids)){g.dyn.push({x:cx-14,y:cy-14,w:28,h:28,kind:'cone',life:7});g.msg('🗣️ 法克：送你三角錐！');}}}
   // 第二階段：分身＋可預判的衝刺

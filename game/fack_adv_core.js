@@ -13,10 +13,10 @@ const lerp=(a,b,t)=>a+(b-a)*t;
 A.util={dist,clamp,lerp,snd};
 
 A.DIFFS={
- easy:{id:'easy',e:'🌱',n:'簡單',enemy:.82,guard:1.075,time:1.25,hearts:4,desc:'巡邏員慢、時間多、4 顆愛心'},
- normal:{id:'normal',e:'🏃',n:'中等',enemy:1,guard:1.15,time:1,hearts:3,desc:'剛剛好的冒險'},
- hard:{id:'hard',e:'🔥',n:'難',enemy:1.1,guard:1.225,time:.9,hearts:3,desc:'敵人更快、時間更緊'},
- hell:{id:'hell',e:'💀',n:'地獄',enemy:1.2,guard:1.3,time:.82,hearts:2,desc:'只有 2 顆愛心，失誤代價很高'}
+ easy:{id:'easy',e:'🌱',n:'簡單',enemy:.82,guard:.899,time:1.25,hearts:4,desc:'巡邏員慢、時間多、4 顆愛心'},
+ normal:{id:'normal',e:'🏃',n:'中等',enemy:1,guard:.962,time:1,hearts:3,desc:'剛剛好的冒險'},
+ hard:{id:'hard',e:'🔥',n:'難',enemy:1.1,guard:1.024,time:.9,hearts:3,desc:'敵人更快、時間更緊'},
+ hell:{id:'hell',e:'💀',n:'地獄',enemy:1.2,guard:1.087,time:.82,hearts:2,desc:'只有 2 顆愛心，失誤代價很高'}
 };
 A.ITEMS={
  speed:{icon:'⚡',name:'疾速鞋',desc:'3 秒內大幅加速'},
