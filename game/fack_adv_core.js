@@ -140,7 +140,7 @@ function Game(layer,cfg){
  g.shieldCharges=A.buffLv(g.buffs,'shield');g.dashLv=A.buffLv(g.buffs,'dash');g.dashCD=0;g.radarT=0;
  g.limit=60;g.time=60;
  // 永久裝備：只在冒險模式（冒險／單關）生效
- g.gearId=cfg.mode==='daily'?null:(cfg.gear||null);g.gx=A.gear?A.gear.fx(g.gearId):{speed:0,pick:0,magnetMul:1,speedDur:1,freeze:0,itemDur:0,time:0,shield:0,hearts:0,radar:0,battery:1,cart:0,paper:0,cloneMark:false};
+ g.gearId=cfg.mode==='daily'?null:(cfg.gear||null);g.gx=A.gear?A.gear.fx(g.gearId):{speed:0,pick:0,magnetMul:1,speedDur:1,freeze:0,itemDur:0,time:0,shield:0,hearts:0,radar:0,battery:1,cart:0,paper:0,cloneMark:false,shieldDur:1};
  g.def.setup(g);
  if(g.gx.time){g.limit*=1+g.gx.time;if(g.dayLen)g.dayLen*=1+g.gx.time;if(g.hourglass)g.hourglass*=1+g.gx.time;}
  if(g.gx.hearts){g.maxHearts+=g.gx.hearts;g.hearts=g.maxHearts;}
@@ -217,7 +217,7 @@ G.magR=function(){const g=this;return 20+g.gx.pick+(35*A.buffLv(g.buffs,'magnet'
 G.dash=function(){const g=this;if(!g.dashLv||g.dashCD>0||g.over||g.paused||g.lock>0)return;g.eff.dash=.5;g.dashCD=g.dashLv>1?6:9;snd().sfx('slide');g.puff(g.P.x,g.P.y,null,'#bfe8ff',6);};
 G.paperMul=function(){const n=A.buffLv(this.buffs,'double');return (n&&this.t<(n>1?40:25)?2:1)*(1+this.gx.paper);};
 G.useItem=function(type,it){const g=this,I=A.ITEMS[type];g.itemsUsed[type]=1;
- const idur=1+g.gx.itemDur;if(type==='speed')g.eff.speed=3*g.gx.speedDur*idur;else if(type==='shield')g.eff.shield=8*idur;else if(type==='magnet')g.eff.magnet=8*idur;else if(type==='radar')g.eff.radar=8;else if(type==='smoke'){g.eff.smoke=4;g.guards.forEach(o=>{if(o.state==='chase')o.state='return';});}
+ const idur=1+g.gx.itemDur;if(type==='speed')g.eff.speed=3*g.gx.speedDur*idur;else if(type==='shield')g.eff.shield=8*g.gx.shieldDur*idur;else if(type==='magnet')g.eff.magnet=8*idur;else if(type==='radar')g.eff.radar=8;else if(type==='smoke'){g.eff.smoke=4;g.guards.forEach(o=>{if(o.state==='chase')o.state='return';});}
  else if(type==='freeze')g.eff.freeze=g.freezeDur();else if(type==='battery')g.battery=Math.min(100,(g.battery||0)+40);else if(type==='hourglass')g.time+=g.hourglass||10;
  else if(type==='onigiri')g.hearts=Math.min(g.maxHearts,g.hearts+1);else if(type==='key')g.hasKey=true;else if(type==='pass')g.eff.pass=10;
  snd().sfx(type==='freeze'?'boing':'coin');g.puff(it?it.x:g.P.x,it?it.y:g.P.y,I.icon+' '+I.name,'#ffe09c',10);
