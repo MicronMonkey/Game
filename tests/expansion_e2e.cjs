@@ -138,7 +138,7 @@ const CLASSIC_KEYS=Object.keys(OLD);
    g.F.inv=0;g.P.x=g.F.x;g.P.y=g.F.y;g.step(1/30);log.push('shieldTag:'+g.F.tags);
    g.useItem('freeze');g.F.inv=0;g.P.x=g.F.x;g.P.y=g.F.y;g.step(1/30);g.useItem('freeze');g.F.inv=0;g.P.x=g.F.x;g.P.y=g.F.y;g.step(1/30);log.push('afterFreeze:'+g.F.tags+' celebrate:'+(g.celebrate>0));
    for(let i=0;i<150;i++)g.step(1/30);l.remove();return {log,win:res&&res.win,p3:res&&res.flags.p3flawless};});
-  assert(r.log[0]==='p2 clones3'&&r.log[1].startsWith('tele:1')&&r.log[2]==='p3'&&r.log[3]==='shieldTag:0'&&r.win,JSON.stringify(r));await ctx.close();return r.log.join(' → ')+' → 勝利';});
+  assert(r.log[0]==='p2 clones5'&&r.log[1].startsWith('tele:1')&&r.log[2]==='p3'&&r.log[3]==='shieldTag:0'&&r.win,JSON.stringify(r));await ctx.close();return r.log.join(' → ')+' → 勝利';});
  await check('成就：完成條件後解鎖、有時間戳、傳說追擊者在 7 項主要成就後解鎖、可切換展示稱號',async()=>{const {ctx,p}=await page();await p.goto(BASE+'fack_v3.html');await seed(p,OLD);await p.reload();
   const r=await p.evaluate(()=>{const F=FackAdventure,d=FackExpStore.data;const base={mode:'single',diff:'easy',used:60,remaining:100,limit:160,hearts:3,damage:0,papers:0,itemsUsed:{},hidden:true,flags:{},extra:{},stars:3,score:1000,win:true};
    const all=[];['night','escort','tenday','boss'].forEach((s,i)=>{const diff=['easy','normal','hard','hell'][i];all.push(...F.recordStage(Object.assign({},base,{stage:s,diff,flags:s==='escort'?{perfect:true}:s==='boss'?{p3flawless:true}:{},itemsUsed:Object.fromEntries(Object.keys(FackAdv.ITEMS).map(k=>[k,1]))})));});

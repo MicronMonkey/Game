@@ -13,10 +13,10 @@ const lerp=(a,b,t)=>a+(b-a)*t;
 A.util={dist,clamp,lerp,snd};
 
 A.DIFFS={
- easy:{id:'easy',e:'🌱',n:'簡單',enemy:.82,time:1.25,hearts:4,desc:'巡邏員慢、時間多、4 顆愛心'},
- normal:{id:'normal',e:'🏃',n:'中等',enemy:1,time:1,hearts:3,desc:'剛剛好的冒險'},
- hard:{id:'hard',e:'🔥',n:'難',enemy:1.1,time:.9,hearts:3,desc:'敵人更快、時間更緊'},
- hell:{id:'hell',e:'💀',n:'地獄',enemy:1.2,time:.82,hearts:2,desc:'只有 2 顆愛心，失誤代價很高'}
+ easy:{id:'easy',e:'🌱',n:'簡單',enemy:.82,guard:1.075,time:1.25,hearts:4,desc:'巡邏員慢、時間多、4 顆愛心'},
+ normal:{id:'normal',e:'🏃',n:'中等',enemy:1,guard:1.15,time:1,hearts:3,desc:'剛剛好的冒險'},
+ hard:{id:'hard',e:'🔥',n:'難',enemy:1.1,guard:1.225,time:.9,hearts:3,desc:'敵人更快、時間更緊'},
+ hell:{id:'hell',e:'💀',n:'地獄',enemy:1.2,guard:1.3,time:.82,hearts:2,desc:'只有 2 顆愛心，失誤代價很高'}
 };
 A.ITEMS={
  speed:{icon:'⚡',name:'疾速鞋',desc:'3 秒內大幅加速'},
@@ -42,6 +42,8 @@ A.BUFFS={
  lucky:{icon:'🍀',name:'幸運補給',max:2,desc:'道具出現速度 +25%',lv:n=>'道具重生 +'+(n*25)+'%'},
  double:{icon:'✖️',name:'雙倍效率',max:2,desc:'每關開始的一段時間內，連署書獲得量 ×2',lv:n=>'前 '+(n>1?40:25)+' 秒 ×2'}
 };
+// 移動障礙物整體速度（相對原始設計）；難度差異另由各關的 enemy 係數決定。
+A.HAZARD_SPEED=.7;
 A.buffLv=(buffs,id)=>clamp((buffs&&buffs[id])|0,0,A.BUFFS[id].max);
 
 // ── 格子尋路（與經典模式同概念，獨立實作）──
@@ -217,7 +219,7 @@ G.useItem=function(type,it){const g=this,I=A.ITEMS[type];g.itemsUsed[type]=1;
 G.addItem=function(type,x,y,o){const it=Object.assign({x,y,type,r:17,bob:this.rng()*6},o||{});this.items.push(it);return it;};
 G.addPapers=function(n,o){for(let i=0;i<n;i++){const p=this.free(Object.assign({pad:20,gap:50,avoid:this.papers},o||{}));this.papers.push({x:p.x,y:p.y,r:12,v:(o&&o.v)||50});}};
 // 巡邏員：沿路徑巡邏，視野錐形內且沒有被障礙物擋住就會追；追丟 3 秒回到路線。
-G.addGuard=function(path,o){const p0=path[0],sp=(o&&o.spd||72)*this.diff.enemy;const gd=Object.assign({x:p0.x,y:p0.y,r:14,path,i:1%path.length,ps:sp,cs:(o&&o.chase||128)*this.diff.enemy,range:(o&&o.range)||175,fov:1.25,ang:0,state:'patrol',sus:0,lost:0,stun:0,navT:0,field:null,name:(o&&o.name)||'巡邏員',grace:3},o||{});gd.ps=sp;this.guards.push(gd);return gd;};
+G.addGuard=function(path,o){const p0=path[0],gm=this.diff.enemy*(this.diff.guard||1),sp=(o&&o.spd||72)*gm;const gd=Object.assign({x:p0.x,y:p0.y,r:14,path,i:1%path.length,ps:sp,cs:(o&&o.chase||128)*gm,range:(o&&o.range)||175,fov:1.25,ang:0,state:'patrol',sus:0,lost:0,stun:0,navT:0,field:null,name:(o&&o.name)||'巡邏員',grace:3},o||{});gd.ps=sp;this.guards.push(gd);return gd;};
 G.canSee=function(o){const g=this,P=g.P;if(g.eff.smoke>0||o.grace>0)return false;const d=dist(o,P);if(d<38)return true;if(d>o.range)return false;let a=Math.atan2(P.y-o.y,P.x-o.x)-o.ang;a=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(a)>o.fov/2)return false;return g.los(o,P);};
 G.moveTo=function(o,tx,ty,sp,dt){const g=this;// 直線看得到就直走，否則沿 BFS 場繞路
  let d=null;if(g.los(o,{x:tx,y:ty},g.solids)){const dx=tx-o.x,dy=ty-o.y,l=Math.hypot(dx,dy);if(l>1)d={x:dx/l,y:dy/l};}
@@ -228,10 +230,11 @@ G.updGuards=function(dt){const g=this,P=g.P;g.guards.forEach(o=>{o.grace=Math.ma
  if(g.eff.freeze>0&&!o.noFreeze){o.mv=0;return;}
  if(o.stun>0){o.stun-=dt;o.mv=0;return;}
  const see=g.canSee(o);
- if(see){o.sus+=dt;o.lost=0;if(o.sus>.35&&o.state!=='chase'){o.state='chase';o.alert=1.2;g.msg('❗ 被'+o.name+'發現了！躲到障礙物後面甩開他');snd().sfx('shout');}}
+ if(see){o.sus+=dt;o.lost=0;o.seenAt={x:P.x,y:P.y};if(o.sus>.35&&o.state!=='chase'){o.state='chase';o.alert=1.2;g.msg('❗ 被'+o.name+'發現了！躲到障礙物後面甩開他');snd().sfx('shout');}}
  else{o.sus=Math.max(0,o.sus-dt*.6);if(o.state==='chase'){o.lost+=dt;if(o.lost>3){o.state='return';g.msg('呼…'+o.name+'跟丟了');}}}
  o.alert=Math.max(0,(o.alert||0)-dt);
- if(o.state==='chase')g.moveTo(o,P.x,P.y,o.cs,dt);
+ // 追擊：看得到就追本人；看不到只會去「最後看到你的位置」，所以躲到障礙物後面可以甩開
+ if(o.state==='chase'){const tg=see||!o.seenAt?P:o.seenAt;g.moveTo(o,tg.x,tg.y,o.cs,dt);if(!see&&o.seenAt&&dist(o,o.seenAt)<10)o.lost=Math.max(o.lost,2.2);}
  else{let w=o.path[o.i];if(o.state==='return'){let bi=0,bd=1e9;o.path.forEach((q,i)=>{const dd=dist(q,o);if(dd<bd){bd=dd;bi=i;}});if(bd<10){o.state='patrol';o.i=(bi+1)%o.path.length;}else w=o.path[bi];}
   g.moveTo(o,w.x,w.y,o.ps,dt);if(o.state==='patrol'&&dist(o,w)<8)o.i=(o.i+1)%o.path.length;}
  if(dist(o,P)<o.r+P.r&&o.stun<=0){if(g.hurt(o.name)){const dx=P.x-o.x,dy=P.y-o.y,l=Math.hypot(dx,dy)||1;P.x+=dx/l*40;P.y+=dy/l*40;g.collide(P);}o.stun=1.6;o.state='return';o.sus=0;g.puff(o.x,o.y-20,'抱歉抱歉','#ffe09c',0);}
@@ -275,7 +278,7 @@ G.step=function(dt){const g=this;if(g.over)return;
  // 閘門：週期開關（綠＝開、黃＝即將關閉、紅＝關閉）；關閉瞬間若人在閘門裡會被推出去。
  g.gates.forEach(t=>{if(t.always!=null){t.closed=!t.always(g)&&!(g.eff.pass>0);}else{const c=((g.t+t.off)%t.period+t.period)%t.period;t.phase=c<t.open?'open':c<t.open+t.warn?'warn':'closed';t.left=c<t.open+t.warn?t.open+t.warn-c:t.period-c;t.closed=t.phase==='closed'&&!(g.eff.pass>0);}});
  // 移動障礙物（定身時停止）
- g.hazards.forEach(h=>{if(g.eff.freeze<=0)h.ph+=dt/h.period;const s=(Math.sin(h.ph*Math.PI*2)+1)/2;h.x=lerp(h.ax,h.bx,s);h.y=lerp(h.ay,h.by,s);
+ g.hazards.forEach(h=>{if(g.eff.freeze<=0)h.ph+=dt/h.period*A.HAZARD_SPEED;const s=(Math.sin(h.ph*Math.PI*2)+1)/2;h.x=lerp(h.ax,h.bx,s);h.y=lerp(h.ay,h.by,s);
   const cx=clamp(P.x,h.x,h.x+h.w),cy=clamp(P.y,h.y,h.y+h.h);if(Math.hypot(P.x-cx,P.y-cy)<P.r-2){g.hurt(h.name||'撞到障礙');const dx=P.x-(h.x+h.w/2),dy=P.y-(h.y+h.h/2),l=Math.hypot(dx,dy)||1;P.x+=dx/l*36;P.y+=dy/l*36;g.collide(P);}});
  g.zones.forEach(z=>{if(P.x>z.x-P.r*.5&&P.x<z.x+z.w+P.r*.5&&P.y>z.y&&P.y<z.y+z.h){g.hurt(z.name);if(z.push){P.x+=z.push.x;P.y+=z.push.y;}g.collide(P);}});
  // 隱藏牆：持續推擠 0.6 秒就會打開
