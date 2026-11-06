@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="zh-Hant"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>全民找法克 V3 測試版｜經典＋冒險模式</title>
+<meta name="robots" content="noindex">
+<meta name="description" content="全民找法克擴充測試版：經典 2600 份連署書追逐，加上冒險闖關、隨機 Buff、Boss 戰、成就收藏與每日挑戰。">
+<meta property="og:type" content="website">
+<meta property="og:title" content="全民找法克 V3 測試版｜冒險模式">
+<meta property="og:description" content="經典追逐＋冒險闖關＋隨機 Buff＋Boss 戰＋每日挑戰。">
+<meta property="og:url" content="https://micronmonkey.github.io/Game/fack_v3.html">
+<meta property="og:image" content="https://micronmonkey.github.io/Game/fack-og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0b1620">
+<style>
+:root{--bg:#0b1620;--fg:#f3eee4;--ac:#f1d09a;--mut:#a9c3cf}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:radial-gradient(ellipse at 50% 0,#294152,#0b1620 70%);color:var(--fg);font-family:system-ui,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;overflow:hidden;overscroll-behavior:none}
+#wrap{height:100dvh;display:flex;flex-direction:column;max-width:980px;margin:0 auto;padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
+header{display:flex;align-items:center;gap:8px;padding:8px 12px}
+header b{flex:1;font-size:15px;color:#ffd98f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+header a,header button{font:600 13px system-ui;color:#eef3f5;background:#1d3747;border:1px solid #4f7385;border-radius:999px;padding:7px 12px;text-decoration:none;white-space:nowrap;cursor:pointer}
+.beta{font:800 10px system-ui;background:#9b2f2f;color:#fff;border-radius:6px;padding:2px 6px;margin-left:6px;vertical-align:2px}
+#stage{position:relative;flex:1;min-height:0;margin:0 8px 8px;border:1px solid #496070;border-radius:12px;overflow:hidden;background:#0b1620}
+#hero{position:absolute;inset:0;z-index:20;display:flex;flex-direction:column;align-items:center;text-align:center;padding:20px 16px;gap:8px;overflow-y:auto;overscroll-behavior:contain;background:linear-gradient(0deg,#07111df5 35%,#07111d99),url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'><path d='M0 20H40M20 0V40' stroke='%23ffffff10'/></svg>")}
+#hero>:first-child{margin-top:auto}#hero>:last-child{margin-bottom:auto}
+#hero .kick{font:12px ui-monospace,monospace;letter-spacing:3px;color:#f1b99b}
+#hero h1{margin:0;font:900 clamp(36px,10vw,68px) system-ui;color:#fff1df;text-shadow:0 4px 24px #000;letter-spacing:4px}
+#hero p{margin:2px 0;max-width:460px;line-height:1.7;color:#dce8ec;font-size:14px}
+#hero .best{font-weight:800;color:#9fe3c4}
+#hero .hall{color:#ffe2a6;font-weight:800;font-size:13px;line-height:1.6}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:9px;width:min(100%,480px);margin-top:6px}
+.modes button{display:flex;flex-direction:column;align-items:center;gap:3px;border:1px solid #8297a4;border-radius:14px;background:#20394c;color:#f7f4ea;padding:14px 8px;font:900 17px system-ui;cursor:pointer;min-height:84px}
+#hero .modes button small{font:600 11px system-ui;opacity:.88;line-height:1.4;color:inherit;margin:0;max-width:none}
+.modes button.main{background:var(--ac);color:#102338;border-color:var(--ac);box-shadow:0 8px 30px #0008}
+.modes button.adv{background:linear-gradient(150deg,#3b6a52,#1f3d33);border-color:#9fe3c4}
+.modes button.cont{grid-column:1/-1;background:linear-gradient(150deg,#6a5a2b,#3b3118);border-color:#ffd98f;min-height:60px}
+.modes button[hidden]{display:none}
+#hero small{color:var(--mut);font-size:11px;line-height:1.7;max-width:460px;margin-top:8px}
+#toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 60px);transform:translateX(-50%);background:var(--ac);color:#111;font-weight:800;padding:8px 16px;border-radius:999px;z-index:50;opacity:0;transition:opacity .3s;pointer-events:none}
+</style>
+</head><body>
+<div id="wrap">
+ <header><b>🏃 全民找法克・V3<span class="beta">測試版</span></b><a href="fack.html">正式版</a><button id="share-top" type="button">分享</button></header>
+ <div id="stage">
+  <div id="hero">
+   <div class="kick">11.03 / 台中廠區疏散演練</div>
+   <h1>全民找法克</h1><p style="color:#ffd98f;font-weight:900">經典追逐＋冒險闖關＋每日挑戰</p>
+   <p>警報響起，神隱很久的法克出現了！<br>你是桃園會長，抱著一箱連署書去追他。</p>
+   <p class="best" id="best"></p><p class="hall" id="hall"></p><p class="hall" id="hall2"></p>
+   <div class="modes">
+    <button class="cont" id="cont" type="button" hidden>▶ 繼續冒險<small id="contInfo"></small></button>
+    <button class="main" id="go" type="button">🏃 經典模式<small>原版 V2：2,600 份連署書挑戰<br>四種難度・原紀錄保留</small></button>
+    <button class="adv" id="adv" type="button">🗺️ 冒險模式<small>四大關卡・隨機 Buff<br>Boss 戰・隱藏線索</small></button>
+    <button id="daily" type="button">📅 每日挑戰<small id="dailyInfo">每天一題，全玩家同地圖</small></button>
+    <button id="achievements" type="button">🏆 成就圖鑑<small>經典＋冒險成就<br>切換展示稱號</small></button>
+   </div>
+   <small>這是擴充功能測試版，經典模式與正式版共用同一份紀錄（不會被清除）；冒險與每日挑戰另外存放在 fack.expansion.v1。<br>本遊戲為虛構創作，人物、事件與廠區地圖皆為想像，不代表任何真實人物的行為或真實廠區配置。</small>
+  </div>
+ </div>
+</div>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="game/chase_v2.js?v=20261105-hell-tuned-official-refresh2"></script>
+<!-- 擴充資料層必須在經典成就模組之前載入：先備份可能損毀的經典紀錄字串 -->
+<script src="game/fack_store.js?v=20261106-x1"></script>
+<script src="game/achievements_live_v2.js?v=20261105"></script>
+<script src="game/fack_adv_core.js?v=20261106-x1"></script>
+<script src="game/fack_adv_stages.js?v=20261106-x1"></script>
+<script src="game/fack_adv_ui.js?v=20261106-x1"></script>
+<script>
+(function(){
+'use strict';
+// ── 經典模式：與正式版 fack.html 完全相同的 Key 與計分 ──
+const KEY='fack-chase-live-v2-best',URL_='https://micronmonkey.github.io/Game/fack_v3.html';
+const RECORD_VERSION='live-v2-hell-tuned-r1',VERSION_KEY='fack-chase-live-record-version';
+// 非破壞性的版本守衛：本頁「絕不刪除」任何紀錄。
+// 只有在版本標記完全不存在時寫入與正式版相同的標記，避免玩家日後開啟正式版時，被正式版的舊遷移程式清掉在這裡打下的經典紀錄。
+(function guardRecords(){try{if(localStorage.getItem(VERSION_KEY)===null)localStorage.setItem(VERSION_KEY,RECORD_VERSION);}catch(e){console.warn('Record guard unavailable',e);}})();
+const $=s=>document.querySelector(s);
+const L=FackChase.LEVELS;
+let best={};try{best=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){best={}}
+function saveBest(){try{localStorage.setItem(KEY,JSON.stringify(best))}catch(e){}}
+function bestLine(){const xs=Object.values(L).filter(l=>best[l.id]&&best[l.id].used).map(l=>l.e+' '+l.n+' '+best[l.id].used+' 秒');return xs.length?'經典最佳紀錄：'+xs.join('　'):'';}
+function showBest(){
+ $('#best').textContent=bestLine();const a=FackTrophies.summary(),x=FackAdventure.summary();
+ $('#hall').textContent='🏅 '+x.title+'　｜　🏆 經典成就 '+a.got+'/'+a.total+'　｜　累積收集 '+a.papers.toLocaleString('zh-TW')+' 份';
+ $('#hall2').textContent='🗺️ 冒險通關 '+x.cleared+'/4 關　｜　🎖️ 冒險成就 '+x.got+'/'+x.total;
+ const run=x.run,cont=$('#cont');
+ if(run&&FackAdv.STAGES[run.stage]){cont.hidden=false;const s=FackAdv.STAGES[run.stage];$('#contInfo').textContent=(run.pendingBuff?'先選擇 Buff，再挑戰 ':'下一關：')+s.icon+' '+s.name+'｜'+FackAdv.DIFFS[run.diff].e+FackAdv.DIFFS[run.diff].n;}else cont.hidden=true;
+ const date=FackExpStore.twDate(),info=FackAdv.dailyInfo(date),r=FackExpStore.data.daily[date];
+ $('#dailyInfo').textContent=info.type.name+(r&&r.clears?'・今日已完成 ✓':'・今日未完成');
+}
+showBest();
+document.addEventListener('fack-title-changed',showBest);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('#hero').style.display!=='none')showBest();});
+function toast(t){const e=$('#toast');e.textContent=t;e.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.opacity=0,2200);}
+async function share(r){
+ const text=r&&r.win?'我在「全民找法克」'+r.level.e+r.level.n+'模式花 '+r.used+' 秒追上法克，獲得 '+r.score+' 分！目前稱號「'+FackTrophies.title()+'」，已解鎖 '+FackTrophies.summary().got+' 項成就！你敢來挑戰嗎？':'11/3 疏散演練，法克出現了！一起來「全民找法克」：';
+ try{if(navigator.share){await navigator.share({title:'全民找法克',text,url:URL_});return;}}catch(e){if(e&&e.name==='AbortError')return;}
+ try{await navigator.clipboard.writeText(text+' '+URL_);toast('已複製分享文字與連結');}catch(e){prompt('複製這段文字分享：',text+' '+URL_);}
+}
+$('#share-top').onclick=()=>share(null);
+// 同一時間只會有一個模式在畫面上
+let game=null,shell=null;
+function closeAll(){if(game){game.close();game=null;}if(shell){shell.close();shell=null;}}
+function backToHero(){closeAll();showBest();$('#hero').style.display='';}
+function start(){
+ closeAll();$('#hero').style.display='none';
+ game=FackChase.mount($('#stage'),{
+  level:localStorage.getItem('fack-live-v2-level')||'normal',
+  introExtra:()=>{const t=bestLine();return t?'<p style="color:#9fe3c4;font-weight:800">'+t.replace('經典最佳紀錄：','最佳紀錄：')+'</p>':'';},
+  onQuit:api=>{api.close();game=null;backToHero();},
+  onEnd:r=>{
+   r.awards=FackTrophies.record(r);
+   if(r.awards.length)toast('🏆 新成就 '+r.awards[0]+(r.awards.length>1?' 等 '+r.awards.length+' 項':''));
+   try{localStorage.setItem('fack-live-v2-level',r.level.id)}catch(e){}
+   const b=best[r.level.id]||{};b.plays=(b.plays||0)+1;
+   if(r.win){if(!b.used||r.used<b.used){if(b.used)r.best='🎉 '+r.level.n+'新紀錄！（之前 '+b.used+' 秒）';b.used=r.used;}else r.best=r.level.n+'最佳紀錄 '+b.used+' 秒';}
+   best[r.level.id]=b;saveBest();showBest();
+  },
+  buttons:r=>[
+   {label:r.win?'再玩一次':'再追一次',onClick:(r,api)=>api.retry()},
+   {label:'換難度',alt:true,onClick:(r,api)=>api.menu()},
+   {label:'成就圖鑑 🏆',alt:true,onClick:()=>FackTrophies.open()},
+   {label:'分享成績',alt:true,onClick:r=>share(r)},
+   {label:'🏠 主選單',alt:true,onClick:()=>backToHero()}
+  ]
+ });
+}
+function adventure(direct){closeAll();$('#hero').style.display='none';shell=FackAdventure.openAdventure($('#stage'),{direct,onExit:()=>{shell=null;backToHero();}});}
+function daily(){closeAll();$('#hero').style.display='none';shell=FackAdventure.openDaily($('#stage'),{onExit:()=>{shell=null;backToHero();}});}
+$('#go').onclick=start;
+$('#adv').onclick=()=>adventure();
+$('#cont').onclick=()=>adventure('continue');
+$('#daily').onclick=daily;
+$('#achievements').onclick=()=>FackAdventure.openGallery({onClose:showBest});
+window.fackChaseState=()=>game?game.state():null;
+})();
+</script>
+</body></html>

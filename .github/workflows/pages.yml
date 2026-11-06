@@ -34,9 +34,14 @@ jobs:
           node --check game/chase.js
           node --check game/drill.js
           node --check game/mobile.js
+          node --check game/fack_store.js
+          node --check game/fack_adv_core.js
+          node --check game/fack_adv_stages.js
+          node --check game/fack_adv_ui.js
           node tests/smoke.cjs
           node tests/director.cjs
           node tests/drill.cjs
+          node tests/expansion_store.cjs
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

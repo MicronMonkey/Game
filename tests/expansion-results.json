@@ -1,0 +1,202 @@
+{
+ "date": "2026-11-06T17:57:04.558Z",
+ "passed": 39,
+ "failed": 0,
+ "results": [
+  {
+   "name": "舊玩家升級：開啟擴充版後經典紀錄逐字不變",
+   "ok": true,
+   "detail": "🏅 地獄追緝官　｜　🏆 經典成就 22/24　｜　累積收集 61,230 份"
+  },
+  {
+   "name": "舊玩家：之後再開正式版 fack.html 也不會清除紀錄、不跳重置通知",
+   "ok": true,
+   "detail": "正式版顯示：🏅 地獄追緝官　｜　🏆 成就 22/24　｜　累積收集 61,230 份"
+  },
+  {
+   "name": "冒險／每日資料只寫入 fack.expansion.v1*，不新增或修改經典 Key",
+   "ok": true,
+   "detail": "fack.expansion.v1, fack.expansion.v1.classic-first, fack.expansion.v1.classic-latest"
+  },
+  {
+   "name": "無紀錄的新玩家首次進入：正常顯示、不跳通知；之後開正式版也不會清掉新紀錄",
+   "ok": true,
+   "detail": "fack-chase-live-record-version"
+  },
+  {
+   "name": "更早期的舊版紀錄（無版本標記）在擴充版中原樣保留，不被刪除",
+   "ok": true,
+   "detail": "保留 fack-chase-best2、fack-chase-trophies-v1"
+  },
+  {
+   "name": "損毀的擴充紀錄：保留原始字串備份並安全回退，不清空經典資料",
+   "ok": true,
+   "detail": "fack.expansion.v1.corrupt.1793987779910"
+  },
+  {
+   "name": "損毀的經典成就字串：在經典模組覆寫前先備份原始內容",
+   "ok": true,
+   "detail": "fack.expansion.v1.classic-corrupt-fack-chase-live-v2-trophies.1793987780179"
+  },
+  {
+   "name": "未來版本的擴充資料（schema 2、未知欄位）讀取後保留，不降版、不刪欄位",
+   "ok": true,
+   "detail": "schema 2"
+  },
+  {
+   "name": "早期無 schema 的擴充資料會遷移到 schema 1，成績保留",
+   "ok": true,
+   "detail": "ok"
+  },
+  {
+   "name": "經典模式四種難度：可開始、計時、退出；與正式版做相同操作後，紀錄結果完全一致",
+   "ok": true,
+   "detail": "easy:77s normal:69s hard:64s hell:51s；難度數值、離開後的紀錄（含 plays 計數）與正式版完全相同"
+  },
+  {
+   "name": "經典模式勝利結算：走原本的 FackTrophies.record 與最佳紀錄（格式不變）",
+   "ok": true,
+   "detail": "plays 24→25"
+  },
+  {
+   "name": "自動玩家實玩 第一關 深夜追蹤（easy）",
+   "ok": true,
+   "detail": "3/3 勝｜勝 27s ★3；勝 28s ★2；勝 28s ★3"
+  },
+  {
+   "name": "自動玩家實玩 第一關 深夜追蹤（normal）",
+   "ok": true,
+   "detail": "2/3 勝｜敗(愛心用完了) 22s ★0；勝 29s ★2；勝 21s ★2"
+  },
+  {
+   "name": "自動玩家實玩 第一關 深夜追蹤（hard）",
+   "ok": true,
+   "detail": "3/3 勝｜勝 57s ★3；勝 20s ★3；勝 24s ★2"
+  },
+  {
+   "name": "自動玩家實玩 第一關 深夜追蹤（hell）",
+   "ok": true,
+   "detail": "2/3 勝｜勝 20s ★2；敗(愛心用完了) 28s ★0；勝 29s ★2"
+  },
+  {
+   "name": "自動玩家實玩 第二關 連署書保衛戰（easy）",
+   "ok": true,
+   "detail": "3/3 勝｜勝 52s ★1 📦5；勝 42s ★2 📦7；勝 42s ★2 📦7"
+  },
+  {
+   "name": "自動玩家實玩 第二關 連署書保衛戰（normal）",
+   "ok": true,
+   "detail": "3/3 勝｜勝 50s ★2 📦6；勝 50s ★2 📦6；勝 50s ★2 📦6"
+  },
+  {
+   "name": "自動玩家實玩 第二關 連署書保衛戰（hard）",
+   "ok": true,
+   "detail": "3/3 勝｜勝 59s ★1 📦1；勝 59s ★1 📦1；勝 68s ★1 📦1"
+  },
+  {
+   "name": "自動玩家實玩 第二關 連署書保衛戰（hell）",
+   "ok": true,
+   "detail": "3/3 勝｜勝 51s ★2 📦6；勝 85s ★1 📦1；勝 46s ★2 📦6"
+  },
+  {
+   "name": "自動玩家實玩 第三關 十日倒數（easy）",
+   "ok": true,
+   "detail": "3/3 勝｜勝 26s ★3；勝 26s ★3；勝 26s ★3"
+  },
+  {
+   "name": "自動玩家實玩 第三關 十日倒數（normal）",
+   "ok": true,
+   "detail": "3/3 勝｜勝 26s ★2；勝 26s ★2；勝 26s ★2"
+  },
+  {
+   "name": "自動玩家實玩 第三關 十日倒數（hard）",
+   "ok": true,
+   "detail": "3/3 勝｜勝 22s ★2；勝 22s ★2；勝 22s ★2"
+  },
+  {
+   "name": "自動玩家實玩 第三關 十日倒數（hell）",
+   "ok": true,
+   "detail": "3/3 勝｜勝 26s ★2；勝 26s ★2；勝 26s ★2"
+  },
+  {
+   "name": "自動玩家實玩 最終關 Boss 三階段（easy）",
+   "ok": true,
+   "detail": "3/3 勝｜勝 88s ★3；勝 27s ★3；勝 154s ★3"
+  },
+  {
+   "name": "自動玩家實玩 最終關 Boss 三階段（normal）",
+   "ok": true,
+   "detail": "3/3 勝｜勝 78s ★3；勝 146s ★3；勝 94s ★3"
+  },
+  {
+   "name": "自動玩家實玩 最終關 Boss 三階段（hard）",
+   "ok": true,
+   "detail": "3/3 勝｜勝 72s ★3；勝 78s ★3；勝 60s ★3"
+  },
+  {
+   "name": "自動玩家實玩 最終關 Boss 三階段（hell）",
+   "ok": true,
+   "detail": "3/3 勝｜勝 137s ★1；勝 68s ★2；勝 69s ★2"
+  },
+  {
+   "name": "連續冒險：通關→選 Buff→下一關；重新整理後進度、待選 Buff 與選項都保留",
+   "ok": true,
+   "detail": "選到 radar；第一關紀錄保留，從第二關繼續"
+  },
+  {
+   "name": "Buff：數值有上限（同種最多 2 層），效果只在冒險模式套用",
+   "ok": true,
+   "detail": "{\"caps\":[2,2,2,2,2,2,2,2],\"s1\":201.6,\"sc\":2,\"dl\":2,\"s2\":168,\"sc2\":0}"
+  },
+  {
+   "name": "Buff 實際效果：緊急護盾抵擋一次傷害、衝刺冷卻、雙倍效率、連署磁鐵範圍",
+   "ok": true,
+   "detail": "{\"h0\":3,\"h1\":3,\"h2\":2,\"cd\":9,\"mul\":2,\"mul2\":1,\"got\":50}"
+  },
+  {
+   "name": "Boss：三階段依序進行、分身與衝刺預告、第三階段需定身才能捕捉",
+   "ok": true,
+   "detail": "p2 clones3 → tele:1 state:aim → p3 → shieldTag:0 → afterFreeze:2 celebrate:true → 勝利"
+  },
+  {
+   "name": "成就：完成條件後解鎖、有時間戳、傳說追擊者在 7 項主要成就後解鎖、可切換展示稱號",
+   "ok": true,
+   "detail": "8 項；展示稱號可在冒險/經典間切換，經典稱號資料未被改寫"
+  },
+  {
+   "name": "每日挑戰：台灣時間跨日切換、同日同種子同地圖、紀錄依日期分開",
+   "ok": true,
+   "detail": "2026-11-06 「連署書大搜集」 → 2026-11-07 「只靠疾速鞋」（種子 1810402838 → 1827180457）"
+  },
+  {
+   "name": "每日挑戰五種題型都可產生並被自動玩家完成",
+   "ok": true,
+   "detail": "{\"catch3\":\"2026-11-01 勝 45s\",\"flawless\":\"2026-11-02 敗 愛心用完了\",\"collect\":\"2026-11-03 勝 26s\",\"speedonly\":\"2026-11-07 勝 38s\",\"nofreeze\":\"2026-11-11 勝 34s\"}"
+  },
+  {
+   "name": "手機版面與操作：iPhone 13",
+   "ok": true,
+   "detail": "搖桿上移 125px；搖桿佔畫面 8%；背景自動暫停"
+  },
+  {
+   "name": "手機版面與操作：Pixel 7",
+   "ok": true,
+   "detail": "搖桿上移 125px；搖桿佔畫面 6%；背景自動暫停"
+  },
+  {
+   "name": "重複進出冒險模式 10 次：事件監聽器沒有累積（無記憶體洩漏跡象）",
+   "ok": true,
+   "detail": "window/document 監聽器 2 → 2"
+  },
+  {
+   "name": "FPS 量測（手機模擬，無頭瀏覽器，僅供參考）",
+   "ok": true,
+   "detail": "第1關 61 fps、第2關 61 fps、第3關 61 fps、第4關 61 fps"
+  },
+  {
+   "name": "頁面 JavaScript 錯誤",
+   "ok": true,
+   "detail": "無"
+  }
+ ]
+}
