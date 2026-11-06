@@ -139,7 +139,12 @@ function Game(layer,cfg){
  g.maxHearts=g.diff.hearts;g.hearts=g.maxHearts;g.inv=0;g.damage=0;g.paperScore=0;g.itemsUsed={};g.hidden=false;g.flags={};
  g.shieldCharges=A.buffLv(g.buffs,'shield');g.dashLv=A.buffLv(g.buffs,'dash');g.dashCD=0;g.radarT=0;
  g.limit=60;g.time=60;
+ // 永久裝備：只在冒險模式（冒險／單關）生效
+ g.gearId=cfg.mode==='daily'?null:(cfg.gear||null);g.gx=A.gear?A.gear.fx(g.gearId):{speed:0,pick:0,magnetMul:1,speedDur:1,freeze:0,itemDur:0,time:0,shield:0,hearts:0,radar:0,battery:1,cart:0,paper:0,cloneMark:false};
  g.def.setup(g);
+ if(g.gx.time){g.limit*=1+g.gx.time;if(g.dayLen)g.dayLen*=1+g.gx.time;if(g.hourglass)g.hourglass*=1+g.gx.time;}
+ if(g.gx.hearts){g.maxHearts+=g.gx.hearts;g.hearts=g.maxHearts;}
+ g.shieldCharges+=g.gx.shield;
  g.time=g.limit;
  g.nav=new Nav(g.W,g.H,g.solids,25);
  if(g.dashLv)layer.classList.add('has-dash');else layer.classList.remove('has-dash');
@@ -206,12 +211,13 @@ G.los=function(a,b,list){const n=Math.max(4,Math.ceil(dist(a,b)/18));list=list||
 G.msg=function(t,d){const m=this.layer.querySelector('.ax-msg');if(!m)return;m.textContent=t;m.classList.add('on');this.msgT=d||2.2;};
 G.tip=function(t,d){let e=this.layer.querySelector('.ax-tip');if(!e){e=document.createElement('div');e.className='ax-tip';this.layer.append(e);}e.textContent=t;e.style.opacity=1;this.tipT=d||5;};
 G.puff=function(x,y,text,color,n){for(let i=0;i<(n||8);i++){const a=this.rng()*6.28,s=40+this.rng()*90;this.fx.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:.6,max:.6,c:color||'#fff',s:3+this.rng()*3});}if(text)this.fx.push({x,y:y-10,vx:0,vy:-40,life:1,max:1,text,c:color||'#fff'});};
-G.speed=function(){const g=this;let s=168*(1+.1*A.buffLv(g.buffs,'swift'));if(g.eff.speed>0)s*=1.55;if(g.eff.dash>0)s*=1.8;if(g.P.slow>0)s*=.55;if(g.def.speedMul)s*=g.def.speedMul(g);return s;};
-G.freezeDur=function(b){return (b||3)*(1+.2*A.buffLv(this.buffs,'extend'));};
+G.speed=function(){const g=this;let s=168*(1+.1*A.buffLv(g.buffs,'swift'));if(g.eff.speed>0)s*=1.55;if(g.eff.dash>0)s*=1.8;if(g.P.slow>0)s*=.55;s*=1+g.gx.speed;if(g.def.speedMul)s*=g.def.speedMul(g);return s;};
+G.freezeDur=function(b){return (b||3)*(1+.2*A.buffLv(this.buffs,'extend')+this.gx.freeze);};
+G.magR=function(){const g=this;return 20+g.gx.pick+(35*A.buffLv(g.buffs,'magnet')+(g.eff.magnet>0?95:0))*g.gx.magnetMul;};
 G.dash=function(){const g=this;if(!g.dashLv||g.dashCD>0||g.over||g.paused||g.lock>0)return;g.eff.dash=.5;g.dashCD=g.dashLv>1?6:9;snd().sfx('slide');g.puff(g.P.x,g.P.y,null,'#bfe8ff',6);};
-G.paperMul=function(){const n=A.buffLv(this.buffs,'double');return n&&this.t<(n>1?40:25)?2:1;};
+G.paperMul=function(){const n=A.buffLv(this.buffs,'double');return (n&&this.t<(n>1?40:25)?2:1)*(1+this.gx.paper);};
 G.useItem=function(type,it){const g=this,I=A.ITEMS[type];g.itemsUsed[type]=1;
- if(type==='speed')g.eff.speed=3;else if(type==='shield')g.eff.shield=8;else if(type==='magnet')g.eff.magnet=8;else if(type==='radar')g.eff.radar=8;else if(type==='smoke'){g.eff.smoke=4;g.guards.forEach(o=>{if(o.state==='chase')o.state='return';});}
+ const idur=1+g.gx.itemDur;if(type==='speed')g.eff.speed=3*g.gx.speedDur*idur;else if(type==='shield')g.eff.shield=8*idur;else if(type==='magnet')g.eff.magnet=8*idur;else if(type==='radar')g.eff.radar=8;else if(type==='smoke'){g.eff.smoke=4;g.guards.forEach(o=>{if(o.state==='chase')o.state='return';});}
  else if(type==='freeze')g.eff.freeze=g.freezeDur();else if(type==='battery')g.battery=Math.min(100,(g.battery||0)+40);else if(type==='hourglass')g.time+=g.hourglass||10;
  else if(type==='onigiri')g.hearts=Math.min(g.maxHearts,g.hearts+1);else if(type==='key')g.hasKey=true;else if(type==='pass')g.eff.pass=10;
  snd().sfx(type==='freeze'?'boing':'coin');g.puff(it?it.x:g.P.x,it?it.y:g.P.y,I.icon+' '+I.name,'#ffe09c',10);
@@ -269,7 +275,7 @@ G.step=function(dt){const g=this;if(g.over)return;
  snd().setFast(g.time<20);
  Object.keys(g.eff).forEach(k=>g.eff[k]=Math.max(0,g.eff[k]-dt));
  g.inv=Math.max(0,g.inv-dt);g.dashCD=Math.max(0,g.dashCD-dt);g.P.slow=Math.max(0,g.P.slow-dt);
- const rl=A.buffLv(g.buffs,'radar');if(rl){g.radarT+=dt;const every=rl>1?12:18;if(g.radarT>=every){g.radarT=0;g.eff.radar=Math.max(g.eff.radar,4);g.msg('📡 偵查雷達掃描中…');}}
+ const rl=A.buffLv(g.buffs,'radar');if(!rl&&g.gx.radar){g.radarT+=dt;if(g.radarT>=g.gx.radar){g.radarT=0;g.eff.radar=Math.max(g.eff.radar,3);g.msg('🎧 情報耳機：掃描中…');}}if(rl){g.radarT+=dt;const every=rl>1?12:18;if(g.radarT>=every){g.radarT=0;g.eff.radar=Math.max(g.eff.radar,4);g.msg('📡 偵查雷達掃描中…');}}
  // 玩家移動
  const P=g.P,inp=g.input();
  if(inp){const sp=g.speed()*inp.m*dt;P.x+=inp.x*sp;P.y+=inp.y*sp;P.fx=inp.x;P.fy=inp.y;P.mv=1;P.walk+=dt*12;}else P.mv=0;
@@ -284,11 +290,11 @@ G.step=function(dt){const g=this;if(g.over)return;
  // 隱藏牆：持續推擠 0.6 秒就會打開
  g.secrets.forEach(s=>{if(s.open)return;const cx=clamp(P.x,s.x,s.x+s.w),cy=clamp(P.y,s.y,s.y+s.h);if(inp&&Math.hypot(P.x-cx,P.y-cy)<P.r+3){s.push=(s.push||0)+dt;if(s.push>.6){s.open=true;snd().sfx('win');g.puff(s.x+s.w/2,s.y+s.h/2,'發現隱藏捷徑！','#ffe09c',20);if(s.onOpen)s.onOpen(g);}}});
  // 道具與連署書
- const magR=20+35*A.buffLv(g.buffs,'magnet')+(g.eff.magnet>0?95:0);
+ const magR=g.magR();
  // 先收集「被撿到」的道具，再執行效果：效果中新增的道具（例如鑰匙）才不會被陣列替換吃掉。
  const picked=[];g.items=g.items.filter(it=>{it.bob+=dt*3;if(it.hiddenUntilNear&&dist(it,P)>110)return true;if(dist(it,P)<P.r+it.r){picked.push(it);return false;}return true;});
  picked.forEach(it=>{if(it.onPick){if(it.onPick(g,it)===false)g.items.push(it);}else g.useItem(it.type,it);});
- g.papers=g.papers.filter(p=>{const d=dist(p,P);if(d<magR+p.r&&d>1){const s=Math.min(d,380*dt);p.x+=(P.x-p.x)/d*s;p.y+=(P.y-p.y)/d*s;}if(d<P.r+p.r){const v=p.v*g.paperMul();g.paperScore+=v;g.puff(p.x,p.y,'+'+v,'#fff8ca',3);snd().sfx('coin');if(g.def.onPaper)g.def.onPaper(g,v);return false;}return true;});
+ g.papers=g.papers.filter(p=>{const d=dist(p,P);if(d<magR+p.r&&d>1){const s=Math.min(d,380*dt);p.x+=(P.x-p.x)/d*s;p.y+=(P.y-p.y)/d*s;}if(d<P.r+p.r){const v=Math.round(p.v*g.paperMul());g.paperScore+=v;g.puff(p.x,p.y,'+'+v,'#fff8ca',3);snd().sfx('coin');if(g.def.onPaper)g.def.onPaper(g,v);return false;}return true;});
  g.spawners.forEach(sp=>{const lucky=1+.25*A.buffLv(g.buffs,'lucky');sp.t=(sp.t==null?sp.every:sp.t)-dt*lucky;if(sp.t<=0){sp.t=sp.every;const n=g.items.filter(i=>sp.types.includes(i.type)).length;if(n<sp.max){const p=g.free(Object.assign({pad:24,far:P,farD:120},sp.opt||{}));g.addItem(sp.types[Math.floor(g.rng()*sp.types.length)],p.x,p.y);}}});
  g.updGuards(dt);
  g.teles=g.teles.filter(o=>{o.t+=dt;if(o.t>=o.dur){if(o.done)o.done(g,o);return false;}return true;});
@@ -349,7 +355,7 @@ G.render=function(){const g=this,c=g.ctx,P=g.P,now=performance.now()/1000;
  const blink=g.inv>0&&((now*12|0)%2===0);
  if(!blink){g.person(P,g.eff.speed>0||g.eff.dash>0?'#e8b84f':'#3d6fa8','#1d1a17','會長');const cr=g.def.carry==null?'📦':g.def.carry;if(cr)txt(c,cr,P.x+P.r*.9,P.y+P.r*.25,15,'#fff');}
  if(g.eff.shield>0||g.shieldCharges>0){c.strokeStyle=g.eff.shield>0?'#9ae7ff':'#9ae7ff55';c.lineWidth=g.eff.shield>0?3:1.5;c.beginPath();c.arc(P.x,P.y,P.r+7,0,7);c.stroke();}
- if(g.eff.magnet>0||A.buffLv(g.buffs,'magnet')){c.strokeStyle='#ffe28a55';c.setLineDash([4,8]);c.lineWidth=1.5;c.beginPath();c.arc(P.x,P.y,20+35*A.buffLv(g.buffs,'magnet')+(g.eff.magnet>0?95:0),0,7);c.stroke();c.setLineDash([]);}
+ if(g.eff.magnet>0||A.buffLv(g.buffs,'magnet')){c.strokeStyle='#ffe28a55';c.setLineDash([4,8]);c.lineWidth=1.5;c.beginPath();c.arc(P.x,P.y,g.magR(),0,7);c.stroke();c.setLineDash([]);}
  if(g.def.over)g.def.over(g,c,now);
  g.fx.forEach(f=>{c.globalAlpha=Math.max(0,f.life/f.max);if(f.text)txt(c,f.text,f.x,f.y,13,f.c,900);else{c.fillStyle=f.c;c.fillRect(f.x-f.s/2,f.y-f.s/2,f.s,f.s);}});c.globalAlpha=1;
  c.restore();
@@ -367,7 +373,7 @@ G.hud=function(){const g=this;const chips=[];
  if(!g.def.customTime)chips.push(['⏱ '+Math.ceil(g.time),g.time<20?'warn':'']);
  (g.def.hud?g.def.hud(g):[]).forEach(x=>chips.push(Array.isArray(x)?x:[x,'']));
  const html=chips.map(x=>'<span class="'+x[1]+'">'+x[0]+'</span>').join('');if(html!==g._chips){g._chips=html;g.layer.querySelector('.ax-chips').innerHTML=html;}
- const bf=[];if(g.shieldCharges>0)bf.push('🛡️ 緊急護盾 ×'+g.shieldCharges);if(g.paperMul()>1)bf.push('✖️ 連署書 ×2');Object.keys(g.eff).forEach(k=>{if(g.eff[k]>.05&&k!=='dash'){const n={speed:'⚡ 加速',shield:'🛡️ 無敵',magnet:'🧲 磁鐵',radar:'📡 雷達',smoke:'💨 煙霧',freeze:'🧊 定身',pass:'🎫 通行'}[k];bf.push(n+' '+g.eff[k].toFixed(1)+'s');}});
+ const bf=[];if(g.shieldCharges>0)bf.push('🛡️ 緊急護盾 ×'+g.shieldCharges);if(g.gearId&&A.GEAR){const ge=A.GEAR.find(x=>x.id===g.gearId);if(ge)bf.push(ge.icon+' '+ge.name);}if(g.paperMul()>=2)bf.push('✖️ 連署書 ×2');Object.keys(g.eff).forEach(k=>{if(g.eff[k]>.05&&k!=='dash'){const n={speed:'⚡ 加速',shield:'🛡️ 無敵',magnet:'🧲 磁鐵',radar:'📡 雷達',smoke:'💨 煙霧',freeze:'🧊 定身',pass:'🎫 通行'}[k];bf.push(n+' '+g.eff[k].toFixed(1)+'s');}});
  const bh=bf.map(x=>'<span>'+x+'</span>').join('');if(bh!==g._bh){g._bh=bh;g.layer.querySelector('.ax-buffs').innerHTML=bh;}
  const db=g.layer.querySelector('.ax-dash');if(g.dashLv){const cd=g.dashCD>0;db.classList.toggle('cd',cd);const l=cd?Math.ceil(g.dashCD)+'s':'衝刺';if(db.textContent!==l)db.textContent=l;}};
 G.state=function(){const g=this;return {stage:g.def.id,x:g.P.x,y:g.P.y,time:g.time,hearts:g.hearts,damage:g.damage,paused:g.paused,over:g.over,papers:g.paperScore,items:g.items.map(i=>({type:i.type,x:i.x,y:i.y})),guards:g.guards.map(o=>({x:o.x,y:o.y,state:o.state})),extra:g.def.state?g.def.state(g):null};};

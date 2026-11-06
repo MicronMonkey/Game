@@ -24,10 +24,11 @@ const ACH=[
  {id:'wrongGuy',icon:'🎭',name:'抓錯人了',title:'認錯人專家',desc:'在 Boss 戰中戳破 10 個假分身',goal:10,cur:()=>D().stats.clonesPopped|0,hidden:true},
  {id:'buzzer',icon:'⏰',name:'壓線逃脫',title:'壓線之王',desc:'剩不到 5 秒時通關任一冒險關卡',goal:1,cur:()=>D().stats.lastSecond|0,hidden:true}
 ];
+function checkGear(silent){if(!A.gear)return [];const g=A.gear.check();if(!silent)g.forEach(x=>A.toast(x.icon,'🎽 獲得裝備：'+x.name,x.effect));return g;}
 function checkAch(){const d=D(),fresh=[];
  // legend 依賴其他成就，因此跑兩輪
  for(let pass=0;pass<2;pass++)ACH.forEach(a=>{if(!d.ach[a.id]&&a.cur()>=a.goal){d.ach[a.id]=Date.now();fresh.push(a);}});
- return fresh;}
+ checkGear();return fresh;}
 function announce(list){list.forEach(a=>A.toast(a.icon,'🏆 解鎖成就：'+a.name,'獲得稱號「'+a.title+'」'));}
 function classicTitle(){try{return window.FackTrophies?window.FackTrophies.title():'見習追緝員';}catch(e){return '見習追緝員';}}
 function displayTitle(){const t=D().title;if(t&&t.src==='adv'){const a=ACH.find(x=>x.id===t.id);if(a&&D().ach[a.id])return a.title;}return classicTitle();}
@@ -40,7 +41,12 @@ function recordStage(res){const d=D(),ad=d.adventure;
  if(res.hidden&&!d.stats.hidden[res.stage])d.stats.hidden[res.stage]=Date.now();
  if(res.flags.shortcut)d.stats.shortcut++;
  if(res.stage==='boss')d.stats.clonesPopped+=(res.extra.clones|0);
+ const by=(field,stage)=>{const o=d.stats[field]=d.stats[field]||{};return o[stage]=o[stage]||{};};
  if(res.win){
+  const cb=by('clearBy',res.stage);cb[res.diff]=(cb[res.diff]|0)+1;
+  if(res.damage===0){const nb=by('noDmgBy',res.stage);nb[res.diff]=(nb[res.diff]|0)+1;}
+  const tb=by('bestTimeBy',res.stage);tb[res.diff]=tb[res.diff]?Math.min(tb[res.diff],res.used):res.used;
+  if(res.stage==='escort'&&res.flags.perfect){const eb=d.stats.escortPerfectBy=d.stats.escortPerfectBy||{};eb[res.diff]=(eb[res.diff]|0)+1;}
   st.clears++;res.newBest=res.score>st.bestScore&&st.clears>1;st.bestStars=Math.max(st.bestStars,res.stars);st.bestScore=Math.max(st.bestScore,res.score);st.bestTime=st.bestTime==null?res.used:Math.min(st.bestTime,res.used);
   ad.diffClears[res.diff]=(ad.diffClears[res.diff]|0)+1;
   const idx=A.STAGES.findIndex(s=>s.id===res.stage);if(idx+2>ad.unlocked){ad.unlocked=Math.min(4,idx+2);res.unlockedNext=A.STAGES[idx+1];}
@@ -96,6 +102,7 @@ function openAdventure(host,opts){opts=opts||{};const sh=new Shell(host,opts);
   let h='<div class="ax-kick">ADVENTURE MODE</div><h2>🗺️ 冒險模式</h2><p>四個主題關卡連續闖關！每過一關，從 3 個隨機 Buff 中選 1 個帶到下一關。失敗只要重玩當前關卡。</p>';
   if(run&&next){h+='<div class="ax-stats"><div><span>進行中的冒險</span><b>'+A.DIFFS[run.diff].e+' '+A.DIFFS[run.diff].n+'</b></div><div><span>下一關</span><b>'+next.icon+' '+next.name+'</b></div><div><span>Buff</span><b>'+(buffList||'尚無')+'</b></div></div><div class="ax-row"><button data-a="cont">'+(run.pendingBuff?'🃏 選擇 Buff':'▶ 繼續冒險')+'</button><button class="alt" data-a="new">重新開始冒險</button></div>';}
   else{h+='<h3>選擇冒險難度</h3><div class="ax-diffs">'+Object.values(A.DIFFS).map(x=>'<button type="button" data-d="'+x.id+'" class="'+(x.id===diff.id?'on':'')+'">'+x.e+' '+x.n+'<small>'+x.desc+'</small></button>').join('')+'</div><div class="ax-row"><button data-a="start">▶ 開始新冒險</button></div>';}
+  {const ge=A.gear&&A.gear.equipped();h+='<p class="ax-small">🎽 '+(ge?'裝備中：'+ge.icon+' '+ge.name+'｜'+ge.effect:'尚未裝備裝備')+'</p>';}
   h+='<h3>關卡選擇（單關挑戰不使用 Buff）</h3><div class="ax-stages">'+A.STAGES.map((s,i)=>{const st=a.stages[s.id]||{},lock=i+1>a.unlocked,cur=run&&run.stage===i;
    return '<div class="ax-stage'+(lock?' locked':'')+(cur?' cur':'')+'"><b>'+s.icon+' '+(i<3?'第'+(i+1)+'關':'最終關')+'｜'+s.name+'</b>'+(lock?'🔒 通關前一關後解鎖':(st.clears?'⭐'.repeat(st.bestStars)+'　通關 '+st.clears+' 次<br>最佳 '+(st.bestScore||0).toLocaleString('zh-TW')+' 分・'+st.bestTime+' 秒':'尚未通關'))+(D().stats.hidden[s.id]?'<br>📔 已找到隱藏線索':'')+'<button type="button" class="alt" data-s="'+i+'"'+(lock?' disabled':'')+'>'+(lock?'未解鎖':'單關挑戰（'+diff.e+diff.n+'）')+'</button></div>';}).join('')+'</div>';
   h+='<div class="ax-row"><button class="alt" data-a="ach">🏆 成就圖鑑</button><button class="alt" data-a="back">← 返回主選單</button></div>';
@@ -109,18 +116,20 @@ function openAdventure(host,opts){opts=opts||{};const sh=new Shell(host,opts);
   q('[data-a=ach]').onclick=()=>openGallery({});
   q('[data-a=back]').onclick=()=>sh.exit();}
  function cfgFor(i,mode){const a=ad(),run=a.run,def=A.STAGES[i];
-  return mode==='run'?{stage:def,diff:A.DIFFS[run.diff],buffs:run.buffs,seed:(run.seed^Math.imul(i+1,2654435761))>>>0,mode:'run'}:{stage:def,diff:A.DIFFS[a.diff]||A.DIFFS.normal,buffs:{},seed:S.hash(def.id+'|'+Date.now()),mode:'single'};}
+  const ge=A.gear&&A.gear.equipped(),gear=ge?ge.id:null;
+  return mode==='run'?{stage:def,diff:A.DIFFS[run.diff],buffs:run.buffs,gear,seed:(run.seed^Math.imul(i+1,2654435761))>>>0,mode:'run'}:{stage:def,diff:A.DIFFS[a.diff]||A.DIFFS.normal,buffs:{},gear,seed:S.hash(def.id+'|'+Date.now()),mode:'single'};}
  function intro(i,mode){const def=A.STAGES[i],first=!D().tutorial[def.id];sh.setTop(def.icon+' '+def.name,false);
   const c=cfgFor(i,mode),bl=mode==='run'?Object.keys(c.buffs).filter(k=>c.buffs[k]>0).map(k=>A.BUFFS[k].icon+' '+A.BUFFS[k].name+' Lv'+c.buffs[k]):[];
-  const d=sh.card(introHtml(def,first)+'<p class="ax-small">'+(mode==='run'?'冒險進行中':'單關挑戰')+'｜'+c.diff.e+' '+c.diff.n+(bl.length?'｜'+bl.join('、'):'')+'</p><div class="ax-row"><button data-a="go">▶ 開始</button><button class="alt" data-a="back">返回</button></div>');
+  const d=sh.card(introHtml(def,first)+'<p class="ax-small">'+(mode==='run'?'冒險進行中':'單關挑戰')+'｜'+c.diff.e+' '+c.diff.n+(bl.length?'｜'+bl.join('、'):'')+'</p><p class="ax-small">'+(c.gear?'🎽 裝備中：'+A.GEAR.find(x=>x.id===c.gear).icon+' '+A.GEAR.find(x=>x.id===c.gear).name+'（'+A.GEAR.find(x=>x.id===c.gear).effect+'）':'🎽 尚未裝備（可在「成就・稱號・裝備」圖鑑中裝備）')+'</p><div class="ax-row"><button data-a="go">▶ 開始</button><button class="alt" data-a="back">返回</button></div>');
   d.querySelector('[data-a=go]').onclick=()=>{D().tutorial[def.id]=Date.now();S.save();const go=()=>start(i,mode);if(def.boss)bossIntro(sh,go);else go();};
   d.querySelector('[data-a=back]').onclick=hub;}
  function start(i,mode){const c=cfgFor(i,mode);sh.setTop(c.stage.icon+' '+c.stage.name,true);
   sh.play(Object.assign(c,{onQuit:hub,onEnd:r=>result(i,mode,r)}));}
  function result(i,mode,r){sh.setTop(A.STAGES[i].icon+' '+A.STAGES[i].name,false);const def=A.STAGES[i],a=ad();const fresh=recordStage(r);
   let finished=false;
+  if(mode==='run'&&a.run&&a.run.stage===i)a.run.damage=(a.run.damage|0)+(r.damage|0);
   if(r.win&&mode==='run'&&a.run&&a.run.stage===i){a.run.results[i]={stars:r.stars,score:r.score,used:r.used};a.run.stage=i+1;
-   if(i>=3){finished=true;a.runsCleared++;a.lastRun={finishedAt:Date.now(),diff:a.run.diff,results:a.run.results,buffs:a.run.buffs};a.run=null;}
+   if(i>=3){finished=true;a.runsCleared++;if(!a.run.damage){const fr=D().stats.flawlessRuns=D().stats.flawlessRuns||{};fr[a.run.diff]=(fr[a.run.diff]|0)+1;checkAch();}a.lastRun={finishedAt:Date.now(),diff:a.run.diff,results:a.run.results,buffs:a.run.buffs};a.run=null;}
    else{a.run.pendingBuff=true;a.run.offer=null;}S.save();}
   announce(fresh);
   const ex=def.id==='escort'?[['📦 送達',(r.extra.bundles|0)+'/10 箱']]:def.id==='boss'?[['🎭 戳破分身',(r.extra.clones|0)+' 個']]:[];
@@ -172,22 +181,37 @@ function openDaily(host,opts){opts=opts||{};const sh=new Shell(host,opts);
 /* ── 成就圖鑑（擴充）── */
 const GSTYLE='.axg{position:fixed;inset:0;z-index:9998;background:#07101ff0;display:flex;align-items:center;justify-content:center;padding:calc(12px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px));font-family:system-ui,"PingFang TC",sans-serif;color:#f4f1e9}.axg-p{width:min(680px,100%);max-height:94dvh;overflow-y:auto;overscroll-behavior:contain;background:linear-gradient(145deg,#1e3445,#111f30);border:1px solid #9aaebe6b;border-radius:18px;box-shadow:0 20px 80px #000c;padding:18px}.axg h2{font-size:23px;color:#ffe0a1;margin:0}.axg-t{display:flex;justify-content:space-between;align-items:center;gap:8px}.axg button{border:1px solid #7894a9;background:#284355;color:#fff;border-radius:9px;padding:8px 12px;font-weight:800;cursor:pointer;min-height:38px}.axg-tabs{display:flex;gap:6px;margin:12px 0 8px}.axg-tabs button.on{background:#f1d09a;color:#102338;border-color:#f1d09a}.axg-m{color:#b5d4d9;font-size:13px;line-height:1.7;margin:6px 0}.axg-bar{height:9px;border-radius:10px;background:#33485a;overflow:hidden;margin:6px 0 14px}.axg-bar i{display:block;background:linear-gradient(90deg,#f4bb59,#fff1c2);height:100%}.axg-l{display:grid;grid-template-columns:1fr 1fr;gap:9px}@media(max-width:520px){.axg-l{grid-template-columns:1fr}}.axg-i{border:1px solid #7899a14d;border-radius:12px;background:#162938;padding:10px;font-size:12px;line-height:1.55}.axg-i.lk{opacity:.62}.axg-i b{font-size:14px;color:#ffe1a3}.axg-i .pb{height:5px;background:#33485a;border-radius:4px;overflow:hidden;margin:5px 0}.axg-i .pb i{display:block;height:100%;background:#9fe3c4}.axg-i .main{font-size:10px;background:#5a4420;color:#ffe1a3;border-radius:5px;padding:1px 5px;margin-left:4px}.axg select{font-size:14px;padding:6px;border-radius:8px;background:#20394c;color:#fff;border:1px solid #8297a4;max-width:100%}';
 function openGallery(opts){opts=opts||{};if(!document.getElementById('axg-style')){const s=document.createElement('style');s.id='axg-style';s.textContent=GSTYLE;document.head.append(s);}
- const old=document.querySelector('.axg');if(old)old.remove();
- const o=document.createElement('div');o.className='axg';o.setAttribute('role','dialog');o.setAttribute('aria-modal','true');o.setAttribute('aria-label','擴充成就圖鑑');document.body.append(o);
+ const old=document.querySelector('.axg');if(old)old.remove();checkGear();S.save();
+ const o=document.createElement('div');o.className='axg';o.setAttribute('role','dialog');o.setAttribute('aria-modal','true');o.setAttribute('aria-label','成就・稱號・裝備圖鑑');document.body.append(o);
+ let tab=opts.tab==='gear'?'gear':'ach';
  function close(){o.remove();document.removeEventListener('keydown',esc,true);document.dispatchEvent(new Event('fack-title-changed'));if(opts.onClose)opts.onClose();}
  function esc(e){if(e.key==='Escape'){e.stopPropagation();close();}}
  document.addEventListener('keydown',esc,true);o.onclick=e=>{if(e.target===o)close();};
- function paint(){const d=D(),got=ACH.filter(a=>d.ach[a.id]).length,pct=Math.round(got/ACH.length*100),cur=d.title&&d.title.src==='adv'?d.title.id:'classic';
+ const stars=t=>'★'.repeat(t)+'☆'.repeat(5-t);
+ const fmtV=(r,v)=>v==null?'—':r.low?v+(r.unit||''):Number(v).toLocaleString('zh-TW');
+ function achHtml(){const d=D(),got=ACH.filter(a=>d.ach[a.id]).length,pct=Math.round(got/ACH.length*100),cur=d.title&&d.title.src==='adv'?d.title.id:'classic';
   const opt='<option value="classic"'+(cur==='classic'?' selected':'')+'>經典稱號：'+classicTitle()+'</option>'+ACH.filter(a=>d.ach[a.id]).map(a=>'<option value="'+a.id+'"'+(cur===a.id?' selected':'')+'>冒險稱號：'+a.title+'</option>').join('');
-  o.innerHTML='<div class="axg-p"><div class="axg-t"><h2>🏆 成就・稱號圖鑑</h2><button type="button" data-a="x">✕ 關閉</button></div><div class="axg-tabs"><button type="button" class="on">🗺️ 冒險／每日</button><button type="button" data-a="classic">🏃 經典模式成就</button></div>'
-   +'<p class="axg-m">已解鎖 <b>'+got+' / '+ACH.length+'</b> 項（'+pct+'%）。冒險成就與經典成就分開保存，經典紀錄不受影響。</p><div class="axg-bar"><i style="width:'+pct+'%"></i></div>'
+  return '<p class="axg-m">已解鎖 <b>'+got+' / '+ACH.length+'</b> 項（'+pct+'%）。冒險成就與經典成就分開保存，經典紀錄不受影響。</p><div class="axg-bar"><i style="width:'+pct+'%"></i></div>'
    +'<p class="axg-m">展示稱號：<select aria-label="展示稱號">'+opt+'</select></p><div class="axg-l">'
    +ACH.map(a=>{const ok=!!d.ach[a.id],v=Math.min(a.goal,Math.max(0,a.cur())),hid=a.hidden&&!ok;
-    return '<div class="axg-i'+(ok?'':' lk')+'"><b>'+(hid?'❔ ？？？':a.icon+' '+a.name)+(ok?' ✓':' 🔒')+'</b>'+(a.main?'<span class="main">主要</span>':'')+(a.hidden?'<span class="main">隱藏</span>':'')+'<br>'+(hid?'隱藏成就：達成特定條件後揭曉':a.desc)+'<br>稱號｜'+(ok?a.title:'？？？')+'<div class="pb"><i style="width:'+(hid?0:v/a.goal*100)+'%"></i></div>'+(hid?'':v+' / '+a.goal)+(ok?'　🕒 '+fmtDate(d.ach[a.id]):'')+'</div>';}).join('')+'</div></div>';
+    return '<div class="axg-i'+(ok?'':' lk')+'"><b>'+(hid?'❔ ？？？':a.icon+' '+a.name)+(ok?' ✓':' 🔒')+'</b>'+(a.main?'<span class="main">主要</span>':'')+(a.hidden?'<span class="main">隱藏</span>':'')+'<br>'+(hid?'隱藏成就：達成特定條件後揭曉':a.desc)+'<br>稱號｜'+(ok?a.title:'？？？')+'<div class="pb"><i style="width:'+(hid?0:v/a.goal*100)+'%"></i></div>'+(hid?'':v+' / '+a.goal)+(ok?'　🕒 '+fmtDate(d.ach[a.id]):'')+'</div>';}).join('')+'</div>';}
+ function gearHtml(){const gd=A.gear.gearData(),eq=A.gear.equipped(),got=A.GEAR.filter(x=>gd.unlocked[x.id]).length;
+  return '<p class="axg-m">已取得 <b>'+got+' / '+A.GEAR.length+'</b> 件裝備。<b>一次只能裝備一件</b>，效果永久生效，但<b>只作用在冒險模式</b>（經典模式與每日挑戰維持公平，不受裝備影響）。<br>目前裝備：<b>'+(eq?eq.icon+' '+eq.name+'｜'+eq.effect:'無')+'</b></p>'
+   +(eq?'<p class="axg-m"><button type="button" data-un="1">卸下裝備</button></p>':'')+'<div class="axg-l">'
+   +A.GEAR.map(x=>{const ok=!!gd.unlocked[x.id],on=eq&&eq.id===x.id;
+    return '<div class="axg-i'+(ok?'':' lk')+'"'+(on?' style="border-color:#f1d09a;box-shadow:0 0 0 1px #f1d09a"':'')+'><b>'+x.icon+' '+x.name+(ok?' ✓':' 🔒')+'</b><span class="main">'+stars(x.tier)+'</span><br>效果｜<b style="font-size:12px;color:#a7ffd6">'+x.effect+'</b>'
+     +x.reqs.map(r=>{const v=r.cur(),okR=A.gear.reqDone(r),pc=r.low?(v==null?0:Math.min(100,r.goal/v*100)):Math.min(100,(Number(v)||0)/r.goal*100);
+      return '<div style="margin-top:5px">'+(okR?'✅ ':'⬜ ')+r.label+(r.low?'在 '+r.goal+(r.unit||'')+' 內':'')+'</div><div class="pb"><i style="width:'+pc+'%"></i></div>'+(r.low?'目前最佳：'+fmtV(r,v):fmtV(r,Math.min(Number(v)||0,r.goal))+' / '+r.goal.toLocaleString('zh-TW'));}).join('')
+     +(ok?'<br>🕒 取得：'+fmtDate(gd.unlocked[x.id])+'<br><button type="button" data-eq="'+x.id+'"'+(on?' disabled':'')+' style="margin-top:6px">'+(on?'裝備中':'裝備')+'</button>':'')+'</div>';}).join('')+'</div>';}
+ function paint(){
+  o.innerHTML='<div class="axg-p"><div class="axg-t"><h2>🏆 成就・稱號・裝備</h2><button type="button" data-a="x">✕ 關閉</button></div><div class="axg-tabs"><button type="button" data-t="ach" class="'+(tab==='ach'?'on':'')+'">🗺️ 冒險成就・稱號</button><button type="button" data-t="gear" class="'+(tab==='gear'?'on':'')+'">🎽 裝備</button><button type="button" data-a="classic">🏃 經典成就</button></div>'+(tab==='gear'?gearHtml():achHtml())+'</div>';
   o.querySelector('[data-a=x]').onclick=close;
+  o.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{tab=b.dataset.t;paint();});
   o.querySelector('[data-a=classic]').onclick=()=>{close();if(window.FackTrophies)window.FackTrophies.open();};
-  o.querySelector('select').onchange=e=>{const v=e.target.value;d.title=v==='classic'?{src:'classic'}:{src:'adv',id:v};S.save();paint();document.dispatchEvent(new Event('fack-title-changed'));};}
+  const sel=o.querySelector('select');if(sel)sel.onchange=e=>{const v=e.target.value,d=D();d.title=v==='classic'?{src:'classic'}:{src:'adv',id:v};S.save();paint();document.dispatchEvent(new Event('fack-title-changed'));};
+  o.querySelectorAll('[data-eq]').forEach(b=>b.onclick=()=>{const x=A.GEAR.find(g=>g.id===b.dataset.eq);if(A.gear.equip(x.id)){A.toast(x.icon,'🎽 已裝備：'+x.name,x.effect);paint();document.dispatchEvent(new Event('fack-title-changed'));}});
+  const un=o.querySelector('[data-un]');if(un)un.onclick=()=>{A.gear.equip(null);paint();document.dispatchEvent(new Event('fack-title-changed'));};}
  paint();o.querySelector('[data-a=x]').focus();}
 
-window.FackAdventure={openAdventure,openDaily,openGallery,summary,displayTitle,ACH,checkAch,recordStage,recordDaily,streak};
+window.FackAdventure={openAdventure,openDaily,openGallery,summary,displayTitle,ACH,checkAch,checkGear,recordStage,recordDaily,streak};
 })();

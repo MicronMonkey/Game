@@ -64,7 +64,7 @@ const night={
   g.lamps=[{x:385,y:385},{x:715,y:385},{x:385,y:760},{x:715,y:760},{x:550,y:1100}];
  },
  start(g){g.tip('🕹️ 用右下搖桿或方向鍵移動。先找 5 個 🔍 線索！',5);},
- update(g,dt){g.battery=Math.max(0,g.battery-dt*.7*(g.diff.enemy));
+ update(g,dt){g.battery=Math.max(0,g.battery-dt*.7*(g.diff.enemy)*g.gx.battery);
   if(g.battery<=0&&!g.flags.lowWarn){g.flags.lowWarn=1;g.msg('🔋 手電筒沒電了！只剩微光，快找電池');}
   if(inRect(g.P,g.exit)){if(g.hasKey)g.win();else if(!(g.lockMsg>0)){g.lockMsg=2.5;g.msg(g.clues<5?'🔒 出口鎖著，還差 '+(5-g.clues)+' 個線索':'🔒 出口鎖著，先去拿 🔑 鑰匙');}}
   g.lockMsg=(g.lockMsg||0)-dt;},
@@ -121,8 +121,8 @@ const escort={
  update(g,dt){const F=g.fack,P=g.P,C=g.cart;F.frozen=g.eff.freeze>0;F.walk+=dt*12;C.inv=Math.max(0,C.inv-dt);
   // 推車沿著玩家的足跡移動
   if(dist(P,g.lastTrail)>14){C.trail.push({x:P.x,y:P.y});g.lastTrail={x:P.x,y:P.y};if(C.trail.length>600)C.trail.shift();}
-  const far=dist(C,P)>276;if(far&&!C.wait){C.wait=true;g.msg('🛒 推車：等等我！別走太遠');}else if(!far)C.wait=false;
-  C.mv=0;const ox=C.x,oy=C.y;let tried=false;if(!C.wait&&C.trail.length&&dist(C,P)>48){const t=C.trail[0],d=dist(C,t);if(d<6)C.trail.shift();else{tried=true;const s=Math.min(d,105*dt);C.x+=(t.x-C.x)/d*s;C.y+=(t.y-C.y)/d*s;C.fx=(t.x-C.x)/d;C.fy=(t.y-C.y)/d;C.mv=1;}}
+  const far=dist(C,P)>276*(1+g.gx.cart);if(far&&!C.wait){C.wait=true;g.msg('🛒 推車：等等我！別走太遠');}else if(!far)C.wait=false;
+  C.mv=0;const ox=C.x,oy=C.y;let tried=false;if(!C.wait&&C.trail.length&&dist(C,P)>48){const t=C.trail[0],d=dist(C,t);if(d<6)C.trail.shift();else{tried=true;const s=Math.min(d,105*(1+g.gx.cart)*dt);C.x+=(t.x-C.x)/d*s;C.y+=(t.y-C.y)/d*s;C.fx=(t.x-C.x)/d;C.fy=(t.y-C.y)/d;C.mv=1;}}
   g.belts.forEach(b=>{if(C.x>b.x&&C.x<b.x+b.w&&C.y>b.y&&C.y<b.y+b.h){const f=g.eff.freeze>0?.25:1;C.x+=b.dx*b.spd*.6*f*dt;C.y+=b.dy*b.spd*.6*f*dt;}});
   g.collide(C);
   // 卡住保護：0.8 秒沒前進就跳過這個足跡點
@@ -266,7 +266,7 @@ const boss={
  onWin(g){g.F.frozen=false;g.clones=[];g.teles=[];},
  celebrateStep(g,dt){if(g.rng()<.7){const x=g.camX+g.rng()*g.VW/g.k;g.fx.push({x,y:g.camY-10,vx:(g.rng()-.5)*30,vy:120+g.rng()*80,life:2.5,max:2.5,text:g.rng()<.5?'📝':'🎉',c:'#fff'});}},
  actors(g,c,now){const F=g.F;
-  g.clones.forEach(cl=>{drawFack(g,c,cl,{paper:cl.paper});});
+  g.clones.forEach(cl=>{drawFack(g,c,cl,{paper:cl.paper});if(g.gx.cloneMark)txt(c,'❓',cl.x,cl.y-cl.r-38,16,'#fff',900);});
   drawFack(g,c,F,{paper:F.phase===2?'#ffffff':null});
   if(F.phase===3&&!F.frozen&&g.celebrate<=0){c.strokeStyle='#ffd23f';c.lineWidth=3;c.globalAlpha=.6+.3*Math.sin(now*6);c.beginPath();c.arc(F.x,F.y,F.r+10,0,7);c.stroke();c.globalAlpha=1;txt(c,'🛡️',F.x-F.r-8,F.y-F.r-6,15,'#fff');}
   if(g.celebrate>0)bubble(c,'好啦好啦……我簽就是了！',F.x,F.y-62);

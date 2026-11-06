@@ -35,6 +35,7 @@ header a,header button{font:600 13px system-ui;color:#eef3f5;background:#1d3747;
 .modes button.adv{background:linear-gradient(150deg,#3b6a52,#1f3d33);border-color:#9fe3c4}
 .modes button.cont{grid-column:1/-1;background:linear-gradient(150deg,#6a5a2b,#3b3118);border-color:#ffd98f;min-height:60px}
 .modes button[hidden]{display:none}
+.cz-card .x-home-row{display:flex;justify-content:center;margin-top:8px}
 #hero small{color:var(--mut);font-size:11px;line-height:1.7;max-width:460px;margin-top:8px}
 #toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 60px);transform:translateX(-50%);background:var(--ac);color:#111;font-weight:800;padding:8px 16px;border-radius:999px;z-index:50;opacity:0;transition:opacity .3s;pointer-events:none}
 </style>
@@ -52,7 +53,7 @@ header a,header button{font:600 13px system-ui;color:#eef3f5;background:#1d3747;
     <button class="main" id="go" type="button">🏃 經典模式<small>原版 V2：2,600 份連署書挑戰<br>四種難度・原紀錄保留</small></button>
     <button class="adv" id="adv" type="button">🗺️ 冒險模式<small>四大關卡・隨機 Buff<br>Boss 戰・隱藏線索</small></button>
     <button id="daily" type="button">📅 每日挑戰<small id="dailyInfo">每天一題，全玩家同地圖</small></button>
-    <button id="achievements" type="button">🏆 成就圖鑑<small>經典＋冒險成就<br>切換展示稱號</small></button>
+    <button id="achievements" type="button">🏆 成就・裝備<small>成就／稱號／15 種永久裝備<br>切換展示稱號與裝備</small></button>
    </div>
    <small>這是擴充功能測試版，經典模式與正式版共用同一份紀錄（不會被清除）；冒險與每日挑戰另外存放在 fack.expansion.v1。<br>本遊戲為虛構創作，人物、事件與廠區地圖皆為想像，不代表任何真實人物的行為或真實廠區配置。</small>
   </div>
@@ -61,11 +62,12 @@ header a,header button{font:600 13px system-ui;color:#eef3f5;background:#1d3747;
 <div id="toast" role="status" aria-live="polite"></div>
 <script src="game/chase_v2.js?v=20261105-hell-tuned-official-refresh2"></script>
 <!-- 擴充資料層必須在經典成就模組之前載入：先備份可能損毀的經典紀錄字串 -->
-<script src="game/fack_store.js?v=20261107-x2"></script>
+<script src="game/fack_store.js?v=20261107-x3"></script>
 <script src="game/achievements_live_v2.js?v=20261105"></script>
-<script src="game/fack_adv_core.js?v=20261107-x2"></script>
-<script src="game/fack_adv_stages.js?v=20261107-x2"></script>
-<script src="game/fack_adv_ui.js?v=20261107-x2"></script>
+<script src="game/fack_adv_core.js?v=20261107-x3"></script>
+<script src="game/fack_adv_stages.js?v=20261107-x3"></script>
+<script src="game/fack_gear.js?v=20261107-x3"></script>
+<script src="game/fack_adv_ui.js?v=20261107-x3"></script>
 <script>
 (function(){
 'use strict';
@@ -83,12 +85,15 @@ function bestLine(){const xs=Object.values(L).filter(l=>best[l.id]&&best[l.id].u
 function showBest(){
  $('#best').textContent=bestLine();const a=FackTrophies.summary(),x=FackAdventure.summary();
  $('#hall').textContent='🏅 '+x.title+'　｜　🏆 經典成就 '+a.got+'/'+a.total+'　｜　累積收集 '+a.papers.toLocaleString('zh-TW')+' 份';
- $('#hall2').textContent='🗺️ 冒險通關 '+x.cleared+'/4 關　｜　🎖️ 冒險成就 '+x.got+'/'+x.total;
+ const ge=FackAdv.gear.equipped(),gc=FackAdv.GEAR.filter(g=>FackAdv.gear.gearData().unlocked[g.id]).length;
+ $('#hall2').textContent='🗺️ 冒險通關 '+x.cleared+'/4 關　｜　🎖️ 冒險成就 '+x.got+'/'+x.total+'　｜　🎽 '+(ge?ge.icon+' '+ge.name:'裝備 '+gc+'/'+FackAdv.GEAR.length);
  const run=x.run,cont=$('#cont');
  if(run&&FackAdv.STAGES[run.stage]){cont.hidden=false;const s=FackAdv.STAGES[run.stage];$('#contInfo').textContent=(run.pendingBuff?'先選擇 Buff，再挑戰 ':'下一關：')+s.icon+' '+s.name+'｜'+FackAdv.DIFFS[run.diff].e+FackAdv.DIFFS[run.diff].n;}else cont.hidden=true;
  const date=FackExpStore.twDate(),info=FackAdv.dailyInfo(date),r=FackExpStore.data.daily[date];
  $('#dailyInfo').textContent=info.type.name+(r&&r.clears?'・今日已完成 ✓':'・今日未完成');
 }
+// 依經典與冒險紀錄解鎖裝備（只讀經典紀錄）
+if(FackAdventure.checkGear().length)FackExpStore.save();
 showBest();
 document.addEventListener('fack-title-changed',showBest);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('#hero').style.display!=='none')showBest();});
@@ -101,7 +106,10 @@ async function share(r){
 $('#share-top').onclick=()=>share(null);
 // 同一時間只會有一個模式在畫面上
 let game=null,shell=null;
-function closeAll(){if(game){game.close();game=null;}if(shell){shell.close();shell=null;}}
+let homeObs=null;
+function closeAll(){if(homeObs){homeObs.disconnect();homeObs=null;}if(game){game.close();game=null;}if(shell){shell.close();shell=null;}}
+// 經典模式的每一個畫面（難度選單、結算）都補上「回主選單」；不修改經典引擎本身
+function addHome(layer){const put=()=>{layer.querySelectorAll('.cz-card').forEach(c=>{if(c.querySelector('.x-home'))return;const row=document.createElement('div');row.className='x-home-row';const b=document.createElement('button');b.type='button';b.className='alt x-home';b.textContent='🏠 回主選單';b.onclick=()=>backToHero();row.append(b);c.append(row);});};put();homeObs=new MutationObserver(put);homeObs.observe(layer,{childList:true});}
 function backToHero(){closeAll();showBest();$('#hero').style.display='';}
 function start(){
  closeAll();$('#hero').style.display='none';
@@ -111,6 +119,7 @@ function start(){
   onQuit:api=>{api.close();game=null;backToHero();},
   onEnd:r=>{
    r.awards=FackTrophies.record(r);
+   if(FackAdventure.checkGear().length)FackExpStore.save();
    if(r.awards.length)toast('🏆 新成就 '+r.awards[0]+(r.awards.length>1?' 等 '+r.awards.length+' 項':''));
    try{localStorage.setItem('fack-live-v2-level',r.level.id)}catch(e){}
    const b=best[r.level.id]||{};b.plays=(b.plays||0)+1;
@@ -121,10 +130,10 @@ function start(){
    {label:r.win?'再玩一次':'再追一次',onClick:(r,api)=>api.retry()},
    {label:'換難度',alt:true,onClick:(r,api)=>api.menu()},
    {label:'成就圖鑑 🏆',alt:true,onClick:()=>FackTrophies.open()},
-   {label:'分享成績',alt:true,onClick:r=>share(r)},
-   {label:'🏠 主選單',alt:true,onClick:()=>backToHero()}
+   {label:'分享成績',alt:true,onClick:r=>share(r)}
   ]
  });
+ addHome(game.layer);
 }
 function adventure(direct){closeAll();$('#hero').style.display='none';shell=FackAdventure.openAdventure($('#stage'),{direct,onExit:()=>{shell=null;backToHero();}});}
 function daily(){closeAll();$('#hero').style.display='none';shell=FackAdventure.openDaily($('#stage'),{onExit:()=>{shell=null;backToHero();}});}

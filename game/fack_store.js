@@ -16,8 +16,8 @@ function set(k,v){try{if(!ls)return false;ls.setItem(k,v);return true;}catch(e){
 function blank(){return {
  schema:SCHEMA,created:Date.now(),updated:0,
  adventure:{unlocked:1,diff:'normal',run:null,stages:{},diffClears:{easy:0,normal:0,hard:0,hell:0},runsStarted:0,runsCleared:0},
- stats:{itemsUsed:{},buffsPicked:{},clonesPopped:0,hidden:{},shortcut:0,bossClears:0,bossFlawless:0,escortPerfect:0,lastSecond:0,dailyClears:0},
- ach:{},title:null,daily:{},tutorial:{}
+ stats:{itemsUsed:{},buffsPicked:{},clonesPopped:0,hidden:{},shortcut:0,bossClears:0,bossFlawless:0,escortPerfect:0,lastSecond:0,dailyClears:0,clearBy:{},noDmgBy:{},bestTimeBy:{},escortPerfectBy:{},flawlessRuns:{}},
+ ach:{},title:null,daily:{},tutorial:{},gear:{equipped:null,unlocked:{}}
 };}
 // 深層合併：保留未知欄位（例如未來版本新增的資料），型別不符時採用預設值。
 function merge(base,v){
