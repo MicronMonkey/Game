@@ -46,7 +46,9 @@ assert.notEqual(t.S.hash('fack-daily|2026-11-06'),t.S.hash('fack-daily|2026-11-0
 let p=boot();p.S.data.daily={'2026-01-01':{clears:1},'2026-11-05':{clears:1}};p.S.pruneDaily('2026-11-06');assert.equal(Object.keys(p.S.data.daily).join(),'2026-11-05');
 // 10) 正式版頁面的版本字串沒有被改動（改動會觸發正式版清除紀錄）
 assert.match(read('fack.html'),/RECORD_VERSION='live-v2-hell-tuned-r1'/);
-assert.match(read('fack_v3.html'),/RECORD_VERSION='live-v2-hell-tuned-r1'/);
-assert.doesNotMatch(read('fack_v3.html'),/localStorage\.removeItem/,'test page must never delete records');
+assert.doesNotMatch(read('fack.html'),/localStorage\.removeItem/,'official page must never delete records');
+assert.match(read('fack.html'),/game\/fack_store\.js/,'official page loads the expansion');
+assert.doesNotMatch(read('fack.html'),/測試版|noindex|fack_v3/,'no test-version leftovers');
+assert.match(read('fack_v3.html'),/location\.replace\('fack\.html'/,'old test link redirects');
 for(const f of ['game/fack_store.js','game/fack_adv_core.js','game/fack_adv_stages.js','game/fack_adv_ui.js'])assert.doesNotMatch(read(f),/removeItem\((?!old\.key)/,f+' removes keys');
 console.log('PASS: expansion store — classic keys untouched, backups, corrupt fallback, migration, future schema, storage blocked, Taiwan date rollover, seeded daily RNG, version string guard.');

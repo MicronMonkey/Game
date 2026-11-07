@@ -26,6 +26,6 @@ GitHub Pages：Settings → Pages → Source 選 GitHub Actions。推送 main �
 [fab24hr-engine](https://github.com/mcltyl/fab24hr-engine) 為場景、對話、任務、存檔等玩法參考。本試玩版獨立實作，未移植其程式或素材，使用 CSS 3D 立體佈景，沒有自由行走與路徑搜尋。未來若實際採用該引擎，須遵守其非商用授權與首頁、結局署名規定。
 Game
 
-## 擴充測試版（V3）
+## 全民找法克 正式版（經典＋冒險）
 
-[fack_v3.html](fack_v3.html)：經典模式（與正式版共用紀錄）＋冒險模式四關、隨機 Buff、三階段 Boss、擴充成就與每日挑戰。冒險資料另存於 `fack.expansion.v1`，不會更動或清除正式版紀錄。完整說明、相容性分析與測試結果見 [EXPANSION.md](EXPANSION.md)。測試：`node tests/expansion_store.cjs`、`node tests/expansion_e2e.cjs`。
+[fack.html](fack.html)：經典模式（沿用 V2 紀錄，不會清除）＋冒險模式四關、隨機 Buff、三階段 Boss、擴充成就、23 種永久裝備與每日挑戰。冒險資料另存於 `fack.expansion.v1`。舊的測試連結 `fack_v3.html` 會自動轉到正式版。完整說明、相容性分析與測試結果見 [EXPANSION.md](EXPANSION.md)。測試：`node tests/expansion_store.cjs`、`node tests/expansion_e2e.cjs`。
