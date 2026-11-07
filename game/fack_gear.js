@@ -17,7 +17,7 @@ const bestTime=(stage,keys)=>{const o=(st().bestTimeBy||{})[stage]||{};const xs=
 const achGot=id=>!!D().ach[id];
 // 條件：cur 回傳目前值；low=true 代表「越低越好」（例如秒數）
 const req=(label,goal,cur,o)=>Object.assign({label,goal,cur},o||{});
-// 原則：星級越高 → 條件越難 → 效果越好。單一屬性上限：跑速 +6%、愛心 +1、自動護盾 1 次。
+// 原則：星級越高 → 條件越難 → 效果越好。單一屬性上限：跑速 +6%、愛心 +1、自動護盾 1 次、每關時間 +20%。
 const GEAR=[
  // ★1 入門：單一小幅加成
  {id:'cap',icon:'🧢',name:'集合區小帽',tier:1,effect:'撿取範圍 +10',fx:{pick:10},
@@ -61,9 +61,9 @@ const GEAR=[
  {id:'hellshoes',icon:'🥾',name:'地獄跑鞋',tier:5,effect:'跑速 +6%、疾速鞋效果時間 +30%',fx:{speed:.06,speedDur:1.3},
   reqs:[req('經典模式地獄難度通關秒數',20,()=>{const b=B().hell;return b&&b.used?b.used:null;},{low:true,unit:'秒'}),
         req('冒險 Boss 關卡（中等以上）通關秒數',30,()=>bestTime('boss',atLeast),{low:true,unit:'秒'})]},
- {id:'badge',icon:'🏅',name:'會長金徽章',tier:5,effect:'跑速 +4%、撿取範圍 +20、道具時間 +20%、每關時間 +5%',fx:{speed:.04,pick:20,itemDur:.2,time:.05},
+ {id:'badge',icon:'🏅',name:'會長金徽章',tier:5,effect:'跑速 +4%、撿取範圍 +20、道具時間 +20%、每關時間 +20%',fx:{speed:.04,pick:20,itemDur:.2,time:.2},
   reqs:[req('經典模式累積收集連署書',300000,()=>n(C().papers)),req('達成「傳說追擊者」',1,()=>achGot('legend')?1:0)]},
- {id:'crown',icon:'👑',name:'法克剋星王冠',tier:5,effect:'愛心上限 +1、每關自動抵擋 1 次傷害、跑速 +4%',fx:{hearts:1,shield:1,speed:.04},
+ {id:'crown',icon:'👑',name:'法克剋星王冠',tier:5,effect:'愛心上限 +1、每關自動抵擋 1 次傷害、跑速 +5%、道具時間 +20%、每關時間 +15%',fx:{hearts:1,shield:1,speed:.05,itemDur:.2,time:.15},
   reqs:[req('經典模式地獄難度累積勝利',30,()=>n((C().winsBy||{}).hell)),req('以地獄難度通關全部四個冒險關卡',4,()=>A.STAGES.filter(x=>n(((st().clearBy||{})[x.id]||{}).hell)>0).length),req('取得其他裝備',15,()=>Object.keys(gearData().unlocked).filter(k=>k!=='crown'&&GEAR.some(x=>x.id===k)).length)]}
 ];
 const DEFAULT_FX={speed:0,pick:0,magnetMul:1,speedDur:1,shieldDur:1,freeze:0,itemDur:0,time:0,shield:0,hearts:0,radar:0,battery:1,cart:0,paper:0,cloneMark:false};
