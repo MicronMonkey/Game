@@ -112,6 +112,14 @@ fs.writeFileSync(LEGACY_PATH,require('node:child_process').execSync('git show f0
   assert(r.e1&&!r.e2&&r.eq1==='glove'&&r.eq2==='sneakers','equip '+JSON.stringify(r));assert(Math.abs(r.m1-(20+(35+95)*1.5))<.01&&Math.abs(r.m0-150)<.01&&Math.abs(r.m2-115)<.01,'fx '+JSON.stringify(r));
   await p.click('#achievements');await p.click('.axg [data-t=gear]');const txt=await p.textContent('.axg');assert(txt.includes('強力磁鐵手套')&&txt.includes('3 / 23'),'gallery');
   await ctx.close();return '取得 '+r.un.join('、')+'；磁鐵範圍 冒險 '+r.m1+'／無裝備 '+r.m0+'／每日挑戰 '+r.m2;});
+ await check('冒險模式失敗時有「換裝備」按鈕：開啟裝備分頁、換裝後提示更新、重新挑戰會套用新裝備',async()=>{const {ctx,p}=await page();await p.goto(BASE+'fack.html?fackdebug=1');await seed(p,OLD);await p.reload();
+  await p.click('#adv');await p.click('[data-s="0"]');await p.click('[data-a=go]');await p.waitForFunction(()=>window.fackAdvGame&&!window.fackAdvGame.over);
+  await p.evaluate(()=>window.fackAdvGame.debug.fail());await p.waitForSelector('.ax-card [data-a=gear]');const tip1=await p.textContent('[data-gear-tip]');
+  await p.click('.ax-card [data-a=gear]');await p.waitForSelector('.axg [data-eq=sneakers]');await p.click('.axg [data-eq=sneakers]');await p.click('.axg [data-a=x]');
+  const tip2=await p.textContent('[data-gear-tip]');await p.click('.ax-card [data-a=retry]');await p.waitForFunction(()=>window.fackAdvGame&&!window.fackAdvGame.over);
+  const gid=await p.evaluate(()=>window.fackAdvGame.gearId);assert(tip2.includes('輕量跑鞋')&&gid==='sneakers','tip/gear '+tip2+' '+gid);
+  await p.evaluate(()=>window.fackAdvGame.debug.win());await p.evaluate(()=>window.fackAdvGame.debug.step(90,1/30));await p.waitForSelector('.ax-card');const winGear=await p.$('.ax-card [data-a=gear]');assert(!winGear,'gear button on win');
+  await ctx.close();return '失敗提示「'+tip1.slice(0,22)+'…」→ 裝上輕量跑鞋 → 重新挑戰 gearId='+gid+'；通關畫面不顯示';});
  await check('裝備組合條件：經典地獄 20 秒內 ＋ 冒險 Boss 30 秒內，兩者都達成才解鎖',async()=>{const {ctx,p}=await page();await p.goto(BASE+'fack.html');
   const best=JSON.parse(OLD['fack-chase-live-v2-best']);best.hell.used=18;await seed(p,Object.assign({},OLD,{'fack-chase-live-v2-best':JSON.stringify(best)}));await p.reload();
   const r=await p.evaluate(()=>{const A=FackAdv,gd=A.gear.gearData();const a=!!gd.unlocked.hellshoes;

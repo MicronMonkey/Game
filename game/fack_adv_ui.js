@@ -93,6 +93,10 @@ function introHtml(def,first){return '<div class="ax-kick">'+def.kick+'</div><h2
 function bossIntro(shell,go){const l=shell.layer,b=document.createElement('div');b.className='ax-boss';b.innerHTML='<div class="bar t"></div><div class="bar b"></div><div class="bf" aria-hidden="true">🏃‍♂️💨</div><h2>BOSS 登場</h2><p>法克的最後反擊！（點一下跳過）</p>';l.append(b);snd().sfx('siren');
  let done=false;const fin=()=>{if(done)return;done=true;b.remove();go();};b.onclick=fin;setTimeout(fin,2600);}
 
+// 失敗畫面的裝備提示：目前裝備與已取得數量
+function gearTip(){const ge=A.gear.equipped(),gd=A.gear.gearData(),got=A.GEAR.filter(x=>gd.unlocked[x.id]).length;
+ if(ge)return '💡 目前裝備：'+ge.icon+' '+ge.name+'（'+ge.effect+'）。已取得 '+got+' 件裝備，可以換一件更適合這關的再挑戰！';
+ return got?'💡 你已取得 '+got+' 件裝備但還沒裝上，裝備後再挑戰會更輕鬆！':'💡 還沒有裝備：完成經典或冒險的指定條件就能取得永久裝備，讓冒險更好過！';}
 /* ── 冒險模式 ── */
 function openAdventure(host,opts){opts=opts||{};const sh=new Shell(host,opts);
  function ad(){return D().adventure;}
@@ -140,15 +144,17 @@ function openAdventure(host,opts){opts=opts||{};const sh=new Shell(host,opts);
   if(r.newBest)h+='<p class="ax-small">🎉 新的最佳分數！</p>';
   if(r.unlockedNext)h+='<p class="ax-small">🔓 解鎖：'+r.unlockedNext.icon+' '+r.unlockedNext.name+'</p>';
   if(fresh.length)h+='<p class="ax-small">🏆 新成就：'+fresh.map(x=>x.icon+x.name).join('、')+'</p>';
+  if(!r.win&&A.gear)h+='<p class="ax-small" data-gear-tip>'+gearTip()+'</p>';
   h+='<div class="ax-row">';
   if(r.win&&mode==='run'&&!finished)h+='<button data-a="buff">🃏 選擇 Buff</button>';
-  else if(!r.win)h+='<button data-a="retry">🔁 重新挑戰本關</button>';
+  else if(!r.win)h+='<button data-a="retry">🔁 重新挑戰本關</button><button class="alt" data-a="gear">🎽 換裝備</button>';
   else if(mode==='single')h+='<button data-a="retry">🔁 再玩一次</button>';
   h+='<button class="alt" data-a="hub">🗺️ 回到冒險地圖</button><button class="alt" data-a="ach">🏆 成就</button></div>';
   const d=sh.card(h);if(r.win)animateStars(d,r.stars);
   const q=s=>d.querySelector(s);
   if(q('[data-a=buff]'))q('[data-a=buff]').onclick=buffPick;
   if(q('[data-a=retry]'))q('[data-a=retry]').onclick=()=>{if(mode==='run'&&!(a.run&&a.run.stage===i))return hub();start(i,mode);};
+  if(q('[data-a=gear]'))q('[data-a=gear]').onclick=()=>openGallery({tab:'gear',onClose:()=>{const t=d.querySelector('[data-gear-tip]');if(t)t.innerHTML=gearTip();}});
   q('[data-a=hub]').onclick=hub;q('[data-a=ach]').onclick=()=>openGallery({});}
  function buffPick(){const a=ad(),run=a.run;if(!run)return hub();sh.setTop('🃏 選擇 Buff',false);
   if(!run.offer){const rng=S.rng((run.seed^Math.imul(run.stage+7,40503))>>>0),pool=Object.keys(A.BUFFS).filter(k=>(run.buffs[k]|0)<A.BUFFS[k].max);
