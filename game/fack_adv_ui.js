@@ -187,7 +187,7 @@ function openGallery(opts){opts=opts||{};if(!document.getElementById('axg-style'
  function close(){o.remove();document.removeEventListener('keydown',esc,true);document.dispatchEvent(new Event('fack-title-changed'));if(opts.onClose)opts.onClose();}
  function esc(e){if(e.key==='Escape'){e.stopPropagation();close();}}
  document.addEventListener('keydown',esc,true);o.onclick=e=>{if(e.target===o)close();};
- const stars=t=>'★'.repeat(t)+'☆'.repeat(5-t);
+ const stars=t=>t>5?'🌈 傳說級':'★'.repeat(t)+'☆'.repeat(5-t);
  const fmtV=(r,v)=>v==null?'—':r.low?v+(r.unit||''):Number(v).toLocaleString('zh-TW');
  function achHtml(){const d=D(),got=ACH.filter(a=>d.ach[a.id]).length,pct=Math.round(got/ACH.length*100),cur=d.title&&d.title.src==='adv'?d.title.id:'classic';
   const opt='<option value="classic"'+(cur==='classic'?' selected':'')+'>經典稱號：'+classicTitle()+'</option>'+ACH.filter(a=>d.ach[a.id]).map(a=>'<option value="'+a.id+'"'+(cur===a.id?' selected':'')+'>冒險稱號：'+a.title+'</option>').join('');
@@ -199,7 +199,8 @@ function openGallery(opts){opts=opts||{};if(!document.getElementById('axg-style'
   return '<p class="axg-m">已取得 <b>'+got+' / '+A.GEAR.length+'</b> 件裝備。<b>一次只能裝備一件</b>，效果永久生效，但<b>只作用在冒險模式</b>（經典模式與每日挑戰維持公平，不受裝備影響）。<br>目前裝備：<b>'+(eq?eq.icon+' '+eq.name+'｜'+eq.effect:'無')+'</b></p>'
    +(eq?'<p class="axg-m"><button type="button" data-un="1">卸下裝備</button></p>':'')+'<div class="axg-l">'
    +A.GEAR.map(x=>{const ok=!!gd.unlocked[x.id],on=eq&&eq.id===x.id;
-    return '<div class="axg-i'+(ok?'':' lk')+'"'+(on?' style="border-color:#f1d09a;box-shadow:0 0 0 1px #f1d09a"':'')+'><b>'+x.icon+' '+x.name+(ok?' ✓':' 🔒')+'</b><span class="main">'+stars(x.tier)+'</span><br>效果｜<b style="font-size:12px;color:#a7ffd6">'+x.effect+'</b>'
+    const leg=x.tier>5?'background:linear-gradient(150deg,#4a3410,#1f2a3a 60%);border-color:#ffd56b;':'';
+    return '<div class="axg-i'+(ok?'':' lk')+'" style="'+leg+(on?'border-color:#f1d09a;box-shadow:0 0 0 1px #f1d09a':'')+'"><b>'+x.icon+' '+x.name+(ok?' ✓':' 🔒')+'</b><span class="main">'+stars(x.tier)+'</span><br>效果｜<b style="font-size:12px;color:#a7ffd6">'+x.effect+'</b>'
      +x.reqs.map(r=>{const v=r.cur(),okR=A.gear.reqDone(r),pc=r.low?(v==null?0:Math.min(100,r.goal/v*100)):Math.min(100,(Number(v)||0)/r.goal*100);
       return '<div style="margin-top:5px">'+(okR?'✅ ':'⬜ ')+r.label+(r.low?'在 '+r.goal+(r.unit||'')+' 內':'')+'</div><div class="pb"><i style="width:'+pc+'%"></i></div>'+(r.low?'目前最佳：'+fmtV(r,v):fmtV(r,Math.min(Number(v)||0,r.goal))+' / '+r.goal.toLocaleString('zh-TW'));}).join('')
      +(ok?'<br>🕒 取得：'+fmtDate(gd.unlocked[x.id])+'<br><button type="button" data-eq="'+x.id+'"'+(on?' disabled':'')+' style="margin-top:6px">'+(on?'裝備中':'裝備')+'</button>':'')+'</div>';}).join('')+'</div>';}

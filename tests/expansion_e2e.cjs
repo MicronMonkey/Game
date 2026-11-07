@@ -105,7 +105,7 @@ const CLASSIC_KEYS=Object.keys(OLD);
   const d=await dump(p);CLASSIC_KEYS.forEach(k=>assert(d[k]===data[k],'classic changed '+k));
   assert(r.un.includes('cap')&&r.un.includes('sneakers')&&r.un.includes('glove')&&!r.un.includes('watch'),'unlock '+r.un);
   assert(r.e1&&!r.e2&&r.eq1==='glove'&&r.eq2==='sneakers','equip '+JSON.stringify(r));assert(Math.abs(r.m1-(20+(35+95)*1.5))<.01&&Math.abs(r.m0-150)<.01&&Math.abs(r.m2-115)<.01,'fx '+JSON.stringify(r));
-  await p.click('#achievements');await p.click('.axg [data-t=gear]');const txt=await p.textContent('.axg');assert(txt.includes('強力磁鐵手套')&&txt.includes('3 / 20'),'gallery');
+  await p.click('#achievements');await p.click('.axg [data-t=gear]');const txt=await p.textContent('.axg');assert(txt.includes('強力磁鐵手套')&&txt.includes('3 / 23'),'gallery');
   await ctx.close();return '取得 '+r.un.join('、')+'；磁鐵範圍 冒險 '+r.m1+'／無裝備 '+r.m0+'／每日挑戰 '+r.m2;});
  await check('裝備組合條件：經典地獄 20 秒內 ＋ 冒險 Boss 30 秒內，兩者都達成才解鎖',async()=>{const {ctx,p}=await page();await p.goto(BASE+'fack_v3.html');
   const best=JSON.parse(OLD['fack-chase-live-v2-best']);best.hell.used=18;await seed(p,Object.assign({},OLD,{'fack-chase-live-v2-best':JSON.stringify(best)}));await p.reload();

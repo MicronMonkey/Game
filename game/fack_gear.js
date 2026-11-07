@@ -1,4 +1,4 @@
-/* 全民找法克・永久裝備（20 種，一次只能裝備一種）
+/* 全民找法克・永久裝備（20 種＋3 件傳說級，一次只能裝備一種）
    ─ 效果只作用在「冒險模式」（含單關挑戰）；經典模式與每日挑戰不受影響，經典成績與排行仍然公平。
    ─ 取得條件會「唯讀」經典紀錄（fack-chase-live-v2-trophies／fack-chase-live-v2-best），從不寫入經典 Key。
    ─ 取得狀態存在 fack.expansion.v1 的 gear 欄位；一旦取得就永久保留。 */
@@ -64,7 +64,15 @@ const GEAR=[
  {id:'badge',icon:'🏅',name:'會長金徽章',tier:5,effect:'跑速 +4%、撿取範圍 +20、道具時間 +20%、每關時間 +20%',fx:{speed:.04,pick:20,itemDur:.2,time:.2},
   reqs:[req('經典模式累積收集連署書',300000,()=>n(C().papers)),req('達成「傳說追擊者」',1,()=>achGot('legend')?1:0)]},
  {id:'crown',icon:'👑',name:'法克剋星王冠',tier:5,effect:'愛心上限 +1、每關自動抵擋 1 次傷害、跑速 +5%、道具時間 +20%、每關時間 +15%',fx:{hearts:1,shield:1,speed:.05,itemDur:.2,time:.15},
-  reqs:[req('經典模式地獄難度累積勝利',30,()=>n((C().winsBy||{}).hell)),req('以地獄難度通關全部四個冒險關卡',4,()=>A.STAGES.filter(x=>n(((st().clearBy||{})[x.id]||{}).hell)>0).length),req('取得其他裝備',15,()=>Object.keys(gearData().unlocked).filter(k=>k!=='crown'&&GEAR.some(x=>x.id===k)).length)]}
+  reqs:[req('經典模式地獄難度累積勝利',30,()=>n((C().winsBy||{}).hell)),req('以地獄難度通關全部四個冒險關卡',4,()=>A.STAGES.filter(x=>n(((st().clearBy||{})[x.id]||{}).hell)>0).length),req('取得其他裝備',15,()=>Object.keys(gearData().unlocked).filter(k=>k!=='crown'&&GEAR.some(x=>x.id===k)).length)]},
+ // 🌈 傳說級（tier 6）：條件約為五星的 2 倍難度，效果約為對應五星的 3 倍
+ {id:'cape',icon:'🦸',name:'全民英雄披風',tier:6,effect:'跑速 +12%、撿取範圍 +60、道具時間 +60%、每關時間 +60%',fx:{speed:.12,pick:60,itemDur:.6,time:.6},
+  reqs:[req('經典模式累積收集連署書',600000,()=>n(C().papers)),req('達成「傳說追擊者」',1,()=>achGot('legend')?1:0),req('經典模式地獄難度累積勝利',30,()=>n((C().winsBy||{}).hell))]},
+ {id:'lightshoes',icon:'💫',name:'光速運動鞋',tier:6,effect:'跑速 +18%、疾速鞋效果時間 ×2',fx:{speed:.18,speedDur:2},
+  reqs:[req('經典模式地獄難度通關秒數',15,()=>{const b=B().hell;return b&&b.used?b.used:null;},{low:true,unit:'秒'}),
+        req('冒險 Boss 關卡（難或地獄）通關秒數',30,()=>bestTime('boss',['hard','hell']),{low:true,unit:'秒'})]},
+ {id:'phoenix',icon:'🔥',name:'不死鳥護符',tier:6,effect:'每關自動抵擋 3 次傷害、跑速 +9%',fx:{shield:3,speed:.09},
+  reqs:[req('以地獄難度完成整趟冒險（四關）且完全沒被攻擊',1,()=>sumBy(st().flawlessRuns,['hell'])),req('以中等以上難度無傷完成整趟冒險（累積）',3,()=>sumBy(st().flawlessRuns,atLeast))]}
 ];
 const DEFAULT_FX={speed:0,pick:0,magnetMul:1,speedDur:1,shieldDur:1,freeze:0,itemDur:0,time:0,shield:0,hearts:0,radar:0,battery:1,cart:0,paper:0,cloneMark:false};
 function gearData(){const d=D();if(!d.gear||typeof d.gear!=='object')d.gear={equipped:null,unlocked:{}};if(!d.gear.unlocked||typeof d.gear.unlocked!=='object')d.gear.unlocked={};return d.gear;}
