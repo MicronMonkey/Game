@@ -3,12 +3,16 @@
 import { BALANCE, CITIES, TUNING, difficultySettings } from '../config.js';
 import { arrivalScore, comboMultiplier } from './scoring.js';
 
-export function createRunState(difficulty = 'normal') {
+export function createRunState(difficulty = 'normal', city = 'taoyuan') {
   const settings = difficultySettings(difficulty);
-  const city = () => ({ arrived: 0, byType: {} });
+  const blank = () => ({ arrived: 0, byType: {} });
+  const mine = CITIES.includes(city) ? city : 'taoyuan';
   return {
     difficulty,
     settings,
+    city: mine, // the city the player runs
+    allyCity: mine === 'taichung' ? 'taoyuan' : 'taichung', // advances automatically
+    allyProgress: 0,
     score: 0,
     sun: TUNING.startingSun,
     sunCapacity: BALANCE.scoring.sun_capacity,
@@ -16,7 +20,7 @@ export function createRunState(difficulty = 'normal') {
     longestCombo: 0,
     lastArrivalAt: -Infinity, // run-clock seconds
     runClock: 0, // seconds of un-paused gameplay across acts
-    cities: Object.fromEntries(CITIES.map((c) => [c, city()])),
+    cities: Object.fromEntries(CITIES.map((c) => [c, blank()])),
     scoredIds: new Set(),
     sprinterBonusUsed: 0,
     skillsUsed: 0,

@@ -118,7 +118,7 @@ export class EndingScene extends Phaser.Scene {
     this.openedGallery = true;
     openGallery({
       result: { score: run.score, difficultyLabel: run.settings.label, newHigh: run.newHigh },
-      onReplay: () => this.scene.start('Menu', { startDifficulty: restart }),
+      onReplay: () => this.scene.start('Menu', { startDifficulty: restart, startCity: run.city }),
       onHome: () => {
         App.run = null;
         this.scene.start('Menu');

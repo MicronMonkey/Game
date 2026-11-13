@@ -1,8 +1,15 @@
-// DOM HUD for the two-city acts. All touch targets ≥ 44×44 CSS px; skills show icon +
-// name + countdown number (never colour alone).
-import { CITIES, CITY_LABELS } from '../config.js';
+// DOM HUD for the city acts: one playable city + an automatic partner city.
+// Skills are presented as a framed skill panel with icon, effect, cost and a radial
+// cooldown; buffs/debuffs appear as labelled chips with countdowns.
+import { CITY_LABELS } from '../config.js';
 import { SKILL_DEFS } from '../systems/SkillSystem.js';
 import { el, fmtScore, fmtTime, layer } from './dom.js';
+
+export const SKILL_EFFECT = {
+  lunch_sprint: '全員加速 40%',
+  sunlight: '掃開烏雲',
+  city_resonance: '得分 ×1.5',
+};
 
 export function createHud(h) {
   const root = layer('hud');
@@ -12,66 +19,67 @@ export function createHud(h) {
   const pause = el('button', { class: 'btn-icon', 'aria-label': '暫停', onclick: h.onPause, text: '⏸' });
   const top = el('div', { class: 'hud-top' }, [clock, countdown, score, pause]);
 
-  const cityHeads = {};
-  for (const c of CITIES) {
-    const count = el('span', { class: 'ch-count', text: '0/30' });
-    const fill = el('i');
-    const bar = el('span', { class: 'ch-bar', role: 'progressbar', 'aria-label': `${CITY_LABELS[c]}集結進度`, 'aria-valuemin': 0, 'aria-valuemax': 30 }, fill);
-    const events = el('span', { class: 'ch-events' });
-    const head = el('div', { class: `city-head city-${c}` }, [el('b', { text: `${CITY_LABELS[c]} ●` }), count, bar, events]);
-    cityHeads[c] = { head, count, fill, bar, events };
-    root.append(head);
-  }
+  // city strip
+  const myName = el('b');
+  const myCount = el('span', { class: 'ch-count', text: '0/30' });
+  const myFill = el('i');
+  const myBar = el('span', { class: 'ch-bar', role: 'progressbar', 'aria-valuemin': 0, 'aria-valuemax': 30 }, myFill);
+  const allyName = el('span', { class: 'ally-name' });
+  const allyCount = el('span', { class: 'ally-count', text: '0/30' });
+  const allyFill = el('i');
+  const ally = el('span', { class: 'ally', title: '夥伴廠由電腦自動推進（虛構）' }, [allyName, el('span', { class: 'ally-bar' }, allyFill), allyCount]);
+  const cityStrip = el('div', { class: 'city-strip' }, [myName, myCount, myBar, ally]);
+  const chips = el('div', { class: 'status-chips', 'aria-live': 'polite' });
 
+  // bottom panel
   const sunFill = el('i');
-  const sunText = el('b', { text: '20' });
-  const sun = el('div', { class: 'hud-sun' }, [el('span', { text: '☀ 陽光' }), el('span', { class: 'sun-bar' }, sunFill), sunText]);
+  const sunText = el('b', { text: '20/100' });
+  const ticks = el('span', { class: 'sun-ticks' });
+  for (const def of Object.values(SKILL_DEFS)) {
+    ticks.append(el('span', { class: 'tick', style: { left: `${def.sun_cost}%` }, title: `${def.name} ${def.sun_cost}` }, el('em', { text: def.icon })));
+  }
+  const sun = el('div', { class: 'hud-sun' }, [el('span', { class: 'sun-label', text: '☀ 陽光技能條' }), el('span', { class: 'sun-bar' }, [sunFill, ticks]), sunText]);
   const combo = el('div', { class: 'hud-combo', text: '' });
   const skills = {};
-  const skillRow = el('div', { class: 'skill-row' });
+  const skillRow = el('div', { class: 'skill-panel', role: 'group', 'aria-label': '技能' });
   for (const def of Object.values(SKILL_DEFS)) {
-    const cd = el('span', { class: 'sk-cd' });
-    const btn = el('button', { class: 'skill', onclick: () => h.onSkill(def.id), 'aria-label': `${def.name}，消耗 ${def.sun_cost} 陽光` }, [
-      el('span', { class: 'sk-icon', text: def.icon }),
-      el('span', { class: 'sk-name', text: def.name }),
+    const state = el('span', { class: 'sk-state', text: '' });
+    const icon = el('span', { class: 'sk-orb' }, el('span', { class: 'sk-icon', text: def.icon }));
+    const btn = el('button', { class: `skill-card sk-${def.id}`, onclick: () => h.onSkill(def.id), 'aria-label': `${def.name}：${SKILL_EFFECT[def.id]}，消耗 ${def.sun_cost} 陽光` }, [
+      icon,
+      el('span', { class: 'sk-text' }, [el('b', { class: 'sk-name', text: def.name }), el('small', { class: 'sk-eff', text: SKILL_EFFECT[def.id] })]),
       el('span', { class: 'sk-cost', text: `☀${def.sun_cost}` }),
-      cd,
+      state,
     ]);
-    skills[def.id] = { btn, cd };
+    skills[def.id] = { btn, state, icon };
     skillRow.append(btn);
   }
-  const boxBtn = el('button', { class: 'skill box-toggle', 'aria-pressed': 'false', onclick: h.onBoxToggle }, [
-    el('span', { class: 'sk-icon', text: '⬚' }),
-    el('span', { class: 'sk-name', text: '框選' }),
-    el('span', { class: 'sk-cost', text: '關' }),
-  ]);
-  skillRow.append(boxBtn);
   const hint = el('div', { class: 'hud-hint', 'aria-live': 'polite', text: '點人物 → 點集結區' });
   const signal = el('div', { class: 'signal-panel', hidden: true }, [el('span', { text: '📡 雙城訊號中斷：依序點 1→2→3 重新連線' })]);
   const signalBtns = el('div', { class: 'signal-btns' });
   signal.append(signalBtns);
   const bottom = el('div', { class: 'hud-bottom' }, [el('div', { class: 'hud-row' }, [sun, combo]), skillRow, hint, signal]);
-  root.append(el('div', { class: 'hud-topwrap' }, [top]), bottom);
+  root.append(el('div', { class: 'hud-topwrap' }, [top, cityStrip, chips]), bottom);
 
   const last = {};
-  const set = (node, key, value, fn) => {
+  const set = (key, value, fn) => {
     if (last[key] === value) return;
     last[key] = value;
-    fn(node, value);
+    fn(value);
   };
 
   return {
     root,
+    /** CSS-px area left for the field. */
     insets() {
-      const t = top.getBoundingClientRect();
+      const t = chips.getBoundingClientRect();
       const b = bottom.getBoundingClientRect();
       return { top: t.bottom + 2, bottom: window.innerHeight - b.top + 2 };
     },
-    placeCity(city, rect) {
-      const hd = cityHeads[city].head;
-      hd.style.left = `${rect.x}px`;
-      hd.style.top = `${rect.y}px`;
-      hd.style.width = `${rect.w}px`;
+    setCities(mine, partner) {
+      myName.textContent = `${CITY_LABELS[mine]}廠`;
+      allyName.textContent = `${CITY_LABELS[partner]}夥伴`;
+      myBar.setAttribute('aria-label', `${CITY_LABELS[mine]}集結進度`);
     },
     setAct(text) {
       countdown.querySelector('small').textContent = `${text}・剩餘`;
@@ -79,13 +87,13 @@ export function createHud(h) {
     setClockLabel(label) {
       clock.querySelector('small').textContent = label;
     },
-    setBox(on) {
-      boxBtn.setAttribute('aria-pressed', String(on));
-      boxBtn.classList.toggle('on', on);
-      boxBtn.querySelector('.sk-cost').textContent = on ? '開' : '關';
-    },
     hint(text) {
-      set(hint, 'hint', text, (n, v) => (n.textContent = v));
+      set('hint', text, (v) => (hint.textContent = v));
+    },
+    flashHint() {
+      hint.classList.remove('flash');
+      void hint.offsetWidth;
+      hint.classList.add('flash');
     },
     showSignal(onTap) {
       signal.hidden = false;
@@ -105,34 +113,59 @@ export function createHud(h) {
     hideSignal() {
       signal.hidden = true;
     },
+    /** Pop animation on a skill card when cast. */
+    pulseSkill(id) {
+      const b = skills[id]?.btn;
+      if (!b) return;
+      b.classList.remove('cast');
+      void b.offsetWidth;
+      b.classList.add('cast');
+    },
     update(v) {
-      set(clock.querySelector('b'), 'clock', v.clock, (n, x) => (n.textContent = x));
-      set(countdown.querySelector('b'), 'cd', fmtTime(v.remaining), (n, x) => (n.textContent = x));
+      set('clock', v.clock, (x) => (clock.querySelector('b').textContent = x));
+      set('cd', fmtTime(v.remaining), (x) => (countdown.querySelector('b').textContent = x));
       countdown.classList.toggle('warn', v.remaining <= 10);
-      set(score.querySelector('b'), 'score', fmtScore(v.score), (n, x) => (n.textContent = x));
-      set(sunText, 'sun', Math.floor(v.sun), (n, x) => (n.textContent = `${x}/${v.sunCap}`));
+      set('score', fmtScore(v.score), (x) => (score.querySelector('b').textContent = x));
+      score.classList.toggle('boosted', !!v.scoreBoost);
+      set('sun', Math.floor(v.sun), (x) => (sunText.textContent = `${x}/${v.sunCap}`));
       sunFill.style.width = `${(v.sun / v.sunCap) * 100}%`;
-      set(combo, 'combo', v.combo, (n, x) => {
-        n.textContent = x > 1 ? `COMBO ×${v.multiplier}（${x} 連）` : '';
-        n.classList.toggle('hot', v.multiplier >= 3);
+      sun.classList.toggle('debuffed', !!v.sunDebuff);
+      set('combo', `${v.combo}|${v.multiplier}`, () => {
+        combo.textContent = v.combo > 1 ? `COMBO ×${v.multiplier}（${v.combo} 連）` : '';
+        combo.classList.toggle('hot', v.multiplier >= 3);
       });
-      for (const c of CITIES) {
-        const cv = v.cities[c];
-        const ch = cityHeads[c];
-        set(ch.count, `cc-${c}`, `${cv.arrived}/${cv.target}`, (n, x) => (n.textContent = x));
-        ch.fill.style.width = `${Math.min(100, (cv.arrived / cv.target) * 100)}%`;
-        ch.bar.setAttribute('aria-valuenow', Math.min(cv.arrived, cv.target));
-        ch.head.classList.toggle('done', cv.arrived >= cv.target);
-        set(ch.events, `ev-${c}`, cv.events, (n, x) => (n.textContent = x));
-      }
+      set('my', `${v.mine.arrived}/${v.mine.target}`, (x) => (myCount.textContent = x));
+      myFill.style.width = `${Math.min(100, (v.mine.arrived / v.mine.target) * 100)}%`;
+      myBar.setAttribute('aria-valuenow', Math.min(v.mine.arrived, v.mine.target));
+      cityStrip.classList.toggle('done', v.mine.arrived >= v.mine.target);
+      set('ally', `${v.ally.arrived}/${v.ally.target}`, (x) => (allyCount.textContent = x));
+      allyFill.style.width = `${Math.min(100, (v.ally.arrived / v.ally.target) * 100)}%`;
+      ally.classList.toggle('done', v.ally.arrived >= v.ally.target);
+      // chips
+      const sig = v.chips.map((c) => `${c.kind}${c.text}${c.left != null ? Math.ceil(c.left) : ''}`).join('|');
+      set('chips', sig, () => {
+        chips.replaceChildren(
+          ...v.chips.map((c) =>
+            el('span', { class: `chip ${c.kind}` }, [
+              el('span', { text: c.text }),
+              c.left != null ? el('b', { text: `${Math.ceil(c.left)}s` }) : null,
+              c.left != null && c.total ? el('i', { style: { width: `${Math.max(0, Math.min(100, (c.left / c.total) * 100))}%` } }) : null,
+            ]),
+          ),
+        );
+      });
       for (const [id, s] of Object.entries(skills)) {
         const r = v.skillReasons[id];
         const activeLeft = v.skillActive[id] || 0;
+        const cd = v.skillCd[id] || 0;
+        const total = SKILL_DEFS[id].cooldown_seconds;
         const disabled = !!r;
         if (s.btn.disabled !== disabled) s.btn.disabled = disabled;
         s.btn.classList.toggle('active', activeLeft > 0);
-        const label = activeLeft > 0 ? `${Math.ceil(activeLeft)}s` : v.skillCd[id] > 0 ? `${Math.ceil(v.skillCd[id])}` : r && r.startsWith('訊號') ? '✕' : '';
-        set(s.cd, `cd-${id}`, label, (n, x) => (n.textContent = x));
+        s.btn.classList.toggle('ready', !r);
+        s.icon.style.setProperty('--cd', cd > 0 ? `${(cd / total) * 360}deg` : '0deg');
+        const label = activeLeft > 0 ? `生效中 ${Math.ceil(activeLeft)}s` : !r ? '就緒！' : cd > 0 ? `冷卻 ${Math.ceil(cd)}s` : r;
+        set(`st-${id}`, label, (x) => (s.state.textContent = x));
         s.btn.title = r || '可施放';
       }
     },

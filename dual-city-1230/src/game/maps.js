@@ -80,3 +80,23 @@ export const MAPS = {
     ],
   },
 };
+
+/**
+ * Return a map oriented for the screen. Portrait screens get the layout transposed
+ * (x↔y) into a 300×400 field so the single city fills a phone screen.
+ */
+export function orientedMap(id, portrait) {
+  const m = MAPS[id];
+  if (!portrait) return { ...m, w: FIELD_W, h: FIELD_H, portrait: false };
+  const t = (p) => ({ ...p, x: p.y, y: p.x });
+  return {
+    ...m,
+    w: FIELD_H,
+    h: FIELD_W,
+    portrait: true,
+    zone: t(m.zone),
+    nodes: Object.fromEntries(Object.entries(m.nodes).map(([k, p]) => [k, t(p)])),
+    idleSpots: m.idleSpots.map(t),
+    buildings: m.buildings.map((b) => ({ ...b, x: b.y, y: b.x, w: b.h, h: b.w })),
+  };
+}

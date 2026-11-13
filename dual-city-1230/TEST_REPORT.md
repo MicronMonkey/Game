@@ -1,15 +1,15 @@
-# 測試報告（2026-11-13）
+# 測試報告（2026-11-13，v2 改版）
 
 環境：Linux 雲端容器、Node 22.23.4、Chromium（Playwright，headless）。**未在真實 iPhone / Android 實機測試**（見下方「未驗證」）。
 
 ## 執行的命令
 ```bash
 npm install
-npm test                       # 單元測試：18/18 通過
+npm test                       # 單元測試：22/22 通過
 npm run build                  # 成功，無錯誤
-npx vite preview --port 4173 & npm run test:e2e                         # 55/55 通過
+npx vite preview --port 4173 & npm run test:e2e                         # 66/66 通過
 # 模擬 GitHub Pages 子路徑：把網站組裝成 /Game/ 並以 /Game/dual-city-1230/ 提供
-BASE_URL=http://localhost:8799/Game/dual-city-1230/ npm run test:e2e    # 55/55 通過
+（v2 僅在本機 preview 執行驗收）
 ```
 
 ## 單元測試（tests/unit）
@@ -29,33 +29,44 @@ Combo 倍率公式、抵達分數取整、剩餘秒數獎勵、難度倍率、�
 | ✅ | 沒有真實照片時兩城皆顯示「照片整理中」 |  |
 | ✅ | 相簿無偽造照片（無 <img>） |  |
 | ✅ | 鍵盤返回首頁 |  |
+| ✅ | 選難度後可選擇桃園廠／台中廠 |  |
 | ✅ | 首次開始顯示教學 |  |
 | ✅ | 教學狀態持久化 |  |
-| ✅ | 桃園與台中同時更新 |  |
+| ✅ | 只顯示單一城市戰場 |  |
+| ✅ | 夥伴廠（台中）自動推進 | 0.62 → 0.82 |
+| ✅ | 沒有框選按鈕 |  |
+| ✅ | 拖曳不會框選多人 |  |
 | ✅ | 點擊角色可選取 |  |
 | ✅ | 點集合區下達指令 | moving |
+| ✅ | 前往中的角色顯示 >>> 路線箭頭 | draw commands=434 |
 | ✅ | 沿道路尋路抵達並計分 | {"has":true,"tao":1,"score":100} |
 | ✅ | 同一角色重複抵達不重複計分 | delta=0 |
-| ✅ | 虛擬時鐘 12:00→12:30 映射 | 12:04 @14.5s/90s |
+| ✅ | 虛擬時鐘 12:00→12:30 映射 | 12:06 @18.9s/90s |
 | ✅ | 陽光不足不能施放並顯示原因 |  |
 | ✅ | 冷卻中不能施放 |  |
 | ✅ | 暫停時倒數/CD/Buff 停止 |  |
 | ✅ | 分頁失焦自動暫停 |  |
-| ✅ | 框選模式可多選 | selected=10 |
+| ✅ | 技能 Buff 特效（光環/邊框/標籤/技能卡） | {"chip":true,"halo":true,"border":true,"card":true} |
+| ✅ | Buff 結束後特效消失 | {"chip":false,"border":false,"gold":false} |
+| ✅ | 干擾角色顯示紅色半透明強調＋圖示＋紅色標籤 | {"n":4,"red":true,"icon":true,"chip":true} |
 | ✅ | 事件生成與解除（排隊/烏雲/斷訊/開會） | {"queue":1,"queueCleared":true,"cloud":true,"cloudCleared":true,"blocked":"訊號中斷","unblocked":true,"meeting":tr |
 | ✅ | 第一幕 → 第二幕 |  |
 | ✅ | 第一幕已集結數保留到第二幕 | taoyuan=30 |
-| ✅ | 進入 Boss（依雙城達標給初始傷害） | {"tao":63,"tai":63,"initDmg":150,"score":48820} |
-| ✅ | 滑鼠瞄準弱點造成 Boss 扣血 | 850 → 825 |
-| ✅ | Boss HP 0 → 成功 | score=55970 |
+| ✅ | 第二幕仍為單一城市 |  |
+| ✅ | 進入 Boss（依雙城達標給初始傷害） | {"tao":64,"tai":30,"initDmg":150,"score":15920} |
+| ✅ | 雙城合擊充滿後按鈕可用 |  |
+| ✅ | 按下雙城合擊啟動大招 |  |
+| ✅ | 黑箱會丟下黑幕 |  |
+| ✅ | 滑鼠瞄準弱點造成 Boss 扣血 | 802 → 766 |
+| ✅ | Boss HP 0 → 成功 | score=23220 |
 | ✅ | 成功過場文案 |  |
 | ✅ | 成功過場可略過並進入相簿 |  |
 | ✅ | 分享：不支援 Web Share 時下載 PNG | dual-city-1230-score.png |
 | ✅ | 分難度保存最高分 |  |
 | ✅ | 不污染其他遊戲 localStorage |  |
 | ✅ | 重新遊玩無殘留舊局分數 |  |
-| ✅ | 零城達標也可進 Boss | {"tao":0,"init":0} |
-| ✅ | 時間 0 且 HP>0 → 失敗 | {"result":"lose","hp":1000} |
+| ✅ | 自己廠未達標也可進 Boss（夥伴廠達標 → 初始傷害 75） | {"tao":0,"init":75} |
+| ✅ | 時間 0 且 HP>0 → 失敗 | {"result":"lose","hp":925} |
 | ✅ | 失敗過場文案 |  |
 | ✅ | 成功與失敗進入「完全相同」的相簿 |  |
 | ✅ | 全程無 JS 錯誤 |  |
@@ -68,11 +79,11 @@ Combo 倍率公式、抵達分數取整、剩餘秒數獎勵、難度倍率、�
 | ✅ | 左右滑動切換 |  |
 | ✅ | JSON 404 不白屏、兩城顯示整理中 |  |
 | ✅ | 相簿可返回首頁 |  |
-| ✅ | 版面 375×667 | {"mode":"portrait","cityH":254,"overlap":false,"minSkill":48,"scrollW":375,"fieldScale":0.7466666666666667} |
-| ✅ | 版面 390×844 | {"mode":"portrait","cityH":339.5,"overlap":false,"minSkill":54,"scrollW":390,"fieldScale":0.945} |
-| ✅ | 版面 393×852 | {"mode":"portrait","cityH":343.5,"overlap":false,"minSkill":54,"scrollW":393,"fieldScale":0.9525} |
-| ✅ | 版面 430×932 | {"mode":"portrait","cityH":383.5,"overlap":false,"minSkill":54,"scrollW":430,"fieldScale":1.045} |
-| ✅ | 版面 1366×768 | {"mode":"landscape","cityH":609,"overlap":false,"minSkill":54,"scrollW":1366,"fieldScale":1.685} |
+| ✅ | 版面 375×667 | {"mode":"portrait","fieldH":426,"overlap":false,"minSkill":50,"scrollW":375,"scale":1.06} |
+| ✅ | 版面 390×844 | {"mode":"portrait","fieldH":504,"overlap":false,"minSkill":59,"scrollW":390,"scale":1.26} |
+| ✅ | 版面 393×852 | {"mode":"portrait","fieldH":508,"overlap":false,"minSkill":59,"scrollW":393,"scale":1.27} |
+| ✅ | 版面 430×932 | {"mode":"portrait","fieldH":557,"overlap":false,"minSkill":58,"scrollW":430,"scale":1.39} |
+| ✅ | 版面 1366×768 | {"mode":"landscape","fieldH":519,"overlap":false,"minSkill":58,"scrollW":1366,"scale":1.73} |
 
 說明：完整流程測試用了 `?test=1` 掛鉤加速時間（timeScale）與自動指派/瞄準，以在數分鐘內跑完兩種結局；選人、指派、框選、暫停、Boss 扣血等核心操作則以真實滑鼠/觸控事件驗證。
 

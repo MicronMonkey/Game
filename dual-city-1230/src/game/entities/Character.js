@@ -53,15 +53,18 @@ export class Character {
     this.selected = false;
     this.lingering = 0;
 
-    this.sprite = this.scene.add.image(this.x, this.y, charKey(type, this.variant, 'down', 0)).setOrigin(0.5, 0.92).setScale(0.62);
-    this.ring = this.scene.add.image(this.x, this.y, 'ring').setScale(0.7).setVisible(false);
-    this.mark = this.scene.add.text(this.x, this.y - 40, '?', {
-      fontFamily: 'system-ui, sans-serif', fontSize: '16px', fontStyle: 'bold', color: '#FFD447', stroke: '#101216', strokeThickness: 3, resolution: 2,
-    }).setOrigin(0.5, 1).setVisible(false);
-    field.charLayer.add([this.ring, this.sprite, this.mark]);
+    this.halo = this.scene.add.image(this.x, this.y, 'halo').setVisible(false);
+    this.sprite = this.scene.add.image(this.x, this.y, charKey(type, this.variant, 'down', 0)).setOrigin(0.5, 0.92).setScale(0.66);
+    this.ring = this.scene.add.image(this.x, this.y, 'ring').setScale(0.75).setVisible(false);
+    // status icon above the head: ❓ lost, 📢 meeting, 🐢 queue (debuffs) / ☕ tired
+    this.mark = this.scene.add.text(this.x, this.y - 40, '', {
+      fontFamily: 'system-ui, "Apple Color Emoji", "Segoe UI Emoji", sans-serif', fontSize: '14px', fontStyle: 'bold', color: '#FFD447', stroke: '#101216', strokeThickness: 3, resolution: 3,
+    }).setOrigin(0.5, 1);
+    this.status = '';
+    field.charLayer.add([this.halo, this.ring, this.sprite, this.mark]);
 
     const spot = field.map.idleSpots[Math.floor(rng() * field.map.idleSpots.length)];
-    this.home = { x: spot.x + (rng() - 0.5) * 18, y: spot.y + (rng() - 0.5) * 8 };
+    this.home = { x: spot.x + (rng() - 0.5) * 10, y: spot.y + (rng() - 0.5) * 10 };
     this.setPath([this.home]);
   }
 
@@ -126,7 +129,6 @@ export class Character {
     this.setPath(pts, route);
     this.curNodeIndex = 0;
     this.state = 'moving';
-    this.mark.setVisible(false);
     return true;
   }
 
@@ -135,7 +137,6 @@ export class Character {
     this.state = 'lost';
     this.path = [];
     this.curEdge = null;
-    this.mark.setVisible(true);
     if (reason) this.say(reason);
   }
 
@@ -153,7 +154,17 @@ export class Character {
     return s;
   }
 
-  update(dt, skillBonus) {
+  /** Debuff key if this character is currently hindered by an event, else ''. */
+  debuff() {
+    if (this.state === 'lost') return 'lost';
+    if (this.pausedFor > 0) return 'meeting';
+    if (this.state === 'moving' && this.curEdge && this.field.isQueued(this.curEdge)) return 'queue';
+    return '';
+  }
+
+  update(dt, ctx) {
+    const skillBonus = ctx.skillBonus;
+    this.buffColor = ctx.buffColor;
     this.animTime += dt;
     this.auraTimer = Math.max(0, this.auraTimer - dt);
     if (this.state === 'arrived') {
@@ -201,7 +212,7 @@ export class Character {
       this.idleTimer -= dt;
       if (this.idleTimer <= 0) {
         this.idleTimer = 1.5 + this.rng() * 2.5;
-        this.path = [{ x: this.home.x + (this.rng() - 0.5) * 14, y: this.home.y + (this.rng() - 0.5) * 6 }];
+        this.path = [{ x: this.home.x + (this.rng() - 0.5) * 8, y: this.home.y + (this.rng() - 0.5) * 8 }];
       }
     }
     this.render(moving);
@@ -227,13 +238,14 @@ export class Character {
     this.state = 'arrived';
     this.lingering = TUNING.arrivedLingerSeconds;
     this.setSelected(false);
-    this.mark.setVisible(false);
-    this.sprite.setTexture(charKey(this.type, this.variant, 'down', 2)).setFlipX(false);
+    this.sprite.setTexture(charKey(this.type, this.variant, 'down', 2)).setFlipX(false).setTint(0xffffff);
+    this.halo.setVisible(false);
+    this.mark.setText('');
   }
 
   leave() {
     this.state = 'gone';
-    this.scene.tweens.add({ targets: [this.sprite], alpha: 0, duration: 250, onComplete: () => this.destroy() });
+    this.scene.tweens.add({ targets: [this.sprite, this.mark], alpha: 0, duration: 250, onComplete: () => this.destroy() });
   }
 
   render(moving) {
@@ -244,12 +256,30 @@ export class Character {
     this.sprite.setDepth(this.y);
     this.ring.setPosition(this.x, this.y + 1).setDepth(this.y - 1);
     this.mark.setDepth(this.y + 1000);
-    this.mark.setPosition(this.x, this.y - 36 - Math.abs(Math.sin(this.animTime * 4)) * 3);
+    this.mark.setPosition(this.x, this.y - 38 - Math.abs(Math.sin(this.animTime * 4)) * 3);
+    // interference = red translucent halo + icon; buff = gold/orange halo
+    const deb = this.active ? this.debuff() : '';
+    const icon = deb === 'lost' ? '❓' : deb === 'meeting' ? '📢' : deb === 'queue' ? '🐢' : this.type === 'tired' && !this.recovered && this.active ? '☕' : '';
+    if (icon !== this.status) {
+      this.status = icon;
+      this.mark.setText(icon);
+    }
+    const pulse = 0.55 + 0.3 * Math.sin(this.animTime * 7);
+    if (deb) {
+      this.halo.setVisible(true).setTint(0xff2a2a).setAlpha(pulse).setScale(1.15);
+    } else if (this.buffColor != null && this.active && this.state !== 'walkIn') {
+      this.halo.setVisible(true).setTint(this.buffColor).setAlpha(pulse * 0.9).setScale(1.05);
+    } else if (this.auraTimer > 0 && this.state === 'moving') {
+      this.halo.setVisible(true).setTint(0xfff3b0).setAlpha(0.35).setScale(0.9);
+    } else this.halo.setVisible(false);
+    this.halo.setPosition(this.x, this.y - 14).setDepth(this.y - 2);
+    this.sprite.setTint(deb ? 0xffb0b0 : 0xffffff);
     this.sprite.setAlpha(this.pausedFor > 0 ? 0.6 : 1);
   }
 
   destroy() {
     this.sprite.destroy();
+    this.halo.destroy();
     this.ring.destroy();
     this.mark.destroy();
   }

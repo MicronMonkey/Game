@@ -21,6 +21,7 @@ export class MenuScene extends Phaser.Scene {
 
   init(data) {
     this.startDifficulty = data?.startDifficulty || null;
+    this.startCity = data?.startCity || null;
   }
 
   create() {
@@ -36,7 +37,7 @@ export class MenuScene extends Phaser.Scene {
       this.scale.off('resize', this.drawBackdrop, this);
       this.ui.remove();
     });
-    if (this.startDifficulty) this.startRun(this.startDifficulty);
+    if (this.startDifficulty && this.startCity) this.startRun(this.startDifficulty, this.startCity);
   }
 
   drawBackdrop() {
@@ -119,7 +120,7 @@ export class MenuScene extends Phaser.Scene {
       title: '選擇難度',
       body: [
         el('div', { class: 'diff-list' }, DIFFICULTIES.map((d) =>
-          el('button', { class: `btn diff diff-${d}`, onclick: () => { m.close(); this.startRun(d); } }, [
+          el('button', { class: `btn diff diff-${d}`, onclick: () => { m.close(); this.chooseCity(d); } }, [
             el('b', { text: DIFFICULTY_LABELS[d] }),
             el('small', { text: desc[d] }),
             el('small', { text: `最高分 ${fmtScore(App.save.scores[d].highest)}` }),
@@ -129,9 +130,29 @@ export class MenuScene extends Phaser.Scene {
     });
   }
 
-  startRun(difficulty) {
+  chooseCity(difficulty) {
+    const card = (id, name, sub, art) =>
+      el('button', { class: `btn city-card city-${id}`, onclick: () => { m.close(); this.startRun(difficulty, id); } }, [
+        el('span', { class: 'city-art', text: art }),
+        el('b', { text: name }),
+        el('small', { text: sub }),
+      ]);
+    const m = modal({
+      title: '選擇你的廠區',
+      body: [
+        el('p', { class: 'small', text: '你負責帶領一座廠的集結；另一座廠由夥伴同步推進（虛構）。' }),
+        el('div', { class: 'city-pick' }, [
+          card('taoyuan', '桃園廠', '廠房・停車場・集結廣場', '🏭'),
+          card('taichung', '台中廠', '工廠・綠地・裝置藝術前', '🌳'),
+        ]),
+      ],
+      actions: [{ label: '返回', onClick: () => this.chooseDifficulty() }],
+    });
+  }
+
+  startRun(difficulty, city) {
     const go = () => {
-      App.run = createRunState(difficulty);
+      App.run = createRunState(difficulty, city);
       this.scene.start('Gathering');
     };
     if (!App.save.tutorialCompleted) showTutorial({ onDone: go });
