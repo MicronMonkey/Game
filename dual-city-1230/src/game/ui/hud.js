@@ -3,6 +3,8 @@
 import { SKILL_DEFS } from '../systems/SkillSystem.js';
 import { el, fmtScore, layer, onPress } from './dom.js';
 
+const DEFAULT_HINT = '拖曳畫面（或方向鍵）移動，黃圈碰到的人會跟你走！';
+
 export function createHud(h) {
   const root = layer('hud runner-hud');
   const clockSmall = el('small', { text: '' });
@@ -44,7 +46,7 @@ export function createHud(h) {
     skills[def.id] = { btn, cdFill, state };
     skillRow.append(btn);
   });
-  const hint = el('div', { class: 'hud-hint', 'aria-live': 'polite' });
+  const hint = el('div', { class: 'hud-hint', 'aria-live': 'polite', text: DEFAULT_HINT });
   const bottom = el('div', { class: 'hud-bottom' }, [sun, skillRow, hint]);
   root.append(el('div', { class: 'hud-topwrap' }, [top, progress, chips]), bottom);
 
@@ -66,8 +68,11 @@ export function createHud(h) {
       clockSmall.textContent = act;
       progress.querySelector('.prog-label').textContent = city;
     },
-    hint(text) {
+    /** Hints expire after ~4 s and fall back to the default line. */
+    hint(text, sticky = false) {
+      clearTimeout(this._hintT);
       set('hint', text, (v) => (hint.textContent = v));
+      if (!sticky) this._hintT = setTimeout(() => set('hint', DEFAULT_HINT, (v) => (hint.textContent = v)), 4000);
     },
     pulseSkill(id) {
       const b = skills[id]?.btn;

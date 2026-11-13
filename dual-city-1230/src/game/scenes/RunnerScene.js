@@ -5,14 +5,14 @@ import Phaser from 'phaser';
 import { App, reducedMotion } from '../app.js';
 import { BALANCE, CITY_LABELS } from '../config.js';
 import { charKey, VARIANTS } from '../art/textures.js';
-import { starsFor, R, ITEM_DEFS, applyCount, clampBaseRadius, effectiveRadius, formationSlot, generateStage, hazardLoss } from '../runner/runnerLogic.js';
+import { difficultyProfile, starsFor, R, ITEM_DEFS, applyCount, clampBaseRadius, effectiveRadius, formationSlot, generateStage, hazardLoss } from '../runner/runnerLogic.js';
 import { addBonus, addSun, registerRecruit, tickCombo } from '../systems/GameState.js';
 import { comboMultiplier } from '../systems/scoring.js';
 import { SKILL_DEFS, SkillSystem } from '../systems/SkillSystem.js';
 import { hasPerk, perkById } from '../perks/perks.js';
 import { Audio } from '../systems/AudioSystem.js';
 import { createHud } from '../ui/hud.js';
-import { clearToasts, toast } from '../ui/dom.js';
+import { clearToasts, screenFlash, toast } from '../ui/dom.js';
 import { pauseMenu } from '../ui/modal.js';
 
 const FONT = 'system-ui, "Noto Sans TC", "PingFang TC", sans-serif';
@@ -41,6 +41,9 @@ export class RunnerScene extends Phaser.Scene {
     this.bannerD = null;
     this.recruitBatch = 0;
     this.batchT = 0;
+    this.mediaT = 0;
+    this.inWave = false;
+    this.pendingWave = 0;
     this.needHintAt = 0;
     this.prevD = undefined;
     this.inFog = false;
@@ -59,6 +62,7 @@ export class RunnerScene extends Phaser.Scene {
     const mult = BALANCE.runner.stage_target_multiplier[st];
     this.target = Math.round(run.settings.targets[this.city] * mult * (R.target_difficulty_multiplier?.[run.difficulty] ?? 1));
     this.countdown = R.countdown_seconds ?? 0;
+    this.profile = difficultyProfile(run.difficulty);
     // scroll speed per difficulty (config: runner.scroll_multiplier); the protagonist
     // walks faster on faster settings so the street stays controllable
     const sm = R.scroll_multiplier?.[run.difficulty] ?? 1;
@@ -214,6 +218,39 @@ export class RunnerScene extends Phaser.Scene {
         }
       }
     }
+    // street life: forward arrows, manholes, roadside trees and lamps with warm light pools
+    for (let d = 300; d < L; d += 320) {
+      const ax = VW / 2;
+      g.fillStyle(0xd8dde6, 0.22);
+      g.fillTriangle(ax, -d - 26, ax - 10, -d - 8, ax + 10, -d - 8);
+      g.fillRect(ax - 3, -d - 8, 6, 18);
+      g.fillStyle(0x23272f, 1);
+      g.fillCircle(((d * 7) % (VW - 60)) + 30, -d - 140, 9);
+      g.lineStyle(1, 0x4b5263, 1);
+      g.strokeCircle(((d * 7) % (VW - 60)) + 30, -d - 140, 9);
+    }
+    const treeEvery = isTao ? 300 : 170;
+    for (let d = 80; d < L + 600; d += treeEvery) {
+      for (const tx of [-30, VW + 30]) {
+        g.fillStyle(0x163024, 1);
+        g.fillCircle(tx, -d, 16);
+        g.fillStyle(0x24583a, 1);
+        g.fillCircle(tx - 4, -d - 4, 11);
+      }
+    }
+    for (let d = 160; d < L + 600; d += 200) {
+      for (const side of [-1, 1]) {
+        const lx = side < 0 ? -8 : VW + 8;
+        g.fillStyle(0xffd447, 0.07);
+        g.fillCircle(lx + side * -26, -d, 54);
+        g.fillStyle(0xffd447, 0.06);
+        g.fillCircle(lx + side * -18, -d, 30);
+        g.fillStyle(0x5a6275, 1);
+        g.fillRect(lx - 2, -d - 4, 4, 20);
+        g.fillStyle(0xfff3b0, 1);
+        g.fillCircle(lx, -d - 6, 4.5);
+      }
+    }
     // crosswalks every so often
     g.fillStyle(0xd8dde6, 0.18);
     for (let d = 600; d < L - 300; d += 900) for (let x = 8; x < VW; x += 26) g.fillRect(x, -d, 14, 30);
@@ -245,6 +282,11 @@ export class RunnerScene extends Phaser.Scene {
       this.charLayer.add(s);
       const o = { ...n, sprite: s, state: 'idle', t: Math.random() * 5 };
       if (n.need) s.setTint(0xb8c0cc);
+      if (n.special === 'reporter') {
+        s.setScale(0.7);
+        o.tag = this.add.text(n.x, -n.d - 44, '📷 直播記者', { fontFamily: FONT, fontSize: '10px', fontStyle: 'bold', color: '#101216', backgroundColor: '#FFFFFF', padding: { x: 3, y: 1 }, resolution: 3 }).setOrigin(0.5, 1);
+        this.fxLayer.add(o.tag);
+      }
       return o;
     });
     // need-group signs
@@ -260,13 +302,23 @@ export class RunnerScene extends Phaser.Scene {
     // gates
     this.gates = lv.gates.map((g) => {
       const mk = (opt, x) => {
-        const good = opt.op === '+' || (opt.op === '*' && opt.value > 1) || (opt.op === 'r' && opt.value > 0);
-        const panel = this.add.rectangle(x, -g.d, VW / 2 - 8, 34, good ? 0x2e7d4f : 0x8a1f2a, 0.78).setStrokeStyle(3, good ? 0x7cf7c4 : 0xff8080);
+        // both sides look the same: the player has to read and judge
+        const panel = this.add.rectangle(x, -g.d, VW / 2 - 8, 34, 0x2a2f3b, 0.88).setStrokeStyle(3, 0xb8c0cc);
         const label = this.add.text(x, -g.d, opt.label, { fontFamily: FONT, fontSize: '17px', fontStyle: 'bold', color: '#FFFFFF', stroke: '#101216', strokeThickness: 4, resolution: 3 }).setOrigin(0.5);
         this.gateLayer.add([panel, label]);
         return { panel, label };
       };
-      return { ...g, L: mk(g.left, VW / 4), Rr: mk(g.right, (VW * 3) / 4) };
+      // gate frame: pillars + "choose a side" banner, so it reads as something you walk through
+      const frame = this.add.graphics();
+      frame.fillStyle(0x64748b, 1);
+      for (const px of [3, VW / 2, VW - 3]) frame.fillRoundedRect(px - 4, -g.d - 26, 8, 46, 3);
+      frame.fillStyle(0x101216, 0.85);
+      frame.fillRoundedRect(VW / 2 - 52, -g.d - 44, 104, 18, 6);
+      frame.lineStyle(1.5, 0xb8c0cc, 1);
+      frame.strokeRoundedRect(VW / 2 - 52, -g.d - 44, 104, 18, 6);
+      const head = this.add.text(VW / 2, -g.d - 35, '左右二選一', { fontFamily: FONT, fontSize: '11px', fontStyle: 'bold', color: '#F5F5F5', resolution: 3 }).setOrigin(0.5);
+      this.gateLayer.add([frame, head]);
+      return { ...g, L: mk(g.left, VW / 4), Rr: mk(g.right, (VW * 3) / 4), frame, head };
     });
     // items
     this.items = lv.items.map((it) => {
@@ -333,9 +385,45 @@ export class RunnerScene extends Phaser.Scene {
   }
 
   // ---------- mechanics ----------
+  /** 📷 直播記者 joined: 媒體曝光 — score ×2 for a few seconds. */
+  startMedia(npc) {
+    this.mediaT = R.media_seconds || 8;
+    if (!this.lowFx) this.cameras.main.flash(160, 255, 255, 255, false);
+    this.banner('📷 媒體曝光！', `${this.mediaT} 秒內號召得分 ×2`, '#FFFFFF');
+    Audio.sfx('skill');
+    npc.tag?.destroy();
+  }
+
+  /** 號召波: every N-combo, a golden shockwave pulls in bystanders within 1.6× the circle. */
+  comboWave(combo, rad) {
+    this.pendingWave = 0;
+    this.inWave = true; // wave recruits don't trigger another wave
+    const p = this.player;
+    const reach = rad * 1.6;
+    let n = 0;
+    for (const npc of this.npcs) {
+      if (npc.state !== 'idle' || (npc.need && rad < npc.need)) continue;
+      if (Math.hypot(npc.x - p.x, npc.d - (p.d + 10)) <= reach) {
+        this.recruit(npc);
+        n++;
+      }
+    }
+    this.inWave = false;
+    this.ring(0xffd447);
+    if (!this.lowFx) this.cameras.main.flash(120, 255, 212, 71, false);
+    this.banner(`號召波！連擊 ×${combo}`, n ? `再拉進 ${n} 人` : '連擊越高越強', '#FFD447');
+    Audio.sfx('win');
+  }
+
+  /** Obstacle loss scaled by difficulty (hell takes 2×). */
+  loss(min, fraction) {
+    const k = this.profile.loss_multiplier;
+    return hazardLoss(this.crowd, Math.round(min * k), fraction * k);
+  }
+
   radius() {
     let m = this.skills.radiusMultiplier();
-    if (this.inFog && !this.skills.shielded()) m *= R.fog_radius_multiplier;
+    if (this.inFog && !this.skills.shielded()) m *= this.profile.fog_radius_multiplier;
     return effectiveRadius(this.baseRadius, m);
   }
 
@@ -375,7 +463,8 @@ export class RunnerScene extends Phaser.Scene {
 
   recruit(npc) {
     npc.state = 'following';
-    const res = registerRecruit(this.run, { resonance: this.skills.resonanceActive() });
+    const res = registerRecruit(this.run, { resonance: this.skills.resonanceActive(), media: this.mediaT > 0 });
+    if (npc.special === 'reporter') this.startMedia(npc);
     addSun(this.run, R.sun_per_recruit);
     this.crowd += 1;
     // the NPC's own sprite becomes a follower (if there is room) for a nice "join" moment
@@ -385,15 +474,19 @@ export class RunnerScene extends Phaser.Scene {
       this.followers.push(npc.sprite);
     } else npc.sprite.destroy();
     this.recruitBatch = (this.recruitBatch || 0) + 1; // merged into one "+N 人" popup
+    const every = R.combo_wave_every || 15;
+    if (!this.inWave && res.combo > 0 && res.combo % every === 0) this.pendingWave = res.combo;
     if (!this.lowFx) this.burst(npc.x, npc.d + 14, 4);
     Audio.sfx('arrive', res.combo);
   }
 
+  /** Only AFTER passing does the screen tell you: full-screen green flash = gain, red = loss. */
   applyGate(opt) {
     if (opt.op === 'r') {
       this.baseRadius = clampBaseRadius(this.baseRadius + opt.value);
-      this.floatAt(this.player.x, this.player.d + 46, opt.label, opt.value > 0 ? '#FFD447' : '#FF8080', 16);
-      Audio.sfx(opt.value > 0 ? 'skill' : 'deny');
+      this.floatAt(this.player.x, this.player.d + 46, opt.label, '#FFFFFF', 16);
+      screenFlash(opt.value > 0 ? 'good' : 'bad');
+      Audio.sfx(opt.value > 0 ? 'goal' : 'deny');
       return;
     }
     if (opt.op === '-' && this.skills.shielded()) {
@@ -401,8 +494,10 @@ export class RunnerScene extends Phaser.Scene {
       return;
     }
     const n = applyCount(this.crowd, opt.op, opt.value);
-    this.changeCrowd(n, '', n >= this.crowd ? '#7CF7C4' : '#FF8080');
-    Audio.sfx(n >= this.crowd ? 'goal' : 'deny');
+    const gain = n >= this.crowd;
+    this.changeCrowd(n, '', '#FFFFFF');
+    screenFlash(gain ? 'good' : 'bad');
+    Audio.sfx(gain ? 'goal' : 'deny');
   }
 
   applyItem(it) {
@@ -446,7 +541,7 @@ export class RunnerScene extends Phaser.Scene {
             p.hitCd = 1.0;
             if (shield) this.floatAt(p.x, p.d + 40, '🛡️', '#7FE7FF', 14);
             else if (this.crowd > 0) {
-              this.changeCrowd(this.crowd - hazardLoss(this.crowd, R.car_hit_loss, R.car_hit_fraction), '卡在車陣');
+              this.changeCrowd(this.crowd - this.loss(R.car_hit_loss, R.car_hit_fraction), '卡在車陣');
               Audio.sfx('deny');
             }
           }
@@ -454,8 +549,23 @@ export class RunnerScene extends Phaser.Scene {
       } else if (h.kind === 'manager') {
         if (!h.used) {
           h.t = (h.t || h.phase) + dt;
+          const near = Math.hypot(h.sprite.x - p.x, h.d - p.d);
+          if (this.profile.manager_chase && !h.chasing && near < 170 && h.d > p.d) {
+            // hell: the manager spots you and comes after your group
+            h.chasing = true;
+            h.tag.setText('主管！').setBackgroundColor('#FF2A2A');
+            this.speech(h.sprite.x, h.d + 62, '你們去哪裡？！');
+            Audio.sfx('event');
+            this.tweens.add({ targets: h.tag, scale: 1.3, yoyo: true, repeat: 3, duration: 120 });
+          }
+          if (h.chasing) {
+            h.baseX += Math.sign(p.x - h.baseX) * Math.min(Math.abs(p.x - h.baseX), 80 * dt);
+            h.d -= 45 * dt;
+            h.range = Math.max(4, h.range - 60 * dt);
+          }
           h.sprite.x = h.baseX + Math.sin((h.t * h.speed) / h.range) * h.range;
           h.sprite.x = Math.max(16, Math.min(VW - 16, h.sprite.x));
+          h.sprite.y = -h.d;
           h.sprite.setTexture(charKey('manager', 0, 'side', Math.floor(h.t * 6) % 2)).setFlipX(Math.cos((h.t * h.speed) / h.range) < 0);
           h.tag.setPosition(h.sprite.x, -h.d - 44);
           const dist = Math.hypot(h.sprite.x - p.x, h.d - p.d);
@@ -464,7 +574,8 @@ export class RunnerScene extends Phaser.Scene {
             if (shield) {
               this.floatAt(h.sprite.x, h.d + 50, '🛡️ 護盾擋下主管！', '#7FE7FF', 14);
             } else {
-              const n = hazardLoss(this.crowd, R.manager_pull, R.manager_pull_fraction);
+              const n = this.loss(R.manager_pull, R.manager_pull_fraction);
+              this.run.managerCaught = (this.run.managerCaught || 0) + 1; // breaks the 零主管 record
               this.speech(h.sprite.x, h.d + 60, '主管：回去開會！');
               if (n > 0) {
                 this.crowd -= n;
@@ -489,7 +600,7 @@ export class RunnerScene extends Phaser.Scene {
       p.drainT -= dt;
       if (p.drainT <= 0) {
         p.drainT = R.meeting_drain_interval;
-        this.changeCrowd(this.crowd - hazardLoss(this.crowd, 1, R.meeting_drain_fraction), '被拉去開會');
+        this.changeCrowd(this.crowd - this.loss(1, R.meeting_drain_fraction), '被拉去開會');
       }
     } else p.drainT = 0.15;
   }
@@ -552,15 +663,16 @@ export class RunnerScene extends Phaser.Scene {
   banner(title, sub, color = '#FFD447') {
     if (this.bannerObjs) this.bannerObjs.forEach((o) => o.destroy());
     const y = -(this.scroll + this.viewH * 0.86);
+    const plate = this.add.rectangle(VW / 2, y + 12, VW - 40, 58, 0x0b0c10, 0.72).setStrokeStyle(2, Phaser.Display.Color.HexStringToColor(color).color, 0.9);
     const t = this.add.text(VW / 2, y, title, { fontFamily: FONT, fontSize: '22px', fontStyle: 'bold', color, stroke: '#101216', strokeThickness: 6, resolution: 3 }).setOrigin(0.5);
     const s2 = this.add.text(VW / 2, y + 24, sub, { fontFamily: FONT, fontSize: '12px', fontStyle: 'bold', color: '#F5F5F5', stroke: '#101216', strokeThickness: 4, resolution: 3 }).setOrigin(0.5);
-    this.fxLayer.add([t, s2]);
-    this.bannerObjs = [t, s2];
+    this.fxLayer.add([plate, t, s2]);
+    this.bannerObjs = [t, s2, plate];
     t.setScale(0.6);
     this.tweens.add({ targets: t, scale: 1, duration: 260, ease: 'Back.easeOut' });
     // banners ride with the camera
     this.bannerD = this.scroll;
-    this.tweens.add({ targets: [t, s2], alpha: 0, delay: 1000, duration: 400, onComplete: () => { t.destroy(); s2.destroy(); } });
+    this.tweens.add({ targets: [t, s2, plate], alpha: 0, delay: 1000, duration: 400, onComplete: () => { t.destroy(); s2.destroy(); plate.destroy(); } });
   }
 
   drawCircle(time, rad) {
@@ -637,6 +749,7 @@ export class RunnerScene extends Phaser.Scene {
     this.elapsed += dt;
     this.run.runClock += dt;
     this.skills.tick(dt);
+    this.mediaT = Math.max(0, (this.mediaT || 0) - dt);
     p.hitCd = Math.max(0, p.hitCd - dt);
     p.flash = Math.max(0, p.flash - dt);
     // camera scroll never stops: the bottom edge eventually pushes everyone over the finish line
@@ -699,6 +812,7 @@ export class RunnerScene extends Phaser.Scene {
       }
       if (n.state === 'idle') {
         n.t += dt;
+        if (n.tag) n.tag.setPosition(n.x, -n.d - 44).setAlpha(0.6 + 0.4 * Math.abs(Math.sin(n.t * 5)));
         n.sprite.setPosition(n.x, -n.d - Math.abs(Math.sin(n.t * 2)) * 1.5);
         n.sprite.setDepth(-n.d);
       }
@@ -709,6 +823,7 @@ export class RunnerScene extends Phaser.Scene {
       this.recruitBatch = 0;
       this.batchT = 0.35;
     }
+    if (this.pendingWave) this.comboWave(this.pendingWave, rad);
     for (const gs of this.groupSigns) if (gs.list.every((n) => n.state !== 'idle')) gs.sign.setVisible(false);
     // gates
     const prevD = this.prevD ?? p.d;
@@ -720,7 +835,7 @@ export class RunnerScene extends Phaser.Scene {
         this.applyGate(left ? g.left : g.right);
         const chosen = left ? g.L : g.Rr;
         const other = left ? g.Rr : g.L;
-        this.tweens.add({ targets: [other.panel, other.label], alpha: 0.2, duration: 200 });
+        this.tweens.add({ targets: [other.panel, other.label, g.frame, g.head], alpha: 0.2, duration: 200 });
         this.tweens.add({ targets: [chosen.panel, chosen.label], scale: 1.15, alpha: 0, duration: 450 });
       }
     }
@@ -763,7 +878,7 @@ export class RunnerScene extends Phaser.Scene {
     this.drawCircle(time, rad);
     if (this.bannerObjs && this.bannerD != null) {
       const shift = this.scroll - this.bannerD;
-      this.bannerObjs.forEach((o, i) => (o.y = -(this.bannerD + this.viewH * 0.86) - shift + (i ? 24 : 0)));
+      this.bannerObjs.forEach((o, i) => (o.y = -(this.bannerD + this.viewH * 0.86) - shift + [0, 24, 12][i]));
     }
     advanceAlly(this.run, dt, resonance);
     this.positionWorld();
@@ -794,7 +909,8 @@ export class RunnerScene extends Phaser.Scene {
     if (S.isActive('rally')) chips.push({ kind: 'buff', text: '📣 號召力 ×1.6', left: S.active.rally, total: SKILL_DEFS.rally.duration_seconds });
     if (S.isActive('shield')) chips.push({ kind: 'buff shield', text: '🛡️ 護盾', left: S.active.shield, total: SKILL_DEFS.shield.duration_seconds });
     if (S.isActive('city_resonance')) chips.push({ kind: 'buff res', text: '🔗 吸人・得分×1.5', left: S.active.city_resonance, total: SKILL_DEFS.city_resonance.duration_seconds });
-    if (this.inFog && !S.shielded()) chips.push({ kind: 'debuff', text: '☁️ 信心不足：號召力 -40%' });
+    if (this.mediaT > 0) chips.push({ kind: 'buff media', text: '📷 媒體曝光 得分×2', left: this.mediaT, total: R.media_seconds || 8 });
+    if (this.inFog && !S.shielded()) chips.push({ kind: 'debuff', text: `☁️ 信心不足：號召力 -${Math.round((1 - this.profile.fog_radius_multiplier) * 100)}%` });
     if (this.inMeeting) chips.push({ kind: 'debuff', text: '📢 會議室：夥伴被拉走中！' });
     return chips;
   }

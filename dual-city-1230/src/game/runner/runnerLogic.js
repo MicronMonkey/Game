@@ -13,6 +13,12 @@ export function applyCount(count, op, value) {
   }
 }
 
+/** Per-difficulty obstacle profile (config: runner.difficulty_profile). */
+export function difficultyProfile(difficulty) {
+  const base = { hazard_multiplier: 1, loss_multiplier: 1, manager_speed: 1, extra_managers: 0, manager_chase: 0, fog_radius_multiplier: R.fog_radius_multiplier };
+  return { ...base, ...(R.difficulty_profile?.[difficulty] || {}) };
+}
+
 /** Stage rating: ★ target met, ★★ ≥ 1.5×, ★★★ ≥ 2× the target. */
 export function starsFor(arrived, target) {
   if (arrived >= target * 2) return 3;
@@ -89,6 +95,7 @@ const NPC_TYPES = ['lunch', 'black', 'volunteer', 'lost', 'sprinter', 'tired'];
 export function generateStage({ stage = 0, difficulty = 'normal', target = 30, seed = 1 }) {
   const rng = rngFrom(seed * 97 + stage * 13 + 7);
   const freq = BALANCE.difficulty[difficulty]?.event_frequency_multiplier ?? 1;
+  const prof = difficultyProfile(difficulty);
   const length = R.stage_length[stage];
   const W = R.view_width;
   const npcs = [];
@@ -123,7 +130,7 @@ export function generateStage({ stage = 0, difficulty = 'normal', target = 30, s
       for (let i = 0; i < gN; i++) npcs.push({ d: d + 80 + (rng() - 0.5) * 30, x: gx + (rng() - 0.5) * 50, type: pick(NPC_TYPES), need, group: slot });
     } else {
       const r = rng();
-      const hz = stage === 0 ? 0.55 * freq : 0.8 * freq;
+      const hz = Math.min(0.95, (stage === 0 ? 0.55 : 0.8) * freq);
       if (r < hz) {
         const kinds = stage === 0 ? ['cars', 'cars', 'manager', 'fog', 'meeting'] : ['cars', 'manager', 'manager', 'fog', 'meeting', 'rumor'];
         const kind = pick(kinds);
@@ -135,7 +142,7 @@ export function generateStage({ stage = 0, difficulty = 'normal', target = 30, s
           for (let x = 20; x < W - 20; x += 62) if (Math.abs(x + 22 - gapX) > 60) cars.push(x);
           for (const x of cars.slice(0, 3 + Math.floor(rng() * 2))) hazards.push({ kind: 'car', d: hd + (rng() - 0.5) * 20, x: x + 22, w: 44, h: 26, color: pick([0xe83b3b, 0x5b8def, 0xf5f5f5, 0x64748b, 0xffb627]) });
         } else if (kind === 'manager') {
-          hazards.push({ kind: 'manager', d: hd, x: 60 + rng() * (W - 120), range: 70 + rng() * 60, speed: 50 + rng() * 40 * (stage + 1), phase: rng() * 6, used: false });
+          hazards.push({ kind: 'manager', d: hd, x: 60 + rng() * (W - 120), range: 70 + rng() * 60, speed: (50 + rng() * 40 * (stage + 1)) * prof.manager_speed, phase: rng() * 6, used: false });
         } else if (kind === 'fog') {
           hazards.push({ kind: 'fog', d: hd, x: W / 2 + (rng() - 0.5) * 120, w: 170 + rng() * 60, h: 110 });
         } else if (kind === 'meeting') {
@@ -151,15 +158,36 @@ export function generateStage({ stage = 0, difficulty = 'normal', target = 30, s
     }
     d += 150 + rng() * 40;
   }
+  // scale the number of obstacles by the difficulty profile (hell = 1.3×, easy = 0.8×)
+  const baseCount = hazards.length;
+  if (prof.hazard_multiplier > 1) {
+    const extra = Math.round(baseCount * (prof.hazard_multiplier - 1)) + 1;
+    for (let i = 0; i < extra; i++) {
+      const hd = startD + 200 + rng() * (endD - startD - 300);
+      if (gates.some((g) => Math.abs(g.d - hd) < 70) || hazards.some((h) => Math.abs(h.d - hd) < 90)) continue;
+      const kind = pick(['manager', 'cars', 'fog', 'meeting', 'manager']);
+      if (kind === 'manager') hazards.push({ kind, d: hd, x: 60 + rng() * (W - 120), range: 80 + rng() * 60, speed: (60 + rng() * 40) * prof.manager_speed, phase: rng() * 6, used: false });
+      if (kind === 'fog') hazards.push({ kind, d: hd, x: W / 2 + (rng() - 0.5) * 120, w: 180, h: 110 });
+      if (kind === 'meeting') hazards.push({ kind, d: hd, x: rng() < 0.5 ? 70 : W - 70, w: 120, h: 90 });
+      if (kind === 'cars') {
+        const gapX = 60 + rng() * (W - 120);
+        let n = 0;
+        for (let x = 20; x < W - 20 && n < 3; x += 62) if (Math.abs(x + 22 - gapX) > 60) { hazards.push({ kind: 'car', d: hd, x: x + 22, w: 44, h: 26, color: pick([0xe83b3b, 0x5b8def, 0xf5f5f5, 0x64748b]) }); n++; }
+      }
+    }
+  } else if (prof.hazard_multiplier < 1) {
+    const drop = Math.round(baseCount * (1 - prof.hazard_multiplier));
+    for (let i = 0; i < drop && hazards.length; i++) hazards.splice(Math.floor(rng() * hazards.length), 1);
+  }
   // guarantee every stage has the signature troubles (2 managers, a meeting room, fog)
-  const need = { manager: stage === 0 ? 2 : 3, meeting: 1, fog: 1 };
-  const spots = [0.28, 0.42, 0.56, 0.7, 0.82];
+  const need = { manager: (stage === 0 ? 2 : 3) + prof.extra_managers, meeting: prof.hazard_multiplier > 1 ? 2 : 1, fog: prof.hazard_multiplier > 1 ? 2 : 1 };
+  const spots = [0.22, 0.3, 0.38, 0.46, 0.54, 0.62, 0.7, 0.78, 0.86];
   let si = 0;
   for (const [kind, n] of Object.entries(need)) {
     let have = hazards.filter((h) => h.kind === kind).length;
     while (have < n && si < spots.length) {
       const hd = length * spots[si++] + 40;
-      if (kind === 'manager') hazards.push({ kind, d: hd, x: 60 + rng() * (W - 120), range: 80 + rng() * 50, speed: 60 + rng() * 40, phase: rng() * 6, used: false });
+      if (kind === 'manager') hazards.push({ kind, d: hd, x: 60 + rng() * (W - 120), range: 80 + rng() * 50, speed: (60 + rng() * 40) * prof.manager_speed, phase: rng() * 6, used: false });
       if (kind === 'meeting') hazards.push({ kind, d: hd, x: rng() < 0.5 ? 70 : W - 70, w: 120, h: 90 });
       if (kind === 'fog') hazards.push({ kind, d: hd, x: W / 2 + (rng() - 0.5) * 120, w: 180, h: 110 });
       have += 1;
@@ -170,6 +198,12 @@ export function generateStage({ stage = 0, difficulty = 'normal', target = 30, s
   while (free < target * 2) {
     npcs.push({ d: startD + rng() * (endD - startD), x: 30 + rng() * (W - 60), type: pick(NPC_TYPES), need: 0 });
     free += 1;
+  }
+  // 📷 直播記者: 1–2 per stage, placed off the obvious line so reaching them is a choice
+  const reporters = stage === 0 ? 1 : 2;
+  for (let i = 0; i < reporters; i++) {
+    const rd = startD + ((i + 1) / (reporters + 1)) * (endD - startD) + (rng() - 0.5) * 120;
+    npcs.push({ d: rd, x: rng() < 0.5 ? 26 + rng() * 30 : W - 26 - rng() * 30, type: 'lunch', need: 0, special: 'reporter' });
   }
   npcs.sort((a, b) => a.d - b.d);
   return { stage, length, target, npcs, gates, items, hazards };

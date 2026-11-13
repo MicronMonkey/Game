@@ -64,7 +64,8 @@ export function segDist(p, a, b) {
 }
 
 export class BossSystem {
-  constructor({ maxHp, seconds, initialDamage = 0, powerBonus = 0, critSeconds = B.critical_charge_seconds, helper = false, rng = Math.random }) {
+  constructor({ maxHp, seconds, initialDamage = 0, powerBonus = 0, critSeconds = B.critical_charge_seconds, helper = false, veilRate = 1, rng = Math.random }) {
+    this.veilRate = Math.max(0.2, veilRate); // more veils: interval ÷ rate
     this.critSeconds = critSeconds;
     // 掃黑幕小幫手: slows veils in the lower field and burns one every few seconds
     this.helper = helper ? { y: HELPER.zoneY, slow: HELPER.slow, every: HELPER.every, timer: HELPER.every } : null;
@@ -180,9 +181,9 @@ export class BossSystem {
     const ph = this.phase - 1;
     this.veilTimer -= dt;
     if (this.veilTimer <= 0) {
-      this.veilTimer = BOSS_TUNING.veilInterval[ph] * (0.8 + this.rng() * 0.4);
+      this.veilTimer = (BOSS_TUNING.veilInterval[ph] / this.veilRate) * (0.8 + this.rng() * 0.4);
       const x = BOSS_BODY.x + (this.rng() - 0.5) * BOSS_BODY.w * 0.9;
-      this.veils.push({ id: ++this.veilId, x, y: BOSS_BODY.y + BOSS_BODY.h / 2, vx: (this.rng() - 0.5) * 40, vy: BOSS_TUNING.veilSpeed[ph] * (0.85 + this.rng() * 0.3), burn: 0 });
+      this.veils.push({ id: ++this.veilId, x, y: BOSS_BODY.y + BOSS_BODY.h / 2, vx: (this.rng() - 0.5) * 40, vy: BOSS_TUNING.veilSpeed[ph] * (0.85 + this.rng() * 0.3), burn: 0, gold: this.rng() < 0.12 });
       this.emit('veil');
     }
     for (const v of this.veils) {
@@ -194,8 +195,8 @@ export class BossSystem {
         if (v.burn >= (this.superTime > 0 ? 0.01 : BOSS_TUNING.veilBurnSeconds)) {
           v.dead = true;
           this.burned += 1;
-          this.superMeter = Math.min(1, this.superMeter + BOSS_TUNING.superPerBurn);
-          this.emit('burn', { x: v.x, y: v.y, superReady: this.superMeter >= 1 });
+          this.superMeter = Math.min(1, this.superMeter + BOSS_TUNING.superPerBurn * (v.gold ? 2 : 1));
+          this.emit('burn', { x: v.x, y: v.y, gold: !!v.gold, superReady: this.superMeter >= 1 });
         }
       } else v.burn = Math.max(0, v.burn - dt * 0.5);
       if (!v.dead && v.y >= BOSS_TUNING.veilLandY) {

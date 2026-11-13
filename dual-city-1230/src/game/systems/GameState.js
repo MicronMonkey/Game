@@ -86,7 +86,7 @@ export function registerRecruit(state, opts = {}) {
   else state.combo = 1;
   state.lastArrivalAt = state.runClock;
   state.longestCombo = Math.max(state.longestCombo, state.combo);
-  const points = arrivalScore(state.combo, !!opts.resonance);
+  const points = arrivalScore(state.combo, !!opts.resonance) * (opts.media ? 2 : 1);
   state.score += points;
   state.recruits = (state.recruits || 0) + 1;
   return { points, combo: state.combo, multiplier: comboMultiplier(state.combo) };

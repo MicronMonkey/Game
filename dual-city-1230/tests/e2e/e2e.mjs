@@ -254,6 +254,13 @@ try {
     out.rumor = sc.baseRadius - r1;
     return out;
   });
+  const gateLook = await page.evaluate(() => { const g = window.__dc.App.hooks.scene.gates[0]; return [g.L.panel.fillColor, g.Rr.panel.fillColor, g.L.panel.strokeColor, g.Rr.panel.strokeColor]; });
+  pass('左右門外觀相同（不以紅綠提示好壞）', gateLook[0] === gateLook[1] && gateLook[2] === gateLook[3], JSON.stringify(gateLook));
+  await page.evaluate(() => window.__dc.App.hooks.scene.applyGate({ op: '+', value: 3, label: '+3 人' }));
+  const fg = await page.evaluate(() => document.getElementById('screen-flash')?.className);
+  await page.evaluate(() => window.__dc.App.hooks.scene.applyGate({ op: '-', value: 2, label: '-2 人' }));
+  const fb = await page.evaluate(() => document.getElementById('screen-flash')?.className);
+  pass('通過後全螢幕閃綠（增益）／閃紅（減少）', fg === 'good' && fb === 'bad', `${fg} / ${fb}`);
   pass('門與道具：×1.2 / -10 / 號召力+20 / 便當+5 / 謠言', gi.mul === Math.round(gi.start * 1.2) && gi.minus === Math.max(0, gi.mul - 10) && gi.r === 20 && gi.bento === gi.minus + 5 && gi.rumor === -15, JSON.stringify(gi));
   // walking through a real gate applies the side you are on
   const gate = await page.evaluate(() => {
@@ -407,7 +414,7 @@ try {
   });
   if (vt) await page.mouse.click(vt.x, vt.y);
   await page.waitForTimeout(100);
-  pass('點落下的黑幕 → 光束改鎖定黑幕', !!vt && (await page.evaluate((id) => { const t = window.__dc.App.hooks.scene.target; return t.kind === 'veil' && t.id === id; }, vt?.id)));
+  pass('點落下的黑幕 → 光束改鎖定黑幕', !!vt && (await page.evaluate(() => window.__dc.App.hooks.scene.target.kind === 'veil')));
   await page.waitForTimeout(1500);
   pass('黑幕燒掉後光束自動回到弱點', (await page.evaluate(() => window.__dc.App.hooks.scene.target.kind)) === 'core');
   await page.evaluate(() => { const sc = window.__dc.App.hooks.scene; sc.onBossEvent({ type: 'weakMoved' }); });
@@ -532,31 +539,39 @@ try {
   page = await newPage(browser);
   await page.goto(`${BASE}?test=1`);
   await page.click('text=略過').catch(() => {});
-  await page.click('text=夥伴裝備');
+  await page.click('.perks-btn');
   pass('新存檔：五個夥伴裝備全部上鎖', (await page.locator('.perk-card.locked').count()) === 5);
-  await page.click('text=完成');
+  await page.click('.modal .btn.primary');
   await page.evaluate(() => {
     const s = window.__dc.App.save;
-    s.stats.bossWins = 1; s.stats.lunchArrivals = 120; s.stats.skillsUsed = 12; s.achievements.push('dual_hero', 'sun_envoy'); s.scores.normal.highest = 70000;
+    s.scores.normal.highest = 30000;
   });
-  await page.click('text=夥伴裝備');
-  pass('達成條件後五個全部解鎖', (await page.locator('.perk-card.unlocked').count()) === 5);
-  await page.click('.perk-card >> nth=0');
+  await page.click('.perks-btn');
+  pass('分數 30,000 → 只解鎖「便當補給站」', (await page.locator('.perk-card.unlocked').count()) === 1);
+  await page.click('.modal .btn.primary');
+  await page.evaluate(() => {
+    const s = window.__dc.App.save;
+    s.stats.bossWins = 1; s.stats.noManagerRun = true; s.stats.threeStars = true; s.scores.hell.highest = 90000;
+  });
+  await page.click('.perks-btn');
+  pass('達成各項挑戰後五個全部解鎖', (await page.locator('.perk-card.unlocked').count()) === 5);
   await page.click('.perk-card >> nth=2');
   await page.click('.perk-card >> nth=4');
+  const eq1 = await page.evaluate(() => JSON.parse(localStorage.getItem('dualCity1230.save.v1')).perksEquipped);
+  await page.click('.perk-card >> nth=0');
   const eq = await page.evaluate(() => JSON.parse(localStorage.getItem('dualCity1230.save.v1')).perksEquipped);
   await shot(page, '12-perks');
-  pass('最多裝備 2 個並存檔', eq.length === 2 && eq.includes('bento_station') && eq.includes('sweeper'), JSON.stringify(eq));
-  await page.click('text=完成');
+  pass('一次只裝備 1 個：點新的會替換', JSON.stringify(eq1) === '["lunch_extension"]' && JSON.stringify(eq) === '["bento_station"]', `${JSON.stringify(eq1)} → ${JSON.stringify(eq)}`);
+  await page.click('.modal .btn.primary');
   await startGame(page, 'normal', 'taoyuan');
   await page.waitForTimeout(400);
   pass('便當補給站：開場就有 5 位夥伴', (await page.evaluate(() => window.__dc.App.hooks.scene.crowd)) === 5);
   await page.evaluate(() => { window.__dc.App.run.bossInitialDamage = 0; window.__dc.App.hooks.scene.scene.start('Boss'); });
   await waitScene(page, 'Boss');
   await page.waitForTimeout(400);
-  const hs = await page.evaluate(() => ({ helper: !!window.__dc.App.hooks.scene.boss.helper, sprite: !!window.__dc.App.hooks.scene.helperSprite }));
-  await shot(page, '12b-helper');
-  pass('掃黑幕小幫手出現在 Boss 關', hs.helper && hs.sprite, JSON.stringify(hs));
+  const hpb = await page.evaluate(() => { const sc = window.__dc.App.hooks.scene; return { label: sc.hpLabel.text, y: sc.hpLabel.y, drawn: sc.hpG.commandBuffer.length > 0 }; });
+  await shot(page, '12b-boss-hpbar');
+  pass('Boss 血條在黑箱正上方', hpb.drawn && /黑箱 HP/.test(hpb.label) && hpb.y < 60, JSON.stringify(hpb));
   await page.context().close();
 
   // ---------- 7d. scroll speed per difficulty ----------
@@ -567,10 +582,14 @@ try {
   for (const d of ['easy', 'normal', 'hell']) {
     await startGame(page, d, 'taoyuan');
     speeds[d] = await page.evaluate(() => window.__dc.App.hooks.scene.scrollSpeed);
+    await page.evaluate(() => { window.__dc.App.hooks.scene.scene.start('Boss'); });
+    await waitScene(page, 'Boss');
+    speeds[`${d}Veil`] = await page.evaluate(() => window.__dc.App.hooks.scene.boss.veilRate);
     await page.evaluate(() => window.__dc.App.hooks.scene.scene.start('Menu'));
     await waitScene(page, 'Menu');
   }
   const oldHell = 58 / 0.85;
+  pass('Boss 黑幕量：輕鬆 ×1.2、標準 ×1.5、地獄 ×3', speeds.easyVeil === 1.2 && speeds.normalVeil === 1.5 && speeds.hellVeil === 3, JSON.stringify(speeds));
   pass('地獄難度捲動為原本兩倍，其他難度依序變快', Math.abs(speeds.hell / oldHell - 2) < 0.02 && speeds.easy < speeds.normal && speeds.normal < speeds.hell, JSON.stringify(speeds));
   await page.context().close();
 

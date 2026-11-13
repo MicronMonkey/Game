@@ -88,3 +88,20 @@ test('runner skills: rally multiplier, shield, cost & cooldown', () => {
   assert.equal(k.shielded(), false);
   assert.equal(k.radiusMultiplier(), 1);
 });
+
+test('hell profile: more obstacles and managers, double losses', async () => {
+  const { difficultyProfile } = await import('../../src/game/runner/runnerLogic.js');
+  const count = (d, k) => {
+    let n = 0;
+    for (let seed = 1; seed < 25; seed++) n += generateStage({ stage: 1, difficulty: d, target: 78, seed }).hazards.filter((h) => !k || h.kind === k).length;
+    return n / 24;
+  };
+  assert.ok(count('hell') >= count('normal') * 1.25, `${count('hell')} vs ${count('normal')}`);
+  assert.ok(count('hell', 'manager') > count('normal', 'manager') + 1);
+  assert.ok(count('easy') < count('normal'));
+  assert.equal(difficultyProfile('hell').loss_multiplier, 2);
+});
+
+test('reporter appears in each stage', () => {
+  for (const stage of [0, 1]) assert.equal(generateStage({ stage, difficulty: 'normal', target: 50, seed: 3 }).npcs.filter((n) => n.special === 'reporter').length, stage ? 2 : 1);
+});

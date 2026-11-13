@@ -464,3 +464,18 @@ button { font-family: inherit; }
 .stars span.on { color: var(--gold); text-shadow: 0 0 14px rgba(255, 212, 71, 0.8), 0 2px 0 #7a5a00; animation: starPop 0.45s ease-out backwards; }
 @keyframes starPop { 0% { transform: scale(0) rotate(-40deg); } 70% { transform: scale(1.3); } 100% { transform: scale(1); } }
 .stars-hint { display: block; color: var(--muted); font-size: 11px; margin-bottom: 4px; }
+
+#screen-flash { position: fixed; inset: 0; pointer-events: none; z-index: 40; opacity: 0; }
+#screen-flash.good { background: radial-gradient(ellipse at center, rgba(60, 230, 140, 0.15), rgba(40, 210, 120, 0.55)); animation: flashFade 0.55s ease-out; }
+#screen-flash.bad { background: radial-gradient(ellipse at center, rgba(240, 60, 60, 0.15), rgba(232, 40, 40, 0.6)); animation: flashFade 0.55s ease-out; }
+@keyframes flashFade { 0% { opacity: 1; } 100% { opacity: 0; } }
+.reduce-motion #screen-flash.good, .reduce-motion #screen-flash.bad { animation-duration: 0.9s; }
+
+.boss-phase { flex: 0.8 1 0 !important; text-align: center; }
+.boss-phase .phase { font-size: 16px; font-weight: 900; color: var(--orange); }
+.chip.buff.media { color: #ffffff; border-color: #ffffff; box-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+.end-tip { margin-top: 14px; padding: 10px 14px; border-radius: 12px; background: rgba(24, 27, 34, 0.9); border: 1.5px solid var(--gold); color: var(--gold); font-weight: 800; font-size: 15px; }
+
+.danger-vignette { position: fixed; inset: 0; pointer-events: none !important; opacity: 0; box-shadow: inset 0 0 0 0 rgba(232, 59, 59, 0); transition: opacity 0.3s; }
+.danger-vignette.on { opacity: 1; animation: danger 1s ease-in-out infinite; }
+@keyframes danger { 0%, 100% { box-shadow: inset 0 0 40px 10px rgba(232, 59, 59, 0.35); } 50% { box-shadow: inset 0 0 90px 30px rgba(232, 59, 59, 0.65); } }

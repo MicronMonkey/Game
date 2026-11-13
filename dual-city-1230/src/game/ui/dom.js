@@ -32,6 +32,18 @@ export function clearUi() {
   uiRoot().replaceChildren();
 }
 
+/** Full-screen flash: 'good' = green (gain), 'bad' = red (loss). Softer with reduced motion. */
+export function screenFlash(kind) {
+  let f = document.getElementById('screen-flash');
+  if (!f) {
+    f = el('div', { id: 'screen-flash', 'aria-hidden': 'true' });
+    document.body.append(f);
+  }
+  f.className = '';
+  void f.offsetWidth;
+  f.className = kind === 'good' ? 'good' : 'bad';
+}
+
 export function clearToasts() {
   document.getElementById('toasts')?.replaceChildren();
 }

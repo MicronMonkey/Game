@@ -5,7 +5,7 @@ import { DIFFICULTIES, DIFFICULTY_LABELS } from '../config.js';
 import { CHAR_TYPES, charKey } from '../art/textures.js';
 import { createRunState } from '../systems/GameState.js';
 import { ACHIEVEMENTS } from '../systems/achievements.js';
-import { MAX_EQUIPPED, PERKS, equippedPerks, togglePerk } from '../perks/perks.js';
+import { PERKS, equippedPerks, togglePerk } from '../perks/perks.js';
 import { Audio } from '../systems/AudioSystem.js';
 import { el, fmtScore, layer, toast } from '../ui/dom.js';
 import { modal, settingsToggles } from '../ui/modal.js';
@@ -175,7 +175,10 @@ export class MenuScene extends Phaser.Scene {
           return el('button', { class: `perk-card ${un ? 'unlocked' : 'locked'} ${on ? 'on' : ''}`, 'aria-pressed': String(on), onclick: () => {
             const r = togglePerk(s, p.id);
             if (!r.ok) toast(r.reason, 'warn');
-            else Audio.sfx(r.equipped ? 'skill' : 'click');
+            else {
+              Audio.sfx(r.equipped ? 'skill' : 'click');
+              if (r.replaced) toast(`已換上 ${p.icon} ${p.name}`, 'good');
+            }
             persist();
             render();
           } }, [
@@ -192,8 +195,8 @@ export class MenuScene extends Phaser.Scene {
     };
     render();
     modal({
-      title: `夥伴裝備（最多 ${MAX_EQUIPPED} 個）`,
-      body: [el('p', { class: 'small', text: '達成成就就能解鎖。裝備後下一局開始生效。' }), list],
+      title: '夥伴裝備（一次裝備 1 個）',
+      body: [el('p', { class: 'small', text: '完成指定挑戰才會解鎖。點一個就裝上（會替換目前的），再點一次卸下；下一局開始生效。' }), list],
       actions: [{ label: '完成', primary: true }],
     });
   }

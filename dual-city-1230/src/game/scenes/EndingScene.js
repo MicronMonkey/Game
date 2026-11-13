@@ -18,6 +18,17 @@ export const ENDING_TEXT = {
   lose: ['黑箱尚未融化，陽光不會停止。', '下一次，我們會帶來更多光。'],
 };
 
+/** One concrete tip for next time, based on how the boss fight actually went. */
+export function failTip(run) {
+  const b = run?.bossStats || {};
+  const tips = [];
+  if (b.hp != null && b.maxHp && b.hp / b.maxHp < 0.15) tips.push(`只差 ${b.hp} HP！試試在護盾空隙放「雙城合擊」`);
+  if ((b.landed || 0) >= 3) tips.push(`黑幕落地 ${b.landed} 次削弱了光束：看到白光黑幕先點它！`);
+  if ((b.burned || 0) < 4) tips.push('燒掉黑幕可以累積「雙城合擊」，金色黑幕充能兩倍');
+  tips.push('弱點移動或被干擾時，記得再點一次白光弱點');
+  return `💡 ${tips[0]}`;
+}
+
 export class EndingScene extends Phaser.Scene {
   constructor() {
     super('Ending');
@@ -40,7 +51,7 @@ export class EndingScene extends Phaser.Scene {
     const [t1, t2] = ENDING_TEXT[this.result];
     this.ui = layer('ending-transition');
     this.ui.append(
-      el('div', { class: `end-card ${this.result}` }, [el('h2', { text: t1 }), el('p', { text: t2 })]),
+      el('div', { class: `end-card ${this.result}` }, [el('h2', { text: t1 }), el('p', { text: t2 }), this.result === 'lose' ? el('div', { class: 'end-tip' }, failTip(run)) : null]),
       el('button', { class: 'btn skip', onclick: () => this.toGallery(), text: '略過 ▶' }),
     );
     this.timer = this.time.delayedCall(TUNING.transitionSeconds * 1000, () => this.toGallery());
@@ -70,6 +81,8 @@ export class EndingScene extends Phaser.Scene {
     });
     const unlocked = evaluateAchievements(save, { citiesReached: run.citiesReachedFinal ?? citiesReached(run), bossWin, difficulty: run.difficulty, bossFailedBefore });
     save.stats.bossFailedSinceWin = bossWin ? false : true;
+    if ((run.stageArrived || []).length === 2 && !run.managerCaught) save.stats.noManagerRun = true;
+    if ((run.stageStars || []).includes(3)) save.stats.threeStars = true;
     persist();
     run.newHigh = newHigh;
     run.newPerks = newlyUnlocked(perksBefore, unlockedPerks(save));

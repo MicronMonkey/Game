@@ -32,6 +32,8 @@ export class BossScene extends Phaser.Scene {
     this.lockFlash = 0;
     this.lastChips = null;
     this.pauseUi = null;
+    this.vignette = null;
+    this.lastSec = null;
   }
 
   create() {
@@ -48,6 +50,7 @@ export class BossScene extends Phaser.Scene {
       powerBonus: Math.min(0.2, arrived / 400) + (hasPerk(run, 'flashlight') ? 0.15 : 0),
       critSeconds: hasPerk(run, 'flashlight') ? 2.4 : BALANCE.boss.critical_charge_seconds,
       helper: hasPerk(run, 'sweeper'),
+      veilRate: BALANCE.boss.veil_multiplier?.[run.difficulty] ?? 1,
     });
     this.aim = { x: BOSS_BODY.x, y: BOSS_BODY.y };
     this.target = { kind: 'none' }; // 'none' | 'core' (weakpoint / current lock) | 'veil'
@@ -63,7 +66,10 @@ export class BossScene extends Phaser.Scene {
     this.fx = this.add.container(0, 0);
     this.dimRect = this.add.rectangle(200, 200, 400, 400, 0x000000, 0);
     this.haloG = this.add.graphics();
-    this.root.add([this.bg, this.bossG, this.veilLayer, this.cloudLayer, this.beamG, this.haloG, this.fx, this.dimRect]);
+    this.hpG = this.add.graphics();
+    this.hpLabel = this.add.text(200, 14, '', { fontFamily: FONT, fontSize: '12px', fontStyle: 'bold', color: '#FFFFFF', stroke: '#101216', strokeThickness: 4, resolution: 3 }).setOrigin(0.5);
+    this.hpTrail = this.boss.hp;
+    this.root.add([this.bg, this.bossG, this.veilLayer, this.cloudLayer, this.beamG, this.haloG, this.fx, this.hpG, this.hpLabel, this.dimRect]);
     this.drawBackground();
     this.cloudSprites = [];
     this.veilSprites = new Map();
@@ -120,14 +126,12 @@ export class BossScene extends Phaser.Scene {
   // ---------- HUD (DOM) ----------
   buildHud() {
     this.hud = layer('hud boss-hud');
-    this.hpFill = el('i');
-    this.hpText = el('b', { text: '' });
     this.timeText = el('b', { text: '' });
     this.scoreText = el('b', { text: fmtScore(this.run.score) });
     this.phaseText = el('span', { class: 'phase', text: '階段 1' });
     const top = el('div', { class: 'hud-top' }, [
       el('div', { class: 'hud-count' }, [el('small', { text: '剩餘' }), this.timeText]),
-      el('div', { class: 'boss-hp' }, [el('small', {}, ['黑箱 HP ', this.phaseText]), el('span', { class: 'hp-bar', role: 'progressbar', 'aria-label': 'Boss 血量' }, [this.hpFill, el('span', { class: 'hp-mark', style: { left: '60%' } }), el('span', { class: 'hp-mark', style: { left: '20%' } })]), this.hpText]),
+      el('div', { class: 'boss-phase' }, [el('small', { text: '黑箱' }), this.phaseText]),
       el('div', { class: 'hud-score' }, [el('small', { text: '遊戲分數' }), this.scoreText]),
       el('button', { class: 'btn-icon', 'aria-label': '暫停', onclick: () => this.pauseGame(), text: '⏸' }),
     ]);
@@ -292,7 +296,7 @@ export class BossScene extends Phaser.Scene {
     for (const v of b.veils) {
       if (v.id === lockedVeil) continue;
       halo(v.x, v.y, 20, v.y > 280);
-      labels.push({ x: v.x, y: v.y - 30, text: v.y > 280 ? '快點！' : '點我' });
+      labels.push({ x: v.x, y: v.y - 30, text: v.gold ? '金！點我' : v.y > 280 ? '快點！' : '點我' });
     }
     const c = this.corePos();
     if (this.target.kind !== 'core') {
@@ -387,6 +391,56 @@ export class BossScene extends Phaser.Scene {
     g.fillCircle(BEAM_SRC.x, BEAM_SRC.y, 36);
     g.fillStyle(0xffd447, 1);
     g.fillCircle(BEAM_SRC.x, BEAM_SRC.y, 18);
+  }
+
+  /** Last 10 s: red pulsing screen edge, a tick each second and a big number. */
+  finalCountdown() {
+    const t = this.boss.time;
+    const on = t <= 10 && t > 0 && !this.boss.result;
+    if (!this.vignette) {
+      this.vignette = el('div', { class: 'danger-vignette', 'aria-hidden': 'true' });
+      this.hud.append(this.vignette);
+    }
+    this.vignette.classList.toggle('on', on);
+    const sec = Math.ceil(t);
+    if (on && sec !== this.lastSec) {
+      this.lastSec = sec;
+      Audio.sfx('tick');
+      const n = this.add.text(200, 236, String(sec), { fontFamily: FONT, fontSize: '54px', fontStyle: 'bold', color: '#FF4D4D', stroke: '#101216', strokeThickness: 7, resolution: 3 }).setOrigin(0.5).setAlpha(0.85);
+      this.fx.add(n);
+      this.tweens.add({ targets: n, scale: 1.5, alpha: 0, duration: 800, onComplete: () => n.destroy() });
+    }
+  }
+
+  /** Big HP bar right above the black box (with a white "recent damage" trail). */
+  drawHpBar(dt) {
+    const b = this.boss;
+    const g = this.hpG;
+    const W = 250;
+    const H = 16;
+    const x = 200 - W / 2;
+    const y = 30 + Math.sin(this.time.now / 600) * 3;
+    this.hpTrail = Math.max(b.hp, this.hpTrail - Math.max(40, (this.hpTrail - b.hp) * 2.5) * dt);
+    g.clear();
+    g.fillStyle(0x000000, 0.6);
+    g.fillRoundedRect(x - 4, y - 4, W + 8, H + 8, 8);
+    g.fillStyle(0x2a1215, 1);
+    g.fillRoundedRect(x, y, W, H, 5);
+    g.fillStyle(0xffffff, 0.85);
+    g.fillRoundedRect(x, y, (W * this.hpTrail) / b.maxHp, H, 5);
+    const frac = b.hp / b.maxHp;
+    const color = b.phase === 3 ? 0xff3b3b : b.phase === 2 ? 0xff7a1c : 0xe83b3b;
+    if (frac > 0) {
+      g.fillStyle(color, 1);
+      g.fillRoundedRect(x, y, Math.max(6, W * frac), H, 5);
+      g.fillStyle(0xffffff, 0.25);
+      g.fillRect(x + 3, y + 2, Math.max(0, W * frac - 6), 4);
+    }
+    g.lineStyle(2, 0xffd447, 0.9);
+    g.strokeRoundedRect(x, y, W, H, 5);
+    g.lineStyle(2, 0xf5f5f5, 0.8);
+    for (const m of [0.6, 0.2]) g.lineBetween(x + W * m, y - 3, x + W * m, y + H + 3);
+    this.hpLabel.setPosition(200, y - 9).setText(`黑箱 HP ${Math.ceil(b.hp)} / ${b.maxHp}　階段 ${b.phase}`);
   }
 
   drawBoss(time) {
@@ -540,7 +594,8 @@ export class BossScene extends Phaser.Scene {
         this.veilSprites.set(v.id, s);
       }
       s.setPosition(v.x, v.y).setRotation(Math.sin(v.y / 18) * 0.3);
-      s.setTint(v.burn > 0 ? 0xff9f1c : 0xffffff);
+      s.setTint(v.burn > 0 ? 0xff9f1c : v.gold ? 0xffd447 : 0xffffff);
+      if (v.gold && !this.lowFx) s.setScale(1.15 + 0.08 * Math.sin(this.time.now / 90));
     }
     for (const [id, s] of this.veilSprites) {
       if (!alive.has(id)) {
@@ -548,6 +603,16 @@ export class BossScene extends Phaser.Scene {
         this.veilSprites.delete(id);
       }
     }
+  }
+
+  /** Landed veil leaves an ink splat on the crowd line (fades slowly). */
+  splat(x) {
+    const g = this.add.graphics();
+    g.fillStyle(0x050608, 0.9);
+    g.fillEllipse(x, BOSS_TUNING.veilLandY + 6, 46, 12);
+    for (let i = 0; i < 5; i++) g.fillCircle(x + (Math.random() - 0.5) * 50, BOSS_TUNING.veilLandY + 4 + Math.random() * 8, 2 + Math.random() * 3);
+    this.root.addAt(g, 2);
+    this.tweens.add({ targets: g, alpha: 0, delay: 3000, duration: 1500, onComplete: () => g.destroy() });
   }
 
   impact(x, y, big, tint) {
@@ -629,6 +694,7 @@ export class BossScene extends Phaser.Scene {
     if (firing) this.run.runClock += dt;
     for (const e of evs) this.onBossEvent(e);
     this.drawBoss(time);
+    this.drawHpBar(dt);
     this.ensureLockLabels();
     this.syncSprites();
     this.drawBeam(time, shooting);
@@ -637,6 +703,7 @@ export class BossScene extends Phaser.Scene {
     if (firing && (hit === 'weak' || hit === 'body' || hit === 'lock') && Math.random() < 0.5) this.impact(this.aim.x, this.aim.y, false);
     this.dimRect.fillAlpha = this.boss.landed.length ? 0.12 * Math.min(2, this.boss.landed.length) : 0;
     this.updateHud();
+    this.finalCountdown();
     if (this.boss.result) this.finish(this.boss.result);
   }
 
@@ -655,8 +722,9 @@ export class BossScene extends Phaser.Scene {
         Audio.sfx('arrive', 2);
         this.impact(e.x, e.y, false, 0xff9f1c);
         this.impact(e.x, e.y, false, 0xffffff);
-        this.run.score += 30;
-        this.floatText(e.x, e.y - 10, '+30 燒掉黑幕', '#FFD447', 11);
+        this.run.score += e.gold ? 200 : 30;
+        this.floatText(e.x, e.y - 10, e.gold ? '金色黑幕！+200・大招充能×2' : '+30 燒掉黑幕', '#FFD447', e.gold ? 13 : 11);
+        if (e.gold) this.impact(e.x, e.y, true, 0xffd447);
         if (e.superReady) {
           toast('🔆 雙城合擊充能完成！按按鈕或空白鍵', 'good');
           this.hintText.textContent = '🔆 雙城合擊就緒！按下去，光束全開、無視護盾';
@@ -665,6 +733,7 @@ export class BossScene extends Phaser.Scene {
       case 'landed':
         Audio.sfx('deny');
         this.floatText(e.x, BOSS_TUNING.veilLandY - 12, '黑幕落地！光束 -25%', '#FF8080', 12);
+        this.splat(e.x);
         if (!this.lowFx) this.cameras.main.shake(120, 0.004);
         this.hintText.textContent = '黑幕落地會削弱光束！掃過落下的黑幕把它燒掉';
         break;
@@ -708,8 +777,6 @@ export class BossScene extends Phaser.Scene {
 
   updateHud() {
     const b = this.boss;
-    this.hpFill.style.width = `${(b.hp / b.maxHp) * 100}%`;
-    this.hpText.textContent = `${Math.ceil(b.hp)} / ${b.maxHp}`;
     this.timeText.textContent = fmtTime(b.time);
     this.timeText.parentElement.classList.toggle('warn', b.time <= 10);
     this.phaseText.textContent = `階段 ${b.phase}`;
@@ -741,7 +808,7 @@ export class BossScene extends Phaser.Scene {
       addBonus(run, 'Boss 剩餘秒數', bossRemainingBonus(this.boss.time));
       run.clearSeconds = Math.round(run.runClock);
     }
-    run.bossStats = { hp: Math.ceil(this.boss.hp), maxHp: this.boss.maxHp, crits: this.boss.crits, burned: this.boss.burned, time: this.boss.time };
+    run.bossStats = { hp: Math.ceil(this.boss.hp), maxHp: this.boss.maxHp, crits: this.boss.crits, burned: this.boss.burned, landed: this.boss.landedCount, time: this.boss.time };
     this.scene.start('Ending', { result });
   }
 }
