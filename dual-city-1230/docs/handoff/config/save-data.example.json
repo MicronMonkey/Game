@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "gameId": "dualCity1230",
+  "scores": {
+    "easy": {
+      "highest": 0,
+      "bestClearSeconds": null
+    },
+    "normal": {
+      "highest": 0,
+      "bestClearSeconds": null
+    },
+    "hell": {
+      "highest": 0,
+      "bestClearSeconds": null
+    }
+  },
+  "stats": {
+    "played": 0,
+    "bossWins": 0,
+    "longestCombo": 0
+  },
+  "achievements": [],
+  "settings": {
+    "soundEnabled": true,
+    "reducedMotion": false
+  },
+  "tutorialCompleted": false
+}

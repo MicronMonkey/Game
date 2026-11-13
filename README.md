@@ -29,3 +29,7 @@ Game
 ## 全民找法克 正式版（經典＋冒險）
 
 [fack.html](fack.html)：經典模式（沿用 V2 紀錄，不會清除）＋冒險模式四關、隨機 Buff、三階段 Boss、擴充成就、23 種永久裝備與每日挑戰。冒險資料另存於 `fack.expansion.v1`。舊的測試連結 `fack_v3.html` 會自動轉到正式版。完整說明、相容性分析與測試結果見 [EXPANSION.md](EXPANSION.md)。測試：`node tests/expansion_store.cjs`、`node tests/expansion_e2e.cjs`。
+
+## 新遊戲：《12:30！雙城集結令》
+
+獨立的新遊戲，原始碼在 [dual-city-1230/](dual-city-1230/)（Phaser 3 + Vite），上線後網址為 https://micronmonkey.github.io/Game/dual-city-1230/ 。與上面的遊戲完全分開，存檔使用自己的 `dualCity1230.save.v1`，不會動到其他遊戲的紀錄。說明見 [dual-city-1230/README.md](dual-city-1230/README.md)。

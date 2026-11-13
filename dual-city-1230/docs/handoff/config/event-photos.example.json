@@ -1,0 +1,21 @@
+{
+  "event": "2026-11-13",
+  "title": "12:30 雙城集結",
+  "note": "EXAMPLE ONLY: images do not exist until you add authorized real photos",
+  "taoyuan": [
+    {
+      "src": "assets/photos/taoyuan-01.webp",
+      "caption": "桃園集結現場",
+      "credit": "",
+      "alt": "2026年11月13日桃園集結現場真實照片"
+    }
+  ],
+  "taichung": [
+    {
+      "src": "assets/photos/taichung-01.webp",
+      "caption": "台中集結現場",
+      "credit": "",
+      "alt": "2026年11月13日台中集結現場真實照片"
+    }
+  ]
+}

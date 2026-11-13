@@ -1,0 +1,104 @@
+{
+  "meta": {
+    "title": "12:30！雙城集結令",
+    "version": "1.0.0",
+    "note": "All counts are fictional gameplay values, not actual participation"
+  },
+  "stages": {
+    "gathering_seconds": 90,
+    "sync_seconds": 60,
+    "boss_seconds": 60,
+    "virtual_start": "12:00",
+    "virtual_end": "12:30",
+    "targets": {
+      "taoyuan": 30,
+      "taichung": 30
+    }
+  },
+  "scoring": {
+    "base_per_arrival": 100,
+    "sun_per_arrival": 3,
+    "combo_window_seconds": 3,
+    "combo_steps_per_multiplier": 3,
+    "combo_max_multiplier": 5,
+    "remaining_second_points": 20,
+    "both_cities_bonus": 3000,
+    "boss_kill_bonus": 5000,
+    "boss_remaining_second_points": 50,
+    "sun_capacity": 100
+  },
+  "characters": {
+    "lunch": {
+      "speed": 1.0
+    },
+    "black": {
+      "speed": 1.0,
+      "extra_sun": 2
+    },
+    "volunteer": {
+      "speed": 1.3,
+      "aura_speed_bonus": 0.1
+    },
+    "lost": {
+      "speed": 0.8
+    },
+    "sprinter": {
+      "speed": 1.6,
+      "bonus_seconds": 2,
+      "max_bonus_seconds_per_run": 10
+    },
+    "tired": {
+      "speed": 0.65,
+      "recovered_speed": 1.0
+    }
+  },
+  "skills": {
+    "lunch_sprint": {
+      "sun_cost": 25,
+      "cooldown_seconds": 15,
+      "duration_seconds": 10,
+      "speed_bonus": 0.4
+    },
+    "sunlight": {
+      "sun_cost": 35,
+      "cooldown_seconds": 20,
+      "remove_cloud_events": 1
+    },
+    "city_resonance": {
+      "sun_cost": 60,
+      "cooldown_seconds": 45,
+      "duration_seconds": 10,
+      "speed_bonus": 0.3,
+      "score_bonus": 0.5
+    }
+  },
+  "boss": {
+    "hp": 1000,
+    "normal_dps": 20,
+    "weakpoint_dps": 35,
+    "critical_charge_seconds": 3,
+    "critical_damage": 80,
+    "weakpoint_break_grace_seconds": 0.25,
+    "number_of_weakpoints": 3,
+    "both_cities_initial_damage": 150,
+    "one_city_initial_damage": 75
+  },
+  "difficulty": {
+    "easy": {
+      "time_multiplier": 1.25,
+      "event_frequency_multiplier": 0.7,
+      "boss_hp_multiplier": 0.8
+    },
+    "normal": {
+      "time_multiplier": 1,
+      "event_frequency_multiplier": 1,
+      "boss_hp_multiplier": 1
+    },
+    "hell": {
+      "time_multiplier": 0.85,
+      "event_frequency_multiplier": 1.4,
+      "boss_hp_multiplier": 1.25
+    }
+  },
+  "design_disclaimer": "All in-game attendance figures are fictional."
+}

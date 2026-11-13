@@ -42,10 +42,26 @@ jobs:
           node tests/director.cjs
           node tests/drill.cjs
           node tests/expansion_store.cjs
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: dual-city-1230/package-lock.json
+      - name: Build 12:30 Dual City game (dual-city-1230/)
+        working-directory: dual-city-1230
+        run: |
+          npm ci
+          npm test
+          npm run build
+      - name: Assemble site (existing games unchanged + /dual-city-1230/ build)
+        run: |
+          mkdir -p _site
+          tar --exclude=./.git --exclude=./_site --exclude=./dual-city-1230 -cf - . | tar -xf - -C _site
+          cp -r dual-city-1230/dist _site/dual-city-1230
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
       - name: Deploy
         id: deployment
         uses: actions/deploy-pages@v4
