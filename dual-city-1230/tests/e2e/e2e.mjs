@@ -470,6 +470,33 @@ try {
   pass('相簿可返回首頁', await page.locator('.menu-card').isVisible());
   await page.context().close();
 
+  // ---------- 7b. two-finger: steer with one finger while tapping a skill with the other ----------
+  page = await newPage(browser, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  await page.goto(`${BASE}?test=1`);
+  await page.click('text=略過').catch(() => {});
+  await startGame(page, 'normal', 'taoyuan');
+  await page.waitForTimeout(800);
+  const cdp = await page.context().newCDPSession(page);
+  const touch = (type, pts) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map((p) => ({ ...p, radiusX: 4, radiusY: 4, force: 1 })) });
+  await page.evaluate(() => { window.__dc.App.run.sun = 100; });
+  const btn = await page.locator('.sk2-rally').boundingBox();
+  const f1 = { x: 195, y: 420, id: 1 };
+  const x0t = await page.evaluate(() => window.__dc.App.hooks.scene.player.x);
+  await touch('touchStart', [f1]);
+  for (let i = 1; i <= 4; i++) await touch('touchMove', [{ ...f1, x: f1.x + i * 15 }]);
+  const f1b = { ...f1, x: f1.x + 60 };
+  const f2 = { x: btn.x + btn.width / 2, y: btn.y + btn.height / 2, id: 2 };
+  await touch('touchStart', [f1b, f2]);
+  await touch('touchMove', [f1b]); // lifts finger 2 only (CDP: touchEnd releases all)
+  await page.waitForTimeout(100);
+  const mid = await page.evaluate(() => ({ rally: window.__dc.App.hooks.scene.skills.active.rally > 0, drag: !!window.__dc.App.hooks.scene.drag }));
+  for (let i = 1; i <= 4; i++) await touch('touchMove', [{ ...f1b, x: f1b.x + i * 10 }]);
+  await page.waitForTimeout(400);
+  const x1t = await page.evaluate(() => window.__dc.App.hooks.scene.player.x);
+  await touch('touchEnd', []);
+  pass('一指拖曳中，另一指可按技能（技能施放、拖曳不中斷）', mid.rally && mid.drag && x1t > x0t + 40, JSON.stringify({ ...mid, x0: Math.round(x0t), x1: Math.round(x1t) }));
+  await page.context().close();
+
   // ---------- 8. viewports ----------
   for (const [w, h] of [[375, 667], [390, 844], [393, 852], [430, 932], [1366, 768]]) {
     page = await newPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 1000 });

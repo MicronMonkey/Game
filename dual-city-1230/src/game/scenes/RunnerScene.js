@@ -80,21 +80,26 @@ export class RunnerScene extends Phaser.Scene {
     this.scale.on('resize', this.layout, this);
 
     this.keys = this.input.keyboard?.addKeys('LEFT,RIGHT,UP,DOWN,W,A,S,D');
+    // Relative steering, locked to ONE finger: the first touch that starts on the game
+    // area steers; any other finger (e.g. tapping a skill button) is ignored here.
+    const onCanvas = (p) => !p.event || p.event.target === this.game.canvas;
     this.input.on('pointerdown', (p) => {
       Audio.unlock();
-      if (this.paused || this.ended) return;
-      // relative steering: drag anywhere, the protagonist mirrors the finger's motion
-      this.drag = { px: p.x, py: p.y, x: this.player.x, rel: this.player.d - this.scroll };
+      if (this.paused || this.ended || this.drag || !onCanvas(p)) return;
+      this.drag = { id: p.id, px: p.x, py: p.y, x: this.player.x, rel: this.player.d - this.scroll };
     });
     this.input.on('pointermove', (p) => {
-      if (!this.drag || !p.isDown || this.paused || this.ended) return;
+      if (!this.drag || p.id !== this.drag.id || !p.isDown || this.paused || this.ended) return;
       const k = 1.3 / this.viewScale;
       this.dragTarget = { x: this.drag.x + (p.x - this.drag.px) * k, rel: this.drag.rel - (p.y - this.drag.py) * k };
     });
-    this.input.on('pointerup', () => {
+    const release = (p) => {
+      if (this.drag && p.id !== this.drag.id) return;
       this.drag = null;
       this.dragTarget = null;
-    });
+    };
+    this.input.on('pointerup', release);
+    this.input.on('pointerupoutside', release);
     this.keyHandler = (e) => {
       if (this.ended) return;
       if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {

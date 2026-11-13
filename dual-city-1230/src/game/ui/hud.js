@@ -1,7 +1,7 @@
 // DOM HUD for the runner acts. Kept deliberately clean: crowd count, progress to the
 // finish, 號召力, a plain energy bar, and three skill buttons that glow when ready.
 import { SKILL_DEFS } from '../systems/SkillSystem.js';
-import { el, fmtScore, layer } from './dom.js';
+import { el, fmtScore, layer, onPress } from './dom.js';
 
 export function createHud(h) {
   const root = layer('hud runner-hud');
@@ -34,12 +34,13 @@ export function createHud(h) {
   Object.values(SKILL_DEFS).forEach((def, i) => {
     const cdFill = el('span', { class: 'sk2-cd' });
     const state = el('small', { class: 'sk2-state' });
-    const btn = el('button', { class: `skill2 sk2-${def.id}`, onclick: () => h.onSkill(def.id), 'aria-label': `${def.name}：${def.effect}，消耗 ${def.sun_cost} 能量（按鍵 ${i + 1}）` }, [
+    const btn = el('button', { class: `skill2 sk2-${def.id}`, 'aria-label': `${def.name}：${def.effect}，消耗 ${def.sun_cost} 能量（按鍵 ${i + 1}）` }, [
       cdFill,
       el('b', { text: `${def.icon} ${def.name}` }),
       el('small', { class: 'sk2-eff', text: def.effect }),
       state,
     ]);
+    onPress(btn, () => h.onSkill(def.id));
     skills[def.id] = { btn, cdFill, state };
     skillRow.append(btn);
   });

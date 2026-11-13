@@ -422,3 +422,6 @@ button { font-family: inherit; }
   .skill2 .sk2-eff { display: none; }
   .hud-crowd .crowd-num b { font-size: 20px; }
 }
+
+/* game buttons act on touch-down; never start a scroll/zoom gesture */
+.skill2, .super-btn, .btn-icon { touch-action: none; -webkit-user-select: none; user-select: none; }
