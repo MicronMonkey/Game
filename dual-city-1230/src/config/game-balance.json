@@ -130,6 +130,12 @@
     "car_hit_loss": 2,
     "manager_pull_fraction": 0.15,
     "meeting_drain_fraction": 0.04,
-    "car_hit_fraction": 0.05
+    "car_hit_fraction": 0.05,
+    "scroll_multiplier": {
+      "_note": "relative to scroll_speed; hell = 2× its previous speed",
+      "easy": 1.0,
+      "normal": 1.5,
+      "hell": 2.35
+    }
   }
 }
