@@ -36,8 +36,13 @@ header a,header button{font:600 13px system-ui;color:#eef3f5;background:#1d3747;
 .cz-card .x-home-row{display:flex;justify-content:center;margin-top:8px}
 #hero small{color:var(--mut);font-size:11px;line-height:1.7;max-width:460px;margin-top:8px}
 #toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 60px);transform:translateX(-50%);background:var(--ac);color:#111;font-weight:800;padding:8px 16px;border-radius:999px;z-index:50;opacity:0;transition:opacity .3s;pointer-events:none}
+
+#platform-return{position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:calc(env(safe-area-inset-left,0px) + 8px);z-index:2147483647;display:inline-flex;align-items:center;min-height:36px;padding:7px 12px;border:1px solid #f1d09a;border-radius:999px;background:#1d3747;color:#fff1df;font:700 13px system-ui;text-decoration:none;box-shadow:0 2px 8px #0006}
+#platform-return:focus-visible{outline:3px solid #fff;outline-offset:2px}
+#wrap{padding-top:calc(env(safe-area-inset-top,0px) + 44px)}
 </style>
 </head><body>
+<a id="platform-return" href="https://micronmonkey.github.io/index.html">← 返回光光猴平台</a>
 <div id="wrap">
  <header><b>🏃 全民找法克</b><button id="share-top" type="button">分享</button></header>
  <div id="stage">
