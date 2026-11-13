@@ -1,12 +1,13 @@
 // Home screen: Phaser background with Q-style gatherers walking, DOM menu on top.
 import Phaser from 'phaser';
-import { App, reducedMotion } from '../app.js';
+import { App, persist, reducedMotion } from '../app.js';
 import { DIFFICULTIES, DIFFICULTY_LABELS } from '../config.js';
 import { CHAR_TYPES, charKey } from '../art/textures.js';
 import { createRunState } from '../systems/GameState.js';
 import { ACHIEVEMENTS } from '../systems/achievements.js';
+import { MAX_EQUIPPED, PERKS, equippedPerks, togglePerk } from '../perks/perks.js';
 import { Audio } from '../systems/AudioSystem.js';
-import { el, fmtScore, layer } from '../ui/dom.js';
+import { el, fmtScore, layer, toast } from '../ui/dom.js';
 import { modal, settingsToggles } from '../ui/modal.js';
 import { openGallery } from '../ui/gallery.js';
 import { showTutorial } from '../ui/tutorial.js';
@@ -101,6 +102,7 @@ export class MenuScene extends Phaser.Scene {
         el('nav', { class: 'menu-buttons' }, [
           btn('▶ 開始遊戲', () => this.chooseDifficulty(), 'primary big'),
           btn('📖 遊戲教學', () => showTutorial({})),
+          btn('🎒 夥伴裝備', () => this.showPerks(), 'perks-btn'),
           btn('🏆 最高紀錄', () => this.showRecords()),
           btn('📷 11/13 真實紀錄', () => this.openAlbum(), 'gold'),
         ]),
@@ -153,10 +155,47 @@ export class MenuScene extends Phaser.Scene {
   startRun(difficulty, city) {
     const go = () => {
       App.run = createRunState(difficulty, city);
+      App.run.perks = equippedPerks(App.save);
       this.scene.start('Gathering');
     };
     if (!App.save.tutorialCompleted) showTutorial({ onDone: go });
     else go();
+  }
+
+  showPerks() {
+    const s = App.save;
+    const list = el('div', { class: 'perk-list' });
+    const render = () => {
+      const eq = equippedPerks(s);
+      list.replaceChildren(
+        ...PERKS.map((p) => {
+          const un = p.unlocked(s);
+          const on = eq.includes(p.id);
+          const [cur, max] = p.progress(s);
+          return el('button', { class: `perk-card ${un ? 'unlocked' : 'locked'} ${on ? 'on' : ''}`, 'aria-pressed': String(on), onclick: () => {
+            const r = togglePerk(s, p.id);
+            if (!r.ok) toast(r.reason, 'warn');
+            else Audio.sfx(r.equipped ? 'skill' : 'click');
+            persist();
+            render();
+          } }, [
+            el('span', { class: 'perk-icon', text: un ? p.icon : '🔒' }),
+            el('span', { class: 'perk-body' }, [
+              el('b', {}, [p.name, el('em', { text: `　${p.where}` })]),
+              el('small', { text: p.effect }),
+              un ? el('small', { class: 'perk-state', text: on ? '✅ 已裝備（點擊卸下）' : '點擊裝備' })
+                : el('span', { class: 'perk-lock' }, [el('small', { text: `解鎖：${p.condition}` }), el('span', { class: 'perk-prog' }, el('i', { style: { width: `${(cur / max) * 100}%` } }))]),
+            ]),
+          ]);
+        }),
+      );
+    };
+    render();
+    modal({
+      title: `夥伴裝備（最多 ${MAX_EQUIPPED} 個）`,
+      body: [el('p', { class: 'small', text: '達成成就就能解鎖。裝備後下一局開始生效。' }), list],
+      actions: [{ label: '完成', primary: true }],
+    });
   }
 
   showRecords() {

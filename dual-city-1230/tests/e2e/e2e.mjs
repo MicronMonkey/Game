@@ -38,7 +38,13 @@ async function newPage(browser, opts = {}) {
 
 const sceneKey = (page) => page.evaluate(() => window.__dc.App.hooks.scene?.sys.settings.key);
 async function waitScene(page, key, timeout = 30000) {
-  await page.waitForFunction((k) => window.__dc?.App.hooks.scene?.sys.settings.key === k && window.__dc.App.hooks.scene.sys.isActive(), key, { timeout });
+  try {
+    await page.waitForFunction((k) => window.__dc?.App.hooks.scene?.sys.settings.key === k && window.__dc.App.hooks.scene.sys.isActive(), key, { timeout });
+  } catch (e) {
+    const st = await page.evaluate(() => { const sc = window.__dc?.App.hooks.scene; return { key: sc?.sys.settings.key, paused: sc?.paused, ended: sc?.ended, time: sc?.boss?.time, ui: [...document.querySelectorAll('#ui > *')].map((n) => n.className) }; }).catch(() => null);
+    console.log('waitScene failed', key, JSON.stringify(st), page.errors?.slice(0, 3));
+    throw e;
+  }
 }
 
 /** Screen (CSS px) position of a field point. */
@@ -76,24 +82,19 @@ async function autoplay(page, on = true) {
   }, on);
 }
 
-/** Boss aimbot: keep the reticle on the weakpoint (win) or on an empty corner (lose). */
+/** Boss bot: keep a target locked (win) or never lock anything (lose). */
 async function bossAim(page, mode) {
   await page.evaluate((mode) => {
     const A = window.__dc.App;
     clearInterval(A._aim);
     A._aim = setInterval(() => {
       const sc = A.hooks.scene;
-      if (!sc?.boss) return;
+      if (!sc?.boss || sc.ended) return;
       if (mode === 'win') {
-        const t = sc.boss.phase === 3 ? sc.boss.currentLock() : sc.boss.weak;
-        sc.aim.x = t.x;
-        sc.aim.y = t.y;
+        if (sc.target.kind === 'none') sc.lockTarget({ kind: 'core' });
         if (sc.boss.canSuper()) sc.trySuper();
-      } else {
-        sc.aim.x = 10;
-        sc.aim.y = 360;
-      }
-    }, 16);
+      } else sc.target = { kind: 'none' };
+    }, 50);
   }, mode);
 }
 
@@ -168,7 +169,9 @@ try {
   await page.click('text=跳過教學');
   await waitScene(page, 'Gathering');
   pass('教學狀態持久化', await page.evaluate(() => JSON.parse(localStorage.getItem('dualCity1230.save.v1')).tutorialCompleted === true));
-  await page.waitForTimeout(1200);
+  pass('開場 3·2·1 倒數（倒數時不捲動）', (await page.evaluate(() => window.__dc.App.hooks.scene.countdown > 0 && window.__dc.App.hooks.scene.scroll === 0)));
+  await page.waitForFunction(() => window.__dc.App.hooks.scene.countdown <= 0, null, { timeout: 8000 });
+  await page.waitForTimeout(800);
   await shot(page, '03-runner');
   const sc1 = await page.evaluate(() => window.__dc.App.hooks.scene.scroll);
   await page.waitForTimeout(700);
@@ -374,27 +377,41 @@ try {
   await page.click('.super-btn');
   pass('按下雙城合擊啟動大招', await page.evaluate(() => window.__dc.App.hooks.scene.boss.superTime > 0));
   await page.evaluate(() => { const b = window.__dc.App.hooks.scene.boss; b.superTime = 0; });
+  // tap-to-target: blinking halos, tapping the weakpoint locks the beam and deals damage
+  await page.evaluate(() => { const sc = window.__dc.App.hooks.scene; sc.target = { kind: 'none' }; sc.boss.veilTimer = 0; });
+  await page.waitForTimeout(300);
+  const halos = await page.evaluate(() => (window.__dc.App.hooks.scene.tapLabels || []).filter((t) => t.visible).map((t) => t.text));
+  await shot(page, '06-boss-halos');
+  pass('目標閃爍白光並標示「點我／點弱點」', halos.length >= 2 && halos.some((t) => /點弱點|點鎖/.test(t)) && halos.some((t) => /點我|快點/.test(t)), JSON.stringify(halos));
+  const hpIdle0 = await page.evaluate(() => window.__dc.App.hooks.scene.boss.hp);
+  await page.waitForTimeout(500);
+  const hpIdle1 = await page.evaluate(() => window.__dc.App.hooks.scene.boss.hp);
+  pass('沒有鎖定目標時光束不攻擊', hpIdle0 === hpIdle1);
   const wk = await page.evaluate(() => {
     const sc = window.__dc.App.hooks.scene;
     const d = window.__dc.App.dpr;
-    return { x: (sc.root.x + sc.boss.weak.x * sc.fieldScale) / d, y: (sc.root.y + sc.boss.weak.y * sc.fieldScale) / d, hp: sc.boss.hp };
+    const c = sc.corePos();
+    return { x: (sc.root.x + c.x * sc.fieldScale) / d, y: (sc.root.y + c.y * sc.fieldScale) / d, hp: sc.boss.hp };
   });
-  await page.mouse.move(wk.x, wk.y);
+  await page.mouse.click(wk.x, wk.y);
   await page.waitForTimeout(700);
-  const hpAfter = await page.evaluate(() => window.__dc.App.hooks.scene.boss.hp);
-  await shot(page, '06-boss');
-  pass('滑鼠瞄準弱點造成 Boss 扣血', hpAfter < wk.hp, `${wk.hp.toFixed(0)} → ${hpAfter.toFixed(0)}`);
-  // weapon controller (joystick) moves the reticle
-  const jb = await page.locator('.joy').boundingBox();
-  const a0 = await page.evaluate(() => ({ ...window.__dc.App.hooks.scene.aim }));
-  await page.mouse.move(jb.x + jb.width / 2, jb.y + jb.height / 2);
-  await page.mouse.down();
-  await page.mouse.move(jb.x + jb.width / 2 + 60, jb.y + jb.height / 2, { steps: 4 });
-  await page.waitForTimeout(500);
-  await page.mouse.up();
-  const a1 = await page.evaluate(() => ({ ...window.__dc.App.hooks.scene.aim, joy: window.__dc.App.hooks.scene.joy.x }));
-  await shot(page, '06b-joystick');
-  pass('武器控制器（搖桿）移動攻擊點、放開後回中', a1.x > a0.x + 60 && a1.joy === 0, `${a0.x.toFixed(0)} → ${a1.x.toFixed(0)}`);
+  const af = await page.evaluate(() => ({ hp: window.__dc.App.hooks.scene.boss.hp, kind: window.__dc.App.hooks.scene.target.kind }));
+  pass('點弱點 → 光束鎖定並自動攻擊', af.kind === 'core' && af.hp < wk.hp, `${wk.hp.toFixed(0)} → ${af.hp.toFixed(0)}`);
+  await page.evaluate(() => { window.__dc.App.hooks.scene.boss.veilTimer = 0; });
+  await page.waitForTimeout(150);
+  const vt = await page.evaluate(() => {
+    const sc = window.__dc.App.hooks.scene;
+    const d = window.__dc.App.dpr;
+    const v = sc.boss.veils[0];
+    return v ? { id: v.id, x: (sc.root.x + v.x * sc.fieldScale) / d, y: (sc.root.y + v.y * sc.fieldScale) / d } : null;
+  });
+  if (vt) await page.mouse.click(vt.x, vt.y);
+  await page.waitForTimeout(100);
+  pass('點落下的黑幕 → 光束改鎖定黑幕', !!vt && (await page.evaluate((id) => { const t = window.__dc.App.hooks.scene.target; return t.kind === 'veil' && t.id === id; }, vt?.id)));
+  await page.waitForTimeout(1500);
+  pass('黑幕燒掉後光束自動回到弱點', (await page.evaluate(() => window.__dc.App.hooks.scene.target.kind)) === 'core');
+  await page.evaluate(() => { const sc = window.__dc.App.hooks.scene; sc.onBossEvent({ type: 'weakMoved' }); });
+  pass('弱點移動時鎖定解除（需要再點）', (await page.evaluate(() => window.__dc.App.hooks.scene.target.kind)) === 'none');
   await bossAim(page, 'win');
   await page.evaluate(() => (window.__dc.App.timeScale = 4));
   await waitScene(page, 'Ending', 60000);
@@ -511,36 +528,35 @@ try {
   pass('一指拖曳中，另一指可按技能（技能施放、拖曳不中斷）', mid.rally && mid.drag && x1t > x0t + 40, JSON.stringify({ ...mid, x0: Math.round(x0t), x1: Math.round(x1t) }));
   await page.context().close();
 
-  // ---------- 7c. boss on a phone: finger on the field does NOT move the aim; joystick + super together ----------
-  page = await newPage(browser, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  // ---------- 7c. perks: unlock, equip (max 2), effects in game ----------
+  page = await newPage(browser);
   await page.goto(`${BASE}?test=1`);
   await page.click('text=略過').catch(() => {});
-  await startGame(page, 'normal', 'taichung');
+  await page.click('text=夥伴裝備');
+  pass('新存檔：五個夥伴裝備全部上鎖', (await page.locator('.perk-card.locked').count()) === 5);
+  await page.click('text=完成');
+  await page.evaluate(() => {
+    const s = window.__dc.App.save;
+    s.stats.bossWins = 1; s.stats.lunchArrivals = 120; s.stats.skillsUsed = 12; s.achievements.push('dual_hero', 'sun_envoy'); s.scores.normal.highest = 70000;
+  });
+  await page.click('text=夥伴裝備');
+  pass('達成條件後五個全部解鎖', (await page.locator('.perk-card.unlocked').count()) === 5);
+  await page.click('.perk-card >> nth=0');
+  await page.click('.perk-card >> nth=2');
+  await page.click('.perk-card >> nth=4');
+  const eq = await page.evaluate(() => JSON.parse(localStorage.getItem('dualCity1230.save.v1')).perksEquipped);
+  await shot(page, '12-perks');
+  pass('最多裝備 2 個並存檔', eq.length === 2 && eq.includes('bento_station') && eq.includes('sweeper'), JSON.stringify(eq));
+  await page.click('text=完成');
+  await startGame(page, 'normal', 'taoyuan');
+  await page.waitForTimeout(400);
+  pass('便當補給站：開場就有 5 位夥伴', (await page.evaluate(() => window.__dc.App.hooks.scene.crowd)) === 5);
   await page.evaluate(() => { window.__dc.App.run.bossInitialDamage = 0; window.__dc.App.hooks.scene.scene.start('Boss'); });
   await waitScene(page, 'Boss');
-  await page.waitForTimeout(500);
-  const cdp2 = await page.context().newCDPSession(page);
-  const t2 = (type, pts) => cdp2.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map((p) => ({ ...p, radiusX: 4, radiusY: 4, force: 1 })) });
-  const aimA = await page.evaluate(() => ({ ...window.__dc.App.hooks.scene.aim }));
-  await t2('touchStart', [{ x: 120, y: 300, id: 1 }]);
-  await t2('touchMove', [{ x: 300, y: 260, id: 1 }]);
-  await t2('touchEnd', []);
-  await page.waitForTimeout(100);
-  const aimB = await page.evaluate(() => ({ ...window.__dc.App.hooks.scene.aim }));
-  pass('手機：手指點戰場不會移動攻擊點（不遮擋）', Math.abs(aimB.x - aimA.x) < 1 && Math.abs(aimB.y - aimA.y) < 1);
-  await page.evaluate(() => { window.__dc.App.hooks.scene.boss.superMeter = 1; });
-  await page.waitForTimeout(80);
-  const jb2 = await page.locator('.joy').boundingBox();
-  const sb2 = await page.locator('.super-btn').boundingBox();
-  const jc = { x: jb2.x + jb2.width / 2, y: jb2.y + jb2.height / 2, id: 1 };
-  await t2('touchStart', [jc]);
-  await t2('touchMove', [{ ...jc, y: jc.y - 50 }]);
-  await t2('touchStart', [{ ...jc, y: jc.y - 50 }, { x: sb2.x + sb2.width / 2, y: sb2.y + sb2.height / 2, id: 2 }]);
   await page.waitForTimeout(400);
-  const both = await page.evaluate(() => ({ superOn: window.__dc.App.hooks.scene.boss.superTime > 0, joyY: window.__dc.App.hooks.scene.joy.y, aimY: window.__dc.App.hooks.scene.aim.y }));
-  await t2('touchEnd', []);
-  await shot(page, '06c-boss-phone');
-  pass('手機：左手搖桿＋右手雙城合擊可同時操作', both.superOn && both.joyY < -0.5 && both.aimY < aimA.y - 30, JSON.stringify(both));
+  const hs = await page.evaluate(() => ({ helper: !!window.__dc.App.hooks.scene.boss.helper, sprite: !!window.__dc.App.hooks.scene.helperSprite }));
+  await shot(page, '12b-helper');
+  pass('掃黑幕小幫手出現在 Boss 關', hs.helper && hs.sprite, JSON.stringify(hs));
   await page.context().close();
 
   // ---------- 7d. scroll speed per difficulty ----------

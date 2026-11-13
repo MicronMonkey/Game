@@ -25,6 +25,7 @@ export class SyncScene extends RunnerScene {
     r.bossInitialDamage = bossInitialDamage(reached);
     const bonuses = [...stageBonuses, ...r.bonuses.slice(before)];
     interstitial({
+      stars: this.run.stageStars?.[this.stage] ?? 0,
       kicker: '第二幕結算',
       title: reached === 2 ? '完美雙城！' : met ? '你的廠達標！' : `抵達 ${arrived} 人（目標 ${this.target}）`,
       lines: [

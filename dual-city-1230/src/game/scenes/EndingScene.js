@@ -4,9 +4,10 @@ import { App, persist, reducedMotion } from '../app.js';
 import { citiesReached } from '../systems/GameState.js';
 import { recordRun } from '../systems/Storage.js';
 import { evaluateAchievements } from '../systems/achievements.js';
+import { newlyUnlocked, unlockedPerks } from '../perks/perks.js';
 import { Audio } from '../systems/AudioSystem.js';
 import { TUNING } from '../config.js';
-import { el, layer, toast } from '../ui/dom.js';
+import { clearToasts, el, layer, toast } from '../ui/dom.js';
 import { openGallery } from '../ui/gallery.js';
 import { shareScore } from '../ui/shareCard.js';
 
@@ -29,6 +30,7 @@ export class EndingScene extends Phaser.Scene {
 
   create() {
     const run = App.run;
+    clearToasts();
     this.cameras.main.setBackgroundColor('#0b0c10');
     this.recordOnce(run);
     Audio.music('memory');
@@ -56,6 +58,7 @@ export class EndingScene extends Phaser.Scene {
     const save = App.save;
     const bossWin = this.result === 'win';
     const bossFailedBefore = !!save.stats.bossFailedSinceWin;
+    const perksBefore = unlockedPerks(save);
     const { newHigh } = recordRun(save, {
       difficulty: run.difficulty,
       score: run.score,
@@ -69,7 +72,9 @@ export class EndingScene extends Phaser.Scene {
     save.stats.bossFailedSinceWin = bossWin ? false : true;
     persist();
     run.newHigh = newHigh;
+    run.newPerks = newlyUnlocked(perksBefore, unlockedPerks(save));
     unlocked.forEach((a, i) => setTimeout(() => toast(`🏅 成就解鎖：${a.name}`, 'good'), 600 + i * 700));
+    run.newPerks.forEach((p, i) => setTimeout(() => toast(`🎒 新夥伴解鎖：${p.icon} ${p.name}（到首頁「夥伴裝備」裝備）`, 'good'), 600 + (unlocked.length + i) * 700));
   }
 
   drawTransition() {
@@ -117,7 +122,7 @@ export class EndingScene extends Phaser.Scene {
     const restart = run.difficulty;
     this.openedGallery = true;
     openGallery({
-      result: { score: run.score, difficultyLabel: run.settings.label, newHigh: run.newHigh },
+      result: { score: run.score, difficultyLabel: run.settings.label, newHigh: run.newHigh, newPerks: run.newPerks || [] },
       onReplay: () => this.scene.start('Menu', { startDifficulty: restart, startCity: run.city }),
       onHome: () => {
         App.run = null;

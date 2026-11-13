@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { applyCount, hazardLoss, effectiveRadius, clampBaseRadius, formationSlot, generateStage, rngFrom, R, GATE_OPTIONS } from '../../src/game/runner/runnerLogic.js';
+import { applyCount, hazardLoss, starsFor, effectiveRadius, clampBaseRadius, formationSlot, generateStage, rngFrom, R, GATE_OPTIONS } from '../../src/game/runner/runnerLogic.js';
 import { SkillSystem } from '../../src/game/systems/SkillSystem.js';
 import { createRunState } from '../../src/game/systems/GameState.js';
 
@@ -18,6 +18,10 @@ test('obstacle losses scale with crowd size', () => {
   assert.equal(hazardLoss(20, 5, 0.15), 5);
   assert.equal(hazardLoss(100, 5, 0.15), 15);
   assert.equal(hazardLoss(0, 1, 0.04), 0);
+});
+
+test('stage stars', () => {
+  assert.deepEqual([10, 45, 70, 90].map((a) => starsFor(a, 45)), [0, 1, 2, 3]);
 });
 
 test('radius clamps', () => {
