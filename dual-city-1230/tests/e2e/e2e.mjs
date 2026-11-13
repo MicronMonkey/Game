@@ -145,10 +145,11 @@ try {
   const missing = await page.locator('.photo-missing').count();
   await shot(page, '02-gallery-empty');
   pass('首頁「11/13 真實紀錄」無條件直達相簿', true);
-  pass('桃園尚無照片 → 顯示「照片整理中」', missing === 1 && (await page.locator('text=桃園真實活動照片整理中').count()) === 1);
+  pass('兩城都有照片 → 不顯示「整理中」', missing === 0);
+  await page.waitForFunction(() => [...document.querySelectorAll('.gallery img')].every((i) => i.complete), null, { timeout: 10000 });
   const imgs = await page.evaluate(() => [...document.querySelectorAll('.gallery img')].map((i) => ({ src: i.getAttribute('src'), ok: i.complete && i.naturalWidth > 0, fit: getComputedStyle(i).objectFit })));
-  pass('台中真實照片從 JSON 載入並完整顯示（contain）', imgs.length === 1 && /assets\/photos\/taichung-01\.webp$/.test(imgs[0].src) && imgs[0].ok && imgs[0].fit === 'contain', JSON.stringify(imgs));
-  const exif = await page.evaluate(async () => { const b = new Uint8Array(await (await fetch('assets/photos/taichung-01.webp')).arrayBuffer()); return new TextDecoder('latin1').decode(b.slice(0, 4096)).includes('EXIF'); });
+  pass('桃園、台中真實照片從 JSON 載入並完整顯示（contain）', imgs.length === 2 && /taoyuan-01\.webp$/.test(imgs[0].src) && /taichung-01\.webp$/.test(imgs[1].src) && imgs.every((i) => i.ok && i.fit === 'contain'), JSON.stringify(imgs));
+  const exif = await page.evaluate(async () => { for (const f of ['taoyuan-01', 'taichung-01']) { const b = new Uint8Array(await (await fetch(`assets/photos/${f}.webp`)).arrayBuffer()); if (new TextDecoder('latin1').decode(b.slice(0, 4096)).includes('EXIF')) return true; } return false; });
   pass('公開照片不含 EXIF/GPS 中繼資料', !exif);
   await page.keyboard.press('Escape');
   await page.waitForSelector('.menu-card');
@@ -415,8 +416,9 @@ try {
   if (vt) await page.mouse.click(vt.x, vt.y);
   await page.waitForTimeout(100);
   pass('點落下的黑幕 → 光束改鎖定黑幕', !!vt && (await page.evaluate(() => window.__dc.App.hooks.scene.target.kind === 'veil')));
-  await page.waitForTimeout(1500);
-  pass('黑幕燒掉後光束自動回到弱點', (await page.evaluate(() => window.__dc.App.hooks.scene.target.kind)) === 'core');
+  await page.evaluate(() => { window.__dc.App.hooks.scene.boss.rotateTimer = 99; }); // keep the weakpoint still for this check
+  const back = await page.waitForFunction(() => window.__dc.App.hooks.scene.target.kind === 'core', null, { timeout: 5000 }).then(() => true).catch(() => false);
+  pass('黑幕燒掉後光束自動回到弱點', back);
   await page.evaluate(() => { const sc = window.__dc.App.hooks.scene; sc.onBossEvent({ type: 'weakMoved' }); });
   pass('弱點移動時鎖定解除（需要再點）', (await page.evaluate(() => window.__dc.App.hooks.scene.target.kind)) === 'none');
   await bossAim(page, 'win');

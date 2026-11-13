@@ -2,7 +2,14 @@
   "event": "2026-11-13",
   "title": "12:30 雙城集結",
   "note": "Add ONLY authorized real event photos. Empty arrays show 「真實活動照片整理中」. See PHOTOS.md.",
-  "taoyuan": [],
+  "taoyuan": [
+    {
+      "src": "assets/photos/taoyuan-01.webp",
+      "caption": "11/13 桃園活動照片",
+      "credit": "活動夥伴提供（臉部已馬賽克）",
+      "alt": "2026年11月13日桃園廠旁籃球場，身穿黑衣的夥伴們手持標語、拉著「員工要制度改革」黑色布條合影"
+    }
+  ],
   "taichung": [
     {
       "src": "assets/photos/taichung-01.webp",
