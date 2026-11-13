@@ -1,19 +1,19 @@
-// Skills: energy (sun) cost, cooldown, duration buffs. Driven by tick(dt) so pausing
+// Runner skills: 大聲號召 / 團結護盾 / 雙城共鳴. Energy (sun) cost, cooldown, duration buffs. Driven by tick(dt) so pausing
 // the scene freezes cooldowns and buffs automatically.
 import { BALANCE } from '../config.js';
 import { spendSun } from './GameState.js';
 
 export const SKILL_DEFS = {
-  lunch_sprint: { id: 'lunch_sprint', name: '午休衝刺', icon: '👟', ...BALANCE.skills.lunch_sprint },
-  sunlight: { id: 'sunlight', name: '陽光照耀', icon: '☀️', ...BALANCE.skills.sunlight },
-  city_resonance: { id: 'city_resonance', name: '雙城共鳴', icon: '🔗', ...BALANCE.skills.city_resonance },
+  rally: { id: 'rally', name: '大聲號召', icon: '📣', effect: '號召力 ×1.6', ...BALANCE.skills.rally },
+  shield: { id: 'shield', name: '團結護盾', icon: '🛡️', effect: '不怕主管與干擾', ...BALANCE.skills.shield },
+  city_resonance: { id: 'city_resonance', name: '雙城共鳴', icon: '🔗', effect: '吸人＋得分×1.5', ...BALANCE.skills.city_resonance },
 };
 
 export class SkillSystem {
   constructor(state) {
     this.state = state;
-    this.cooldowns = { lunch_sprint: 0, sunlight: 0, city_resonance: 0 };
-    this.active = { lunch_sprint: 0, city_resonance: 0 };
+    this.cooldowns = { rally: 0, shield: 0, city_resonance: 0 };
+    this.active = { rally: 0, shield: 0, city_resonance: 0 };
     this.blocked = {}; // skillId -> reason (e.g. signal outage)
   }
 
@@ -47,12 +47,13 @@ export class SkillSystem {
     return (this.active[id] || 0) > 0;
   }
 
-  /** Same-category speed bonuses use the highest value — they never stack. */
-  speedBonus() {
-    let b = 0;
-    if (this.isActive('lunch_sprint')) b = Math.max(b, SKILL_DEFS.lunch_sprint.speed_bonus);
-    if (this.isActive('city_resonance')) b = Math.max(b, SKILL_DEFS.city_resonance.speed_bonus);
-    return b;
+  /** Radius multiplier from skills (rally; never stacks with itself). */
+  radiusMultiplier() {
+    return this.isActive('rally') ? SKILL_DEFS.rally.radius_multiplier : 1;
+  }
+
+  shielded() {
+    return this.isActive('shield');
   }
 
   resonanceActive() {

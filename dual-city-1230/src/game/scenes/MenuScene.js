@@ -1,7 +1,7 @@
 // Home screen: Phaser background with Q-style gatherers walking, DOM menu on top.
 import Phaser from 'phaser';
 import { App, reducedMotion } from '../app.js';
-import { DIFFICULTIES, DIFFICULTY_LABELS, difficultySettings } from '../config.js';
+import { DIFFICULTIES, DIFFICULTY_LABELS } from '../config.js';
 import { CHAR_TYPES, charKey } from '../art/textures.js';
 import { createRunState } from '../systems/GameState.js';
 import { ACHIEVEMENTS } from '../systems/achievements.js';
@@ -112,9 +112,9 @@ export class MenuScene extends Phaser.Scene {
 
   chooseDifficulty() {
     const desc = {
-      easy: '時間 ×1.25・事件較少・Boss HP 800',
-      normal: '標準時間・標準事件・Boss HP 1000',
-      hell: '時間 ×0.85・事件 ×1.4・Boss HP 1250',
+      easy: '捲動較慢・障礙較少・Boss HP 800',
+      normal: '標準速度與障礙・Boss HP 1000',
+      hell: '捲動更快・主管更多・Boss HP 1250',
     };
     const m = modal({
       title: '選擇難度',
@@ -140,7 +140,7 @@ export class MenuScene extends Phaser.Scene {
     const m = modal({
       title: '選擇你的廠區',
       body: [
-        el('p', { class: 'small', text: '你負責帶領一座廠的集結；另一座廠由夥伴同步推進（虛構）。' }),
+        el('p', { class: 'small', text: '你是帶頭的主角：一路號召夥伴走到集結區。另一座廠由夥伴同步推進（虛構）。' }),
         el('div', { class: 'city-pick' }, [
           card('taoyuan', '桃園廠', '廠房・停車場・集結廣場', '🏭'),
           card('taichung', '台中廠', '工廠・綠地・裝置藝術前', '🌳'),
@@ -188,7 +188,6 @@ export class MenuScene extends Phaser.Scene {
         el('p', { text: DISCLAIMER }),
         el('p', { text: '遊戲內的突發事件（排隊、迷路、開會、烏雲、訊號中斷）與 Boss 皆為象徵性的喜劇設計，不代表當天真實發生，也不指涉任何特定個人。' }),
         el('p', { text: '本遊戲不蒐集姓名、聯絡方式、IP 或位置；紀錄只存在你的瀏覽器（localStorage：dualCity1230.save.v1）。' }),
-        el('p', { text: `目前版本：遊戲時間 ${difficultySettings('normal').gatheringSeconds}+${difficultySettings('normal').syncSeconds}+${difficultySettings('normal').bossSeconds} 秒（標準）。` }),
       ],
       actions: [{ label: '我知道了', primary: true }],
     });

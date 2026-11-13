@@ -17,7 +17,10 @@ const STYLE = {
   lost: { shirt: ['#E8EEF6', '#DDE6F2', '#F2F5FA'], pants: '#9AA7BA' },
   sprinter: { shirt: ['#E83B3B', '#F0582F', '#D62F55'], pants: '#1F2433' },
   tired: { shirt: ['#8A93A3', '#7C8597', '#959CA8'], pants: '#454B57' },
+  hero: { shirt: ['#15161A', '#15161A', '#15161A'], pants: '#22242C' },
+  manager: { shirt: ['#4A4F5C', '#3E4350', '#545A68'], pants: '#2B2F38' },
 };
+export const SPECIAL_TYPES = ['hero', 'manager'];
 
 function rr(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -32,7 +35,7 @@ function rr(ctx, x, y, w, h, r) {
 function drawChar(ctx, type, variant, dir, frame) {
   const st = STYLE[type];
   const skin = SKIN[variant % SKIN.length];
-  const hair = type === 'lost' ? '#F2F5FA' : HAIR[(variant + 1) % HAIR.length];
+  const hair = type === 'lost' ? '#F2F5FA' : type === 'manager' ? '#8A8F99' : HAIR[(variant + 1) % HAIR.length];
   const shirt = st.shirt[variant % st.shirt.length];
   const cx = CHAR_W / 2;
   const cheer = frame === 2;
@@ -84,6 +87,18 @@ function drawChar(ctx, type, variant, dir, frame) {
     ctx.fillStyle = st.band;
     ctx.fillRect(cx - 9, 33, 4, 4); // armband
   }
+  if (type === 'hero') {
+    // gold sash
+    ctx.strokeStyle = '#FFD447';
+    ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(cx - 8, 31); ctx.lineTo(cx + 8, 45); ctx.stroke();
+  }
+  if (type === 'manager' && dir !== 'up') {
+    ctx.fillStyle = '#F5F5F5';
+    ctx.fillRect(cx - 3, 30, 6, 6);
+    ctx.fillStyle = '#E83B3B';
+    ctx.fillRect(cx - 1.5, 31, 3, 11); // tie
+  }
   // arms
   ctx.strokeStyle = skin;
   ctx.lineWidth = 4;
@@ -110,6 +125,13 @@ function drawChar(ctx, type, variant, dir, frame) {
     } else if (type === 'lost') {
       ctx.fillStyle = '#9BD1FF'; ctx.fillRect(px - 4, 38, 8, 6);
       ctx.strokeStyle = '#3F6FA8'; ctx.lineWidth = 0.8; ctx.strokeRect(px - 4, 38, 8, 6);
+    } else if (type === 'hero') {
+      // megaphone
+      ctx.fillStyle = '#FF9F1C';
+      ctx.beginPath(); ctx.moveTo(px - 3, 38); ctx.lineTo(px + 7, 33); ctx.lineTo(px + 7, 45); ctx.lineTo(px - 3, 41); ctx.closePath(); ctx.fill();
+    } else if (type === 'manager') {
+      ctx.fillStyle = '#C8A26B'; ctx.fillRect(px - 4, 36, 8, 10);
+      ctx.fillStyle = '#F5F5F5'; ctx.fillRect(px - 3, 38, 6, 7);
     } else if (type === 'volunteer') {
       ctx.strokeStyle = '#ddd'; ctx.lineWidth = 1.2;
       ctx.beginPath(); ctx.moveTo(px, 44); ctx.lineTo(px, 26); ctx.stroke();
@@ -209,7 +231,7 @@ function canvasTex(scene, key, w, h, draw) {
 }
 
 export function generateTextures(scene) {
-  for (const type of CHAR_TYPES) {
+  for (const type of [...CHAR_TYPES, ...SPECIAL_TYPES]) {
     for (let v = 0; v < VARIANTS; v++) {
       for (const dir of DIRS) {
         for (let f = 0; f < 3; f++) {

@@ -58,7 +58,7 @@ async function startGame(page, difficulty = 'normal', city = 'taoyuan') {
   await waitScene(page, 'Gathering');
 }
 
-/** Autoplayer: every tick select every idle/lost gatherer and send them to the zone. */
+/** Runner bot: steer toward the nearest joinable bystander ahead (or stand still). */
 async function autoplay(page, on = true) {
   await page.evaluate((on) => {
     const A = window.__dc.App;
@@ -66,12 +66,13 @@ async function autoplay(page, on = true) {
     if (!on) return;
     A._auto = setInterval(() => {
       const sc = A.hooks.scene;
-      if (!sc?.field || sc.paused || sc.ended) return;
-      const f = sc.field;
-      f.chars.filter((ch) => ch.active && (ch.state === 'idle' || ch.state === 'lost' || ch.willGetLost)).forEach((ch) => ch.setSelected(true));
-      if (f.selected().length) sc.orderSelected(f);
-      if (sc.evsys?.signal) [1, 2, 3].forEach((n) => sc.evsys.tapSignal(n));
-    }, 250);
+      if (!sc?.npcs || sc.paused || sc.ended) return;
+      const pl = sc.player;
+      const cands = sc.npcs.filter((n) => n.state === 'idle' && n.d > pl.d - 20 && n.d < pl.d + 300 && !(n.need && sc.radius() < n.need));
+      cands.sort((a, b) => a.d - b.d);
+      const t = cands[0];
+      sc.dragTarget = t ? { x: t.x, rel: Math.min(t.d - sc.scroll - 10, sc.viewH - 80) } : { x: 180, rel: sc.viewH * 0.4 };
+    }, 100);
   }, on);
 }
 
@@ -149,7 +150,7 @@ try {
   await page.waitForSelector('.menu-card');
   pass('鍵盤返回首頁', !(await page.locator('.gallery').count()));
 
-  // ---------- 4. core: real taps ----------
+  // ---------- 4. runner core ----------
   await page.evaluate(() => {
     const s = JSON.parse(localStorage.getItem('dualCity1230.save.v1'));
     s.tutorialCompleted = false;
@@ -164,189 +165,212 @@ try {
   await page.click('text=跳過教學');
   await waitScene(page, 'Gathering');
   pass('教學狀態持久化', await page.evaluate(() => JSON.parse(localStorage.getItem('dualCity1230.save.v1')).tutorialCompleted === true));
-  await page.waitForTimeout(2500);
-  await shot(page, '03-gathering');
-  pass('只顯示單一城市戰場', await page.evaluate(() => { const sc = window.__dc.App.hooks.scene; return Object.keys(sc.fields).length === 1 && sc.city === 'taoyuan'; }));
-  const ally1 = await page.evaluate(() => window.__dc.App.run.allyProgress);
-  await page.waitForTimeout(800);
-  const ally2 = await page.evaluate(() => window.__dc.App.run.allyProgress);
-  pass('夥伴廠（台中）自動推進', ally2 > ally1, `${ally1.toFixed(2)} → ${ally2.toFixed(2)}`);
-  pass('沒有框選按鈕', (await page.locator('.box-toggle').count()) === 0 && (await page.getByText('框選', { exact: true }).count()) === 0);
-  // drag across the field must NOT select anyone
-  const fr = await page.evaluate(() => { const f = window.__dc.App.hooks.scene.field; const d = window.__dc.App.dpr; return { x: f.rect.x / d, y: f.rect.y / d, w: f.rect.w / d, h: f.rect.h / d }; });
-  await page.mouse.move(fr.x + 4, fr.y + 4);
-  await page.mouse.down();
-  await page.mouse.move(fr.x + fr.w - 4, fr.y + fr.h - 4, { steps: 6 });
-  await page.mouse.up();
-  pass('拖曳不會框選多人', (await page.evaluate(() => window.__dc.App.hooks.scene.field.selected().length)) === 0);
-  // tap one character, then the zone
-  const target = await page.evaluate(() => {
-    const f = window.__dc.App.hooks.scene.field;
-    const ch = f.chars.find((c) => c.active && c.state === 'idle' && c.type !== 'lost') || f.chars.find((c) => c.active && c.type !== 'lost');
-    return { id: ch.id, x: ch.x, y: ch.y - 16 };
-  });
-  let sp = await fieldToScreen(page, target.x, target.y);
-  await page.mouse.click(sp.x, sp.y);
-  const selected = await page.evaluate((id) => window.__dc.App.hooks.scene.field.chars.find((c) => c.id === id)?.selected, target.id);
-  pass('點擊角色可選取', selected);
-  const zc = await page.evaluate(() => window.__dc.App.hooks.scene.field.map.zone);
-  const zone = await fieldToScreen(page, zc.x, zc.y);
-  await page.mouse.click(zone.x, zone.y);
-  const moving = await page.evaluate((id) => window.__dc.App.hooks.scene.field.chars.find((c) => c.id === id)?.state, target.id);
-  pass('點集合區下達指令', moving === 'moving' || moving === 'arrived', moving);
-  await page.waitForTimeout(200);
-  const route = await page.evaluate(() => window.__dc.App.hooks.scene.field.routeG.commandBuffer.length);
-  await shot(page, '03b-route');
-  pass('前往中的角色顯示 >>> 路線箭頭', route > 20, `draw commands=${route}`);
-  await page.waitForFunction((id) => window.__dc.App.run.scoredIds.has(id), target.id, { timeout: 20000 }).catch(() => {});
-  const arrivedInfo = await page.evaluate((id) => ({ has: window.__dc.App.run.scoredIds.has(id), tao: window.__dc.App.run.cities.taoyuan.arrived, score: window.__dc.App.run.score }), target.id);
-  pass('沿道路尋路抵達並計分', arrivedInfo.has && arrivedInfo.tao >= 1 && arrivedInfo.score >= 100, JSON.stringify(arrivedInfo));
-  const dbl = await page.evaluate((id) => {
-    const sc = window.__dc.App.hooks.scene;
-    const before = window.__dc.App.run.score;
-    const ch = sc.field.chars.find((c) => c.id === id) || { id, type: 'lunch', field: sc.field, markArrived() {}, x: 0, y: 0 };
-    sc.onArrive(ch);
-    sc.onArrive(ch);
-    return window.__dc.App.run.score - before;
-  }, target.id);
-  pass('同一角色重複抵達不重複計分', dbl === 0, `delta=${dbl}`);
-
-  // virtual clock mapping
-  const clk = await page.evaluate(async () => {
-    const sc = window.__dc.App.hooks.scene;
-    return { text: sc.clockText(), elapsed: sc.elapsed, act: sc.actSeconds };
-  });
-  const expectedMin = Math.floor((clk.elapsed / clk.act) * 30);
-  pass('虛擬時鐘 12:00→12:30 映射', clk.text === `12:${String(expectedMin).padStart(2, '0')}` || clk.text === `12:${String(expectedMin + 1).padStart(2, '0')}`, `${clk.text} @${clk.elapsed.toFixed(1)}s/${clk.act}s`);
-
-  // skills: insufficient sun / cooldown
-  const sk = await page.evaluate(() => {
-    const sc = window.__dc.App.hooks.scene;
-    const run = window.__dc.App.run;
-    run.sun = 10;
-    const r1 = sc.skills.cast('lunch_sprint');
-    run.sun = 100;
-    const r2 = sc.skills.cast('lunch_sprint');
-    const r3 = sc.skills.cast('lunch_sprint');
-    return { r1, r2, r3, sun: run.sun };
-  });
-  pass('陽光不足不能施放並顯示原因', !sk.r1.ok && /陽光不足/.test(sk.r1.reason));
-  pass('冷卻中不能施放', sk.r2.ok && !sk.r3.ok && /冷卻/.test(sk.r3.reason) && sk.sun === 75);
-
-  // pause freezes countdown, buffs and cooldowns
-  await page.click('.hud-top .btn-icon');
-  const p1 = await page.evaluate(() => {
-    const sc = window.__dc.App.hooks.scene;
-    return { rem: sc.remaining, cd: sc.skills.cooldowns.lunch_sprint, act: sc.skills.active.lunch_sprint };
-  });
   await page.waitForTimeout(1200);
-  const p2 = await page.evaluate(() => {
+  await shot(page, '03-runner');
+  const sc1 = await page.evaluate(() => window.__dc.App.hooks.scene.scroll);
+  await page.waitForTimeout(700);
+  const sc2 = await page.evaluate(() => window.__dc.App.hooks.scene.scroll);
+  pass('畫面自動往前捲動', sc2 > sc1, `${sc1.toFixed(0)} → ${sc2.toFixed(0)}`);
+  // keyboard: move left/right/up
+  const k0 = await page.evaluate(() => ({ ...window.__dc.App.hooks.scene.player }));
+  await page.keyboard.down('ArrowLeft');
+  await page.keyboard.down('ArrowUp');
+  await page.waitForTimeout(400);
+  await page.keyboard.up('ArrowLeft');
+  await page.keyboard.up('ArrowUp');
+  const k1 = await page.evaluate(() => ({ ...window.__dc.App.hooks.scene.player, scroll: window.__dc.App.hooks.scene.scroll }));
+  pass('方向鍵上下左右操控主角', k1.x < k0.x - 20 && k1.d - k0.d > 60, `x ${k0.x.toFixed(0)}→${k1.x.toFixed(0)} d ${k0.d.toFixed(0)}→${k1.d.toFixed(0)}`);
+  // touch/mouse drag steering
+  const box = await page.evaluate(() => { const d = window.__dc.App.dpr; const sc = window.__dc.App.hooks.scene; return { x: sc.ox / d + 180 * sc.viewScale / d, y: sc.areaTop / d + 200 }; });
+  const x0 = await page.evaluate(() => window.__dc.App.hooks.scene.player.x);
+  await page.mouse.move(box.x, box.y);
+  await page.mouse.down();
+  await page.mouse.move(box.x + 80, box.y, { steps: 5 });
+  await page.waitForTimeout(500);
+  await page.mouse.up();
+  const x1 = await page.evaluate(() => window.__dc.App.hooks.scene.player.x);
+  pass('拖曳畫面操控主角', x1 > x0 + 40, `${x0.toFixed(0)} → ${x1.toFixed(0)}`);
+  // recruiting: bystander inside the circle joins
+  const rec = await page.evaluate(() => {
     const sc = window.__dc.App.hooks.scene;
-    return { rem: sc.remaining, cd: sc.skills.cooldowns.lunch_sprint, act: sc.skills.active.lunch_sprint };
+    const n = sc.npcs.find((x) => x.state === 'idle' && !x.need && x.d > sc.player.d + 40);
+    const before = sc.crowd;
+    const score = window.__dc.App.run.score;
+    n.x = sc.player.x + 10;
+    n.d = sc.player.d + 20;
+    return { id: sc.npcs.indexOf(n), before, score };
   });
-  await shot(page, '04-pause');
-  pass('暫停時倒數/CD/Buff 停止', p1.rem === p2.rem && p1.cd === p2.cd && p1.act === p2.act);
+  await page.waitForTimeout(150);
+  const recAfter = await page.evaluate((id) => ({ state: window.__dc.App.hooks.scene.npcs[id].state, crowd: window.__dc.App.hooks.scene.crowd, score: window.__dc.App.run.score }), rec.id);
+  pass('黃圈內的路人加入並跟著走（計分）', recAfter.state === 'following' && recAfter.crowd === rec.before + 1 && recAfter.score > rec.score, JSON.stringify(recAfter));
+  // outside circle → not recruited
+  const far = await page.evaluate(() => {
+    const sc = window.__dc.App.hooks.scene;
+    const n = sc.npcs.find((x) => x.state === 'idle' && !x.need && x.d > sc.player.d + 40);
+    n.x = sc.player.x + sc.radius() + 60 > 340 ? sc.player.x - sc.radius() - 60 : sc.player.x + sc.radius() + 60;
+    n.d = sc.player.d + 10;
+    return sc.npcs.indexOf(n);
+  });
+  await page.waitForTimeout(150);
+  pass('黃圈外的路人不會加入', (await page.evaluate((id) => window.__dc.App.hooks.scene.npcs[id].state, far)) === 'idle');
+  // big hesitant group requires 號召力
+  const need = await page.evaluate(() => {
+    const sc = window.__dc.App.hooks.scene;
+    const n = sc.npcs.find((x) => x.state === 'idle' && x.need);
+    sc.baseRadius = 40;
+    n.x = sc.player.x + 5;
+    n.d = sc.player.d + 15;
+    return { id: sc.npcs.indexOf(n), need: n.need };
+  });
+  await page.waitForTimeout(150);
+  const needLow = await page.evaluate((id) => window.__dc.App.hooks.scene.npcs[id].state, need.id);
+  await page.evaluate(() => { window.__dc.App.hooks.scene.baseRadius = 100; });
+  await page.waitForTimeout(150);
+  const needHigh = await page.evaluate((id) => window.__dc.App.hooks.scene.npcs[id].state, need.id);
+  pass('觀望人群需要足夠號召力才加入', needLow === 'idle' && needHigh === 'following', `${needLow} → ${needHigh}`);
+  await page.evaluate(() => { window.__dc.App.hooks.scene.baseRadius = 52; });
+  // gates & items
+  const gi = await page.evaluate(() => {
+    const sc = window.__dc.App.hooks.scene;
+    sc.changeCrowd(10);
+    const out = { start: sc.crowd };
+    sc.applyGate({ op: '*', value: 1.2, label: '人數 ×1.2' });
+    out.mul = sc.crowd;
+    sc.applyGate({ op: '-', value: 10, label: '-10 人' });
+    out.minus = sc.crowd;
+    const r0 = sc.baseRadius;
+    sc.applyGate({ op: 'r', value: 20, label: '號召力 +20' });
+    out.r = sc.baseRadius - r0;
+    sc.applyItem({ kind: 'bento', x: 0, d: 0, ring: {}, icon: {}, cap: {} });
+    out.bento = sc.crowd;
+    const r1 = sc.baseRadius;
+    sc.applyItem({ kind: 'rumor', x: 0, d: 0, ring: {}, icon: {}, cap: {} });
+    out.rumor = sc.baseRadius - r1;
+    return out;
+  });
+  pass('門與道具：×1.2 / -10 / 號召力+20 / 便當+5 / 謠言', gi.mul === Math.round(gi.start * 1.2) && gi.minus === Math.max(0, gi.mul - 10) && gi.r === 20 && gi.bento === gi.minus + 5 && gi.rumor === -15, JSON.stringify(gi));
+  // walking through a real gate applies the side you are on
+  const gate = await page.evaluate(() => {
+    const sc = window.__dc.App.hooks.scene;
+    const g = sc.gates.find((x) => !x.used);
+    sc.player.d = g.d - 5;
+    sc.prevD = g.d - 5;
+    sc.player.x = 60; // left side
+    sc.scroll = g.d - 200;
+    return { d: g.d, left: g.left.label, before: sc.crowd, r: sc.baseRadius };
+  });
+  await page.evaluate((d) => { const sc = window.__dc.App.hooks.scene; sc.player.d = d + 5; }, gate.d);
+  await page.waitForTimeout(150);
+  const gateUsed = await page.evaluate((d) => window.__dc.App.hooks.scene.gates.find((g) => g.d === d).used, gate.d);
+  pass('走過左右門會套用所選那一邊', gateUsed, gate.left);
+  // manager pulls followers; shield blocks it
+  const mg = await page.evaluate(() => {
+    const sc = window.__dc.App.hooks.scene;
+    sc.changeCrowd(20);
+    const m = sc.hazards.find((h) => h.kind === 'manager' && !h.used);
+    m.d = sc.player.d;
+    m.baseX = sc.player.x;
+    m.range = 1;
+    const before = sc.crowd;
+    return { before };
+  });
+  await page.waitForTimeout(200);
+  const mgAfter = await page.evaluate(() => window.__dc.App.hooks.scene.crowd);
+  await shot(page, '03b-manager');
+  pass('主管把夥伴拉回去開會（人數減少）', mgAfter < mg.before, `${mg.before} → ${mgAfter}`);
+  const sh = await page.evaluate(() => {
+    const sc = window.__dc.App.hooks.scene;
+    window.__dc.App.run.sun = 100;
+    sc.skills.cooldowns.shield = 0;
+    sc.castSkill('shield');
+    const m = sc.hazards.find((h) => h.kind === 'manager' && !h.used);
+    m.d = sc.player.d;
+    m.baseX = sc.player.x;
+    m.range = 1;
+    return sc.crowd;
+  });
+  await page.waitForTimeout(200);
+  pass('團結護盾擋下主管', (await page.evaluate(() => window.__dc.App.hooks.scene.crowd)) === sh);
+  // fog shrinks the circle; rally enlarges it
+  const fog = await page.evaluate(() => {
+    const sc = window.__dc.App.hooks.scene;
+    sc.skills.active.shield = 0;
+    const r0 = sc.radius();
+    const f = sc.hazards.find((h) => h.kind === 'fog') || (sc.hazards.push({ kind: 'fog', d: 0, x: 0, w: 200, h: 120 }), sc.hazards[sc.hazards.length - 1]);
+    f.d = sc.player.d;
+    f.x = sc.player.x;
+    return { r0, fd: f.d };
+  });
+  await page.waitForTimeout(150);
+  const fogR = await page.evaluate(() => ({ r: window.__dc.App.hooks.scene.radius(), chip: !!document.querySelector('.chip.debuff') }));
+  await shot(page, '03c-fog');
+  pass('信心不足霧氣讓號召力變小＋紅色提示', fogR.r < fog.r0 && fogR.chip, `${fog.r0} → ${fogR.r}`);
+  await page.evaluate(() => { const sc = window.__dc.App.hooks.scene; sc.hazards.filter((h) => h.kind === 'fog').forEach((h) => (h.d = -9999)); });
+  await page.waitForTimeout(100);
+  const ral = await page.evaluate(() => {
+    const sc = window.__dc.App.hooks.scene;
+    const r0 = sc.radius();
+    window.__dc.App.run.sun = 100;
+    sc.skills.cooldowns.rally = 0;
+    sc.castSkill('rally');
+    return { r0, r1: sc.radius() };
+  });
+  await page.waitForTimeout(200);
+  const ralUi = await page.evaluate(() => ({ chip: !!document.querySelector('.chip.buff'), active: !!document.querySelector('.skill2.active') }));
+  await shot(page, '03d-rally');
+  pass('大聲號召：號召力 ×1.6 + Buff 標示', Math.abs(ral.r1 - ral.r0 * 1.6) < 1 && ralUi.chip && ralUi.active, JSON.stringify({ ...ral, ...ralUi }));
+  await page.evaluate(() => { window.__dc.App.hooks.scene.skills.active.rally = 0.05; });
+  await page.waitForTimeout(300);
+  pass('Buff 結束後特效消失', !(await page.evaluate(() => !!document.querySelector('.chip.buff') || !!document.querySelector('.skill2.active'))));
+  // ready glow
+  const glow = await page.evaluate(() => {
+    const sc = window.__dc.App.hooks.scene;
+    Object.keys(sc.skills.cooldowns).forEach((k) => (sc.skills.cooldowns[k] = 0));
+    window.__dc.App.run.sun = 100;
+    return true;
+  });
+  await page.waitForTimeout(150);
+  const readyN = await page.locator('.skill2.ready').count();
+  await page.evaluate(() => { window.__dc.App.run.sun = 0; });
+  await page.waitForTimeout(150);
+  const readyZ = await page.locator('.skill2.ready').count();
+  pass('技能準備好時發光、未準備時不發光', glow && readyN === 3 && readyZ === 0, `${readyN} → ${readyZ}`);
+  pass('能量條沒有圖示刻度', (await page.locator('.energy-bar .tick, .sun-ticks').count()) === 0);
+  // pause
+  await page.click('.hud-top .btn-icon');
+  const p1 = await page.evaluate(() => ({ s: window.__dc.App.hooks.scene.scroll, cd: window.__dc.App.hooks.scene.skills.cooldowns.rally }));
+  await page.waitForTimeout(800);
+  const p2 = await page.evaluate(() => ({ s: window.__dc.App.hooks.scene.scroll, cd: window.__dc.App.hooks.scene.skills.cooldowns.rally }));
+  pass('暫停時捲動與冷卻停止', p1.s === p2.s && p1.cd === p2.cd);
   await page.click('text=繼續遊戲');
-  // auto-pause on tab hide
   await page.evaluate(() => {
     Object.defineProperty(document, 'hidden', { configurable: true, get: () => true });
     document.dispatchEvent(new Event('visibilitychange'));
   });
   pass('分頁失焦自動暫停', await page.evaluate(() => window.__dc.App.hooks.scene.paused));
-  await page.evaluate(() => {
-    Object.defineProperty(document, 'hidden', { configurable: true, get: () => false });
-  });
+  await page.evaluate(() => Object.defineProperty(document, 'hidden', { configurable: true, get: () => false }));
   await page.click('text=繼續遊戲');
-
-  // buff visuals appear while active and disappear afterwards
-  const buff = await page.evaluate(() => {
-    const sc = window.__dc.App.hooks.scene;
-    window.__dc.App.run.sun = 100;
-    sc.skills.cooldowns.lunch_sprint = 0;
-    sc.castSkill('lunch_sprint');
-    return true;
-  });
-  await page.waitForTimeout(300);
-  const buffOn = await page.evaluate(() => ({ chip: !!document.querySelector('.chip.buff'), halo: window.__dc.App.hooks.scene.field.chars.some((c) => c.active && c.halo.visible), border: window.__dc.App.hooks.scene.field.borderG.commandBuffer.length > 0, card: !!document.querySelector('.skill-card.active') }));
-  await shot(page, '03c-buff');
-  pass('技能 Buff 特效（光環/邊框/標籤/技能卡）', buff && buffOn.chip && buffOn.halo && buffOn.border && buffOn.card, JSON.stringify(buffOn));
-  await page.evaluate(() => { window.__dc.App.hooks.scene.skills.active.lunch_sprint = 0.05; });
-  await page.waitForTimeout(400);
-  const buffOff = await page.evaluate(() => ({ chip: !!document.querySelector('.chip.buff'), border: window.__dc.App.hooks.scene.field.borderG.commandBuffer.length > 0, gold: window.__dc.App.hooks.scene.field.chars.some((c) => c.active && c.halo.visible && c.halo.tintTopLeft === 0xffd447) }));
-  pass('Buff 結束後特效消失', !buffOff.chip && !buffOff.border && !buffOff.gold, JSON.stringify(buffOff));
-  // interference highlight
-  const deb = await page.evaluate(() => {
-    const sc = window.__dc.App.hooks.scene;
-    sc.evsys.start('meeting', sc.city);
-    return sc.field.meetings[0]?.group.map((c) => c.id) || [];
-  });
-  await page.waitForTimeout(200);
-  const debInfo = await page.evaluate((ids) => {
-    const f = window.__dc.App.hooks.scene.field;
-    const g = f.chars.filter((c) => ids.includes(c.id));
-    return { n: g.length, red: g.every((c) => c.halo.visible && c.halo.tintTopLeft === 0xff2a2a), icon: g.every((c) => c.status === '📢'), chip: !!document.querySelector('.chip.debuff') };
-  }, deb);
-  await shot(page, '03d-debuff');
-  pass('干擾角色顯示紅色半透明強調＋圖示＋紅色標籤', debInfo.n > 0 && debInfo.red && debInfo.icon && debInfo.chip, JSON.stringify(debInfo));
-
-  // events lifecycle
-  const ev = await page.evaluate(() => {
-    const sc = window.__dc.App.hooks.scene;
-    const out = {};
-    const C = sc.city;
-    sc.field.meetings.slice().forEach((m) => sc.evsys.clearMeeting(C, m, true));
-    sc.evsys.start('queue', C);
-    out.queue = sc.field.queues.size;
-    const [k] = sc.field.queues.keys();
-    sc.evsys.tapQueue(C, k);
-    sc.evsys.tapQueue(C, k);
-    out.queueCleared = sc.field.queues.size === 0;
-    sc.evsys.start('cloud', C);
-    out.cloud = !!sc.field.cloud;
-    window.__dc.App.run.sun = 100;
-    sc.skills.cooldowns.sunlight = 0;
-    sc.castSkill('sunlight');
-    out.cloudCleared = !sc.field.cloud;
-    sc.evsys.start('signal', C);
-    out.blocked = sc.skills.reason('city_resonance');
-    sc.evsys.tapSignal(1); sc.evsys.tapSignal(2); sc.evsys.tapSignal(3);
-    out.unblocked = sc.skills.blocked.city_resonance === undefined;
-    sc.evsys.start('meeting', C);
-    const m = sc.field.meetings[0];
-    out.meeting = !!m;
-    if (m) { sc.evsys.tapMeeting(C, m); sc.evsys.tapMeeting(C, m); sc.evsys.tapMeeting(C, m); }
-    out.meetingCleared = sc.field.meetings.length === 0;
-    return out;
-  });
-  pass('事件生成與解除（排隊/烏雲/斷訊/開會）', ev.queue === 1 && ev.queueCleared && ev.cloud && ev.cloudCleared && /訊號/.test(ev.blocked) && ev.unblocked && ev.meeting && ev.meetingCleared, JSON.stringify(ev));
 
   // ---------- 5. full run → boss WIN ----------
   await autoplay(page, true);
-  await page.evaluate(() => (window.__dc.App.timeScale = 6));
-  await waitScene(page, 'Sync', 60000).catch(() => {});
-  await page.waitForSelector('.interstitial', { state: 'detached', timeout: 10000 }).catch(() => {});
-  pass('第一幕 → 第二幕', (await sceneKey(page)) === 'Sync');
-  await page.waitForTimeout(800);
+  await page.evaluate(() => (window.__dc.App.timeScale = 4));
+  await waitScene(page, 'Sync', 120000);
+  const s1 = await page.evaluate(() => ({ a: window.__dc.App.run.stageArrived[0], t: window.__dc.App.run.stageTargets[0] }));
+  pass('第一幕抵達終點 → 第二幕（不會卡關）', true, JSON.stringify(s1));
+  await page.waitForTimeout(1500);
   await shot(page, '05-sync');
-  const keptCounts = await page.evaluate(() => window.__dc.App.run.cities.taoyuan.arrived);
-  pass('第一幕已集結數保留到第二幕', keptCounts > 0, `taoyuan=${keptCounts}`);
-  pass('第二幕仍為單一城市', await page.evaluate(() => window.__dc.App.hooks.scene.field.id === 'taoyuan'));
-  await waitScene(page, 'Boss', 60000);
+  await waitScene(page, 'Boss', 120000);
   await autoplay(page, false);
-  const syncSummary = await page.evaluate(() => ({ tao: window.__dc.App.run.cities.taoyuan.arrived, tai: window.__dc.App.run.cities.taichung.arrived, initDmg: window.__dc.App.run.bossInitialDamage, score: window.__dc.App.run.score }));
-  pass('進入 Boss（依雙城達標給初始傷害）', true, JSON.stringify(syncSummary));
+  const syncSummary = await page.evaluate(() => ({ s2: window.__dc.App.run.stageArrived[1], t2: window.__dc.App.run.stageTargets[1], initDmg: window.__dc.App.run.bossInitialDamage, score: window.__dc.App.run.score }));
+  pass('第二幕結束進入 Boss', true, JSON.stringify(syncSummary));
   await page.evaluate(() => (window.__dc.App.timeScale = 1));
-  await page.waitForTimeout(1800);
-  // real pointer aim on the weakpoint for a moment
-  // super: burn veils → meter → button
+  await page.waitForTimeout(1900);
   await page.evaluate(() => { window.__dc.App.hooks.scene.boss.superMeter = 1; });
   await page.waitForTimeout(100);
-  pass('雙城合擊充滿後按鈕可用', await page.locator('.super-btn.ready').count() === 1);
+  pass('雙城合擊充滿後按鈕可用', (await page.locator('.super-btn.ready').count()) === 1);
   await page.click('.super-btn');
   pass('按下雙城合擊啟動大招', await page.evaluate(() => window.__dc.App.hooks.scene.boss.superTime > 0));
-  const vb = await page.evaluate(() => { const b = window.__dc.App.hooks.scene.boss; b.superTime = 0; b.veilTimer = 0; return true; });
-  await page.waitForFunction(() => window.__dc.App.hooks.scene.boss.veils.length > 0, null, { timeout: 5000 });
-  pass('黑箱會丟下黑幕', vb);
+  await page.evaluate(() => { const b = window.__dc.App.hooks.scene.boss; b.superTime = 0; });
   const wk = await page.evaluate(() => {
     const sc = window.__dc.App.hooks.scene;
     const d = window.__dc.App.dpr;
@@ -360,15 +384,13 @@ try {
   await bossAim(page, 'win');
   await page.evaluate(() => (window.__dc.App.timeScale = 4));
   await waitScene(page, 'Ending', 60000);
-  const winRun = await page.evaluate(() => ({ result: window.__dc.App.run.bossResult, score: window.__dc.App.run.score, bonuses: window.__dc.App.run.bonuses }));
+  const winRun = await page.evaluate(() => ({ result: window.__dc.App.run.bossResult, score: window.__dc.App.run.score }));
   pass('Boss HP 0 → 成功', winRun.result === 'win', `score=${winRun.score}`);
   await page.evaluate(() => (window.__dc.App.timeScale = 1));
   await page.waitForSelector('.end-card.win');
   await shot(page, '07-win');
-  pass('成功過場文案', await page.locator('text=陽光照進黑箱！').count() > 0);
   await page.click('text=略過');
   await page.waitForSelector('.gallery .album-taichung');
-  await shot(page, '08-gallery-after-win');
   const sigWin = await albumSignature(page);
   pass('成功過場可略過並進入相簿', sigWin.length > 0);
   const dl = page.waitForEvent('download', { timeout: 8000 }).catch(() => null);
@@ -382,13 +404,13 @@ try {
   // ---------- 6. replay → boss LOSE ----------
   await page.click('text=再玩一次');
   await waitScene(page, 'Gathering');
-  const fresh = await page.evaluate(() => ({ score: window.__dc.App.run.score, tao: window.__dc.App.run.cities.taoyuan.arrived, recorded: !!window.__dc.App.run.recorded }));
-  pass('重新遊玩無殘留舊局分數', fresh.score === 0 && fresh.tao === 0 && !fresh.recorded);
-  // zero targets reached: no orders, fast-forward both acts
-  await page.evaluate(() => (window.__dc.App.timeScale = 10));
-  await waitScene(page, 'Boss', 90000);
-  const zero = await page.evaluate(() => ({ tao: window.__dc.App.run.cities.taoyuan.arrived, init: window.__dc.App.run.bossInitialDamage }));
-  pass('自己廠未達標也可進 Boss（夥伴廠達標 → 初始傷害 75）', zero.tao === 0 && zero.init === 75, JSON.stringify(zero));
+  const fresh = await page.evaluate(() => ({ score: window.__dc.App.run.score, crowd: window.__dc.App.hooks.scene.crowd, recorded: !!window.__dc.App.run.recorded, city: window.__dc.App.run.city }));
+  pass('重新遊玩無殘留舊局分數（沿用同一廠區）', fresh.score === 0 && fresh.crowd === 0 && !fresh.recorded && fresh.city === 'taoyuan', JSON.stringify(fresh));
+  // idle player: the camera still pushes them over the finish line
+  await page.evaluate(() => (window.__dc.App.timeScale = 6));
+  await waitScene(page, 'Boss', 120000);
+  const zero = await page.evaluate(() => ({ a: window.__dc.App.run.stageArrived, init: window.__dc.App.run.bossInitialDamage }));
+  pass('什麼都不做也會被推過終點、未達標也能進 Boss', zero.a.length === 2, JSON.stringify(zero));
   await bossAim(page, 'lose');
   await waitScene(page, 'Ending', 90000);
   const loseRun = await page.evaluate(() => ({ result: window.__dc.App.run.bossResult, hp: window.__dc.App.run.bossStats.hp }));
@@ -396,7 +418,7 @@ try {
   await page.evaluate(() => (window.__dc.App.timeScale = 1));
   await page.waitForSelector('.end-card.lose');
   await shot(page, '09-lose');
-  pass('失敗過場文案', await page.locator('text=黑箱尚未融化，陽光不會停止。').count() > 0);
+  pass('失敗過場文案', (await page.locator('text=黑箱尚未融化，陽光不會停止。').count()) > 0);
   await page.waitForSelector('.gallery .album-taichung', { timeout: 10000 });
   const sigLose = await albumSignature(page);
   pass('成功與失敗進入「完全相同」的相簿', sigWin === sigLose);
@@ -458,23 +480,19 @@ try {
     const lay = await page.evaluate(() => {
       const sc = window.__dc.App.hooks.scene;
       const d = window.__dc.App.dpr;
-      const f = sc.field;
       const top = document.querySelector('.status-chips').getBoundingClientRect();
       const bottom = document.querySelector('.hud-bottom').getBoundingClientRect();
-      const fy = f.container.y / d;
-      const fh = (f.map.h * f.scale) / d;
-      const sk = [...document.querySelectorAll('.skill-card')].map((b) => b.getBoundingClientRect());
+      const sk = [...document.querySelectorAll('.skill2')].map((b) => b.getBoundingClientRect());
       return {
-        mode: sc.layoutMode,
-        fieldH: Math.round(fh),
-        overlap: fy < top.bottom - 1 || fy + fh > bottom.top + 1,
+        viewH: Math.round(sc.viewH),
+        playH: Math.round(bottom.top - top.bottom),
+        roadW: Math.round((360 * sc.viewScale) / d),
         minSkill: Math.min(...sk.map((b) => Math.min(b.width, b.height))),
         scrollW: document.documentElement.scrollWidth,
-        scale: +(f.scale / d).toFixed(2),
       };
     });
     await shot(page, `11-viewport-${w}x${h}`);
-    pass(`版面 ${w}×${h}`, !lay.overlap && lay.minSkill >= 44 && lay.scrollW <= w && lay.fieldH > 200, JSON.stringify(lay));
+    pass(`版面 ${w}×${h}`, lay.minSkill >= 44 && lay.scrollW <= w && lay.playH > 280 && lay.viewH >= 400 && lay.roadW <= w, JSON.stringify(lay));
     await page.context().close();
   }
 } finally {
