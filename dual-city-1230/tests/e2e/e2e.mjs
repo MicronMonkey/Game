@@ -42,18 +42,18 @@ async function waitScene(page, key, timeout = 30000) {
 }
 
 /** Screen (CSS px) position of a field point. */
-async function fieldToScreen(page, city, x, y) {
-  return page.evaluate(({ city, x, y }) => {
-    const sc = window.__dc.App.hooks.scene;
-    const f = sc.fields[city];
+async function fieldToScreen(page, x, y) {
+  return page.evaluate(({ x, y }) => {
+    const f = window.__dc.App.hooks.scene.field;
     const dpr = window.__dc.App.dpr;
     return { x: (f.container.x + x * f.scale) / dpr, y: (f.container.y + y * f.scale) / dpr };
-  }, { city, x, y });
+  }, { x, y });
 }
 
-async function startGame(page, difficulty = 'normal') {
+async function startGame(page, difficulty = 'normal', city = 'taoyuan') {
   await page.click('text=開始遊戲');
   await page.click(`.diff-${difficulty}`);
+  await page.click(`.city-${city}`);
   if (await page.locator('.tutorial').count()) await page.click('text=跳過教學');
   await waitScene(page, 'Gathering');
 }
@@ -66,12 +66,10 @@ async function autoplay(page, on = true) {
     if (!on) return;
     A._auto = setInterval(() => {
       const sc = A.hooks.scene;
-      if (!sc?.fields || sc.paused || sc.ended) return;
-      for (const c of ['taoyuan', 'taichung']) {
-        const f = sc.fields[c];
-        f.chars.filter((ch) => ch.active && (ch.state === 'idle' || ch.state === 'lost')).forEach((ch) => ch.setSelected(true));
-        if (f.selected().length) sc.orderSelected(f);
-      }
+      if (!sc?.field || sc.paused || sc.ended) return;
+      const f = sc.field;
+      f.chars.filter((ch) => ch.active && (ch.state === 'idle' || ch.state === 'lost' || ch.willGetLost)).forEach((ch) => ch.setSelected(true));
+      if (f.selected().length) sc.orderSelected(f);
       if (sc.evsys?.signal) [1, 2, 3].forEach((n) => sc.evsys.tapSignal(n));
     }, 250);
   }, on);
@@ -85,10 +83,11 @@ async function bossAim(page, mode) {
     A._aim = setInterval(() => {
       const sc = A.hooks.scene;
       if (!sc?.boss) return;
-      if (sc.boss.frozen > 0) sc.thawTap();
       if (mode === 'win') {
-        sc.aim.x = sc.boss.weak.x;
-        sc.aim.y = sc.boss.weak.y;
+        const t = sc.boss.phase === 3 ? sc.boss.currentLock() : sc.boss.weak;
+        sc.aim.x = t.x;
+        sc.aim.y = t.y;
+        if (sc.boss.canSuper()) sc.trySuper();
       } else {
         sc.aim.x = 10;
         sc.aim.y = 360;
@@ -159,39 +158,53 @@ try {
   });
   await page.click('text=開始遊戲');
   await page.click('.diff-normal');
+  pass('選難度後可選擇桃園廠／台中廠', (await page.locator('.city-taoyuan').isVisible()) && (await page.locator('.city-taichung').isVisible()));
+  await page.click('.city-taoyuan');
   pass('首次開始顯示教學', await page.locator('.tut-card').isVisible());
   await page.click('text=跳過教學');
   await waitScene(page, 'Gathering');
   pass('教學狀態持久化', await page.evaluate(() => JSON.parse(localStorage.getItem('dualCity1230.save.v1')).tutorialCompleted === true));
   await page.waitForTimeout(2500);
   await shot(page, '03-gathering');
-  // both cities update simultaneously
-  const pos1 = await page.evaluate(() => ['taoyuan', 'taichung'].map((c) => window.__dc.App.hooks.scene.fields[c].chars.map((ch) => `${ch.x.toFixed(1)},${ch.y.toFixed(1)}`).join('|')));
-  await page.waitForTimeout(600);
-  const pos2 = await page.evaluate(() => ['taoyuan', 'taichung'].map((c) => window.__dc.App.hooks.scene.fields[c].chars.map((ch) => `${ch.x.toFixed(1)},${ch.y.toFixed(1)}`).join('|')));
-  pass('桃園與台中同時更新', pos1[0] !== pos2[0] && pos1[1] !== pos2[1]);
-  // tap a character, then the zone
+  pass('只顯示單一城市戰場', await page.evaluate(() => { const sc = window.__dc.App.hooks.scene; return Object.keys(sc.fields).length === 1 && sc.city === 'taoyuan'; }));
+  const ally1 = await page.evaluate(() => window.__dc.App.run.allyProgress);
+  await page.waitForTimeout(800);
+  const ally2 = await page.evaluate(() => window.__dc.App.run.allyProgress);
+  pass('夥伴廠（台中）自動推進', ally2 > ally1, `${ally1.toFixed(2)} → ${ally2.toFixed(2)}`);
+  pass('沒有框選按鈕', (await page.locator('.box-toggle').count()) === 0 && (await page.getByText('框選', { exact: true }).count()) === 0);
+  // drag across the field must NOT select anyone
+  const fr = await page.evaluate(() => { const f = window.__dc.App.hooks.scene.field; const d = window.__dc.App.dpr; return { x: f.rect.x / d, y: f.rect.y / d, w: f.rect.w / d, h: f.rect.h / d }; });
+  await page.mouse.move(fr.x + 4, fr.y + 4);
+  await page.mouse.down();
+  await page.mouse.move(fr.x + fr.w - 4, fr.y + fr.h - 4, { steps: 6 });
+  await page.mouse.up();
+  pass('拖曳不會框選多人', (await page.evaluate(() => window.__dc.App.hooks.scene.field.selected().length)) === 0);
+  // tap one character, then the zone
   const target = await page.evaluate(() => {
-    const f = window.__dc.App.hooks.scene.fields.taoyuan;
+    const f = window.__dc.App.hooks.scene.field;
     const ch = f.chars.find((c) => c.active && c.state === 'idle' && c.type !== 'lost') || f.chars.find((c) => c.active && c.type !== 'lost');
-    return { id: ch.id, x: ch.x, y: ch.y - 14 };
+    return { id: ch.id, x: ch.x, y: ch.y - 16 };
   });
-  let sp = await fieldToScreen(page, 'taoyuan', target.x, target.y);
+  let sp = await fieldToScreen(page, target.x, target.y);
   await page.mouse.click(sp.x, sp.y);
-  const selected = await page.evaluate((id) => window.__dc.App.hooks.scene.fields.taoyuan.chars.find((c) => c.id === id)?.selected, target.id);
+  const selected = await page.evaluate((id) => window.__dc.App.hooks.scene.field.chars.find((c) => c.id === id)?.selected, target.id);
   pass('點擊角色可選取', selected);
-  const zone = await fieldToScreen(page, 'taoyuan', 330, 158);
+  const zc = await page.evaluate(() => window.__dc.App.hooks.scene.field.map.zone);
+  const zone = await fieldToScreen(page, zc.x, zc.y);
   await page.mouse.click(zone.x, zone.y);
-  const moving = await page.evaluate((id) => window.__dc.App.hooks.scene.fields.taoyuan.chars.find((c) => c.id === id)?.state, target.id);
+  const moving = await page.evaluate((id) => window.__dc.App.hooks.scene.field.chars.find((c) => c.id === id)?.state, target.id);
   pass('點集合區下達指令', moving === 'moving' || moving === 'arrived', moving);
+  await page.waitForTimeout(200);
+  const route = await page.evaluate(() => window.__dc.App.hooks.scene.field.routeG.commandBuffer.length);
+  await shot(page, '03b-route');
+  pass('前往中的角色顯示 >>> 路線箭頭', route > 20, `draw commands=${route}`);
   await page.waitForFunction((id) => window.__dc.App.run.scoredIds.has(id), target.id, { timeout: 20000 }).catch(() => {});
   const arrivedInfo = await page.evaluate((id) => ({ has: window.__dc.App.run.scoredIds.has(id), tao: window.__dc.App.run.cities.taoyuan.arrived, score: window.__dc.App.run.score }), target.id);
   pass('沿道路尋路抵達並計分', arrivedInfo.has && arrivedInfo.tao >= 1 && arrivedInfo.score >= 100, JSON.stringify(arrivedInfo));
-  // double-scoring attempt
   const dbl = await page.evaluate((id) => {
     const sc = window.__dc.App.hooks.scene;
     const before = window.__dc.App.run.score;
-    const ch = sc.fields.taoyuan.chars.find((c) => c.id === id) || { id, type: 'lunch', field: sc.fields.taoyuan, markArrived() {}, x: 0, y: 0 };
+    const ch = sc.field.chars.find((c) => c.id === id) || { id, type: 'lunch', field: sc.field, markArrived() {}, x: 0, y: 0 };
     sc.onArrive(ch);
     sc.onArrive(ch);
     return window.__dc.App.run.score - before;
@@ -245,46 +258,64 @@ try {
   });
   await page.click('text=繼續遊戲');
 
-  // touch box-select mode
-  await page.click('.box-toggle');
-  const fieldRect = await page.evaluate(() => {
-    const f = window.__dc.App.hooks.scene.fields.taichung;
-    const d = window.__dc.App.dpr;
-    return { x: f.rect.x / d, y: f.rect.y / d, w: f.rect.w / d, h: f.rect.h / d };
+  // buff visuals appear while active and disappear afterwards
+  const buff = await page.evaluate(() => {
+    const sc = window.__dc.App.hooks.scene;
+    window.__dc.App.run.sun = 100;
+    sc.skills.cooldowns.lunch_sprint = 0;
+    sc.castSkill('lunch_sprint');
+    return true;
   });
-  await page.mouse.move(fieldRect.x + 4, fieldRect.y + 32);
-  await page.mouse.down();
-  await page.mouse.move(fieldRect.x + fieldRect.w - 4, fieldRect.y + fieldRect.h - 4, { steps: 6 });
-  await page.mouse.up();
-  const boxN = await page.evaluate(() => window.__dc.App.hooks.scene.fields.taichung.selected().length);
-  pass('框選模式可多選', boxN >= 2, `selected=${boxN}`);
-  await page.click('.box-toggle');
+  await page.waitForTimeout(300);
+  const buffOn = await page.evaluate(() => ({ chip: !!document.querySelector('.chip.buff'), halo: window.__dc.App.hooks.scene.field.chars.some((c) => c.active && c.halo.visible), border: window.__dc.App.hooks.scene.field.borderG.commandBuffer.length > 0, card: !!document.querySelector('.skill-card.active') }));
+  await shot(page, '03c-buff');
+  pass('技能 Buff 特效（光環/邊框/標籤/技能卡）', buff && buffOn.chip && buffOn.halo && buffOn.border && buffOn.card, JSON.stringify(buffOn));
+  await page.evaluate(() => { window.__dc.App.hooks.scene.skills.active.lunch_sprint = 0.05; });
+  await page.waitForTimeout(400);
+  const buffOff = await page.evaluate(() => ({ chip: !!document.querySelector('.chip.buff'), border: window.__dc.App.hooks.scene.field.borderG.commandBuffer.length > 0, gold: window.__dc.App.hooks.scene.field.chars.some((c) => c.active && c.halo.visible && c.halo.tintTopLeft === 0xffd447) }));
+  pass('Buff 結束後特效消失', !buffOff.chip && !buffOff.border && !buffOff.gold, JSON.stringify(buffOff));
+  // interference highlight
+  const deb = await page.evaluate(() => {
+    const sc = window.__dc.App.hooks.scene;
+    sc.evsys.start('meeting', sc.city);
+    return sc.field.meetings[0]?.group.map((c) => c.id) || [];
+  });
+  await page.waitForTimeout(200);
+  const debInfo = await page.evaluate((ids) => {
+    const f = window.__dc.App.hooks.scene.field;
+    const g = f.chars.filter((c) => ids.includes(c.id));
+    return { n: g.length, red: g.every((c) => c.halo.visible && c.halo.tintTopLeft === 0xff2a2a), icon: g.every((c) => c.status === '📢'), chip: !!document.querySelector('.chip.debuff') };
+  }, deb);
+  await shot(page, '03d-debuff');
+  pass('干擾角色顯示紅色半透明強調＋圖示＋紅色標籤', debInfo.n > 0 && debInfo.red && debInfo.icon && debInfo.chip, JSON.stringify(debInfo));
 
   // events lifecycle
   const ev = await page.evaluate(() => {
     const sc = window.__dc.App.hooks.scene;
     const out = {};
-    sc.evsys.start('queue', 'taoyuan');
-    out.queue = sc.fields.taoyuan.queues.size;
-    const [k] = sc.fields.taoyuan.queues.keys();
-    sc.evsys.tapQueue('taoyuan', k);
-    sc.evsys.tapQueue('taoyuan', k);
-    out.queueCleared = sc.fields.taoyuan.queues.size === 0;
-    sc.evsys.start('cloud', 'taichung');
-    out.cloud = !!sc.fields.taichung.cloud;
+    const C = sc.city;
+    sc.field.meetings.slice().forEach((m) => sc.evsys.clearMeeting(C, m, true));
+    sc.evsys.start('queue', C);
+    out.queue = sc.field.queues.size;
+    const [k] = sc.field.queues.keys();
+    sc.evsys.tapQueue(C, k);
+    sc.evsys.tapQueue(C, k);
+    out.queueCleared = sc.field.queues.size === 0;
+    sc.evsys.start('cloud', C);
+    out.cloud = !!sc.field.cloud;
     window.__dc.App.run.sun = 100;
     sc.skills.cooldowns.sunlight = 0;
     sc.castSkill('sunlight');
-    out.cloudCleared = !sc.fields.taichung.cloud;
-    sc.evsys.start('signal', 'taoyuan');
+    out.cloudCleared = !sc.field.cloud;
+    sc.evsys.start('signal', C);
     out.blocked = sc.skills.reason('city_resonance');
     sc.evsys.tapSignal(1); sc.evsys.tapSignal(2); sc.evsys.tapSignal(3);
     out.unblocked = sc.skills.blocked.city_resonance === undefined;
-    sc.evsys.start('meeting', 'taichung');
-    const m = sc.fields.taichung.meetings[0];
+    sc.evsys.start('meeting', C);
+    const m = sc.field.meetings[0];
     out.meeting = !!m;
-    if (m) { sc.evsys.tapMeeting('taichung', m); sc.evsys.tapMeeting('taichung', m); sc.evsys.tapMeeting('taichung', m); }
-    out.meetingCleared = sc.fields.taichung.meetings.length === 0;
+    if (m) { sc.evsys.tapMeeting(C, m); sc.evsys.tapMeeting(C, m); sc.evsys.tapMeeting(C, m); }
+    out.meetingCleared = sc.field.meetings.length === 0;
     return out;
   });
   pass('事件生成與解除（排隊/烏雲/斷訊/開會）', ev.queue === 1 && ev.queueCleared && ev.cloud && ev.cloudCleared && /訊號/.test(ev.blocked) && ev.unblocked && ev.meeting && ev.meetingCleared, JSON.stringify(ev));
@@ -299,6 +330,7 @@ try {
   await shot(page, '05-sync');
   const keptCounts = await page.evaluate(() => window.__dc.App.run.cities.taoyuan.arrived);
   pass('第一幕已集結數保留到第二幕', keptCounts > 0, `taoyuan=${keptCounts}`);
+  pass('第二幕仍為單一城市', await page.evaluate(() => window.__dc.App.hooks.scene.field.id === 'taoyuan'));
   await waitScene(page, 'Boss', 60000);
   await autoplay(page, false);
   const syncSummary = await page.evaluate(() => ({ tao: window.__dc.App.run.cities.taoyuan.arrived, tai: window.__dc.App.run.cities.taichung.arrived, initDmg: window.__dc.App.run.bossInitialDamage, score: window.__dc.App.run.score }));
@@ -306,6 +338,15 @@ try {
   await page.evaluate(() => (window.__dc.App.timeScale = 1));
   await page.waitForTimeout(1800);
   // real pointer aim on the weakpoint for a moment
+  // super: burn veils → meter → button
+  await page.evaluate(() => { window.__dc.App.hooks.scene.boss.superMeter = 1; });
+  await page.waitForTimeout(100);
+  pass('雙城合擊充滿後按鈕可用', await page.locator('.super-btn.ready').count() === 1);
+  await page.click('.super-btn');
+  pass('按下雙城合擊啟動大招', await page.evaluate(() => window.__dc.App.hooks.scene.boss.superTime > 0));
+  const vb = await page.evaluate(() => { const b = window.__dc.App.hooks.scene.boss; b.superTime = 0; b.veilTimer = 0; return true; });
+  await page.waitForFunction(() => window.__dc.App.hooks.scene.boss.veils.length > 0, null, { timeout: 5000 });
+  pass('黑箱會丟下黑幕', vb);
   const wk = await page.evaluate(() => {
     const sc = window.__dc.App.hooks.scene;
     const d = window.__dc.App.dpr;
@@ -347,7 +388,7 @@ try {
   await page.evaluate(() => (window.__dc.App.timeScale = 10));
   await waitScene(page, 'Boss', 90000);
   const zero = await page.evaluate(() => ({ tao: window.__dc.App.run.cities.taoyuan.arrived, init: window.__dc.App.run.bossInitialDamage }));
-  pass('零城達標也可進 Boss', zero.tao === 0 && zero.init === 0, JSON.stringify(zero));
+  pass('自己廠未達標也可進 Boss（夥伴廠達標 → 初始傷害 75）', zero.tao === 0 && zero.init === 75, JSON.stringify(zero));
   await bossAim(page, 'lose');
   await waitScene(page, 'Ending', 90000);
   const loseRun = await page.evaluate(() => ({ result: window.__dc.App.run.bossResult, hp: window.__dc.App.run.bossStats.hp }));
@@ -412,26 +453,28 @@ try {
     page = await newPage(browser, { viewport: { width: w, height: h }, hasTouch: w < 1000 });
     await page.goto(`${BASE}?test=1`);
     await page.click('text=略過').catch(() => {});
-    await startGame(page);
+    await startGame(page, 'normal', w < 1000 ? 'taichung' : 'taoyuan');
     await page.waitForTimeout(1200);
     const lay = await page.evaluate(() => {
       const sc = window.__dc.App.hooks.scene;
       const d = window.__dc.App.dpr;
-      const r = (c) => sc.fields[c].rect;
-      const sk = [...document.querySelectorAll('.skill')].map((b) => b.getBoundingClientRect());
+      const f = sc.field;
+      const top = document.querySelector('.status-chips').getBoundingClientRect();
       const bottom = document.querySelector('.hud-bottom').getBoundingClientRect();
-      const top = document.querySelector('.hud-top').getBoundingClientRect();
+      const fy = f.container.y / d;
+      const fh = (f.map.h * f.scale) / d;
+      const sk = [...document.querySelectorAll('.skill-card')].map((b) => b.getBoundingClientRect());
       return {
         mode: sc.layoutMode,
-        cityH: Math.min(r('taoyuan').h, r('taichung').h) / d,
-        overlap: r('taichung').y / d < top.bottom || (r('taichung').y + r('taichung').h) / d > bottom.top + 1 || (r('taoyuan').y + r('taoyuan').h) / d > bottom.top + 1,
+        fieldH: Math.round(fh),
+        overlap: fy < top.bottom - 1 || fy + fh > bottom.top + 1,
         minSkill: Math.min(...sk.map((b) => Math.min(b.width, b.height))),
         scrollW: document.documentElement.scrollWidth,
-        fieldScale: sc.fields.taoyuan.scale / d,
+        scale: +(f.scale / d).toFixed(2),
       };
     });
     await shot(page, `11-viewport-${w}x${h}`);
-    pass(`版面 ${w}×${h}`, !lay.overlap && lay.minSkill >= 44 && lay.scrollW <= w && lay.cityH > 120, JSON.stringify(lay));
+    pass(`版面 ${w}×${h}`, !lay.overlap && lay.minSkill >= 44 && lay.scrollW <= w && lay.fieldH > 200, JSON.stringify(lay));
     await page.context().close();
   }
 } finally {

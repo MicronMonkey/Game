@@ -1,13 +1,13 @@
 // Random events (symbolic jokes — NOT claims about what happened on the day).
 // Lifecycle: spawn (weighted, capped per city) → active (timer / player fix) → cleared.
-import { CITIES, TUNING } from '../config.js';
+import { TUNING } from '../config.js';
 import { edgeKey } from './pathing.js';
 
 export const EVENT_DEFS = {
-  queue: { name: '午餐排隊', hint: '道路變慢！點🍱排隊標誌 2 下分流', weight: 3 },
-  lost: { name: '工程師迷路', hint: '有人迷路了！點選「?」人物重新指引', weight: 3 },
-  meeting: { name: '突然開會', hint: '都午休了還開會？點📢 3 下解散', weight: 2 },
-  cloud: { name: '陰天烏雲', hint: '陽光累積 -50%！用「陽光照耀」掃開', weight: 2 },
+  queue: { name: '午餐排隊', hint: '紅色道路變慢🐢！點「🍱排隊」標誌 2 下分流', weight: 3 },
+  lost: { name: '工程師迷路', hint: '紅光❓的人迷路了！點他，再點集結區重新指引', weight: 3 },
+  meeting: { name: '突然開會', hint: '紅光📢的人被叫去開會！點「📢開會」標誌 3 下解散', weight: 2 },
+  cloud: { name: '陰天烏雲', hint: '陽光收集 -50%！用技能「☀️陽光照耀」掃開', weight: 2 },
   signal: { name: '雙城訊號中斷', hint: '雙城共鳴無法施放！依序點 1→2→3', weight: 1 },
 };
 
@@ -24,6 +24,10 @@ export class EventsSystem {
     this.history = [];
   }
 
+  cities() {
+    return Object.keys(this.host.fields);
+  }
+
   activeCount(city) {
     const f = this.host.fields[city];
     return f.queues.size + (f.cloud ? 1 : 0) + f.meetings.length + (f.lostEvent > 0 ? 1 : 0);
@@ -32,7 +36,7 @@ export class EventsSystem {
   tick(dt) {
     const fields = this.host.fields;
     // advance active events
-    for (const c of CITIES) {
+    for (const c of this.cities()) {
       const f = fields[c];
       for (const [k, q] of f.queues) {
         q.time -= dt;
@@ -65,7 +69,7 @@ export class EventsSystem {
 
   spawnRandom() {
     const rng = this.host.rng;
-    const cities = CITIES.filter((c) => this.activeCount(c) < TUNING.maxEventsPerCity);
+    const cities = this.cities().filter((c) => this.activeCount(c) < TUNING.maxEventsPerCity);
     if (!cities.length) return null;
     const city = cities[Math.floor(rng() * cities.length)];
     const f = this.host.fields[city];
@@ -175,7 +179,7 @@ export class EventsSystem {
   /** Sunlight skill: remove one cloud (longest remaining). Returns city or null. */
   removeOneCloud() {
     let best = null;
-    for (const c of CITIES) {
+    for (const c of this.cities()) {
       const cl = this.host.fields[c].cloud;
       if (cl && (!best || cl.time > this.host.fields[best].cloud.time)) best = c;
     }

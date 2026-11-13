@@ -1,7 +1,7 @@
 // 第二幕「雙城同步」— events in both cities, link the two. Targets are the SAME 30/30
 // as act 1 (no hidden increase); arrivals beyond the target still score as bonus.
 import { CityFieldScene } from './CityFieldScene.js';
-import { BALANCE, CITIES, CITY_LABELS } from '../config.js';
+import { BALANCE, CITY_LABELS } from '../config.js';
 import { addBonus, citiesReached } from '../systems/GameState.js';
 import { bossInitialDamage } from '../systems/scoring.js';
 import { interstitial } from '../ui/interstitial.js';
@@ -14,16 +14,12 @@ export class SyncScene extends CityFieldScene {
   }
 
   onCreateAct() {
-    const done = citiesReached(this.run);
-    this.hud.hint(done === 2 ? '兩城已達標！繼續集結可再加分，並處理突發事件' : '兩城同步進行：注意突發事件，目標仍是各 30 人');
-    this.linked = done === 2;
+    this.hud.hint(this.myCityReached() ? '已達標！繼續集結仍可加分，並排除紅色干擾' : '干擾變多了！紅光的人需要你處理，目標仍是 30 人');
+    this.banner('第二幕 雙城同步', '紅光 = 被干擾', '#FF9F1C');
   }
 
   onCityGoal() {
-    if (!this.linked && this.bothReached()) {
-      this.linked = true;
-      toast('金色連線！雙城都達標', 'good');
-    }
+    if (citiesReached(this.run) === 2) toast('金色連線！雙城都達標', 'good');
   }
 
   clockText() {
@@ -40,7 +36,7 @@ export class SyncScene extends CityFieldScene {
     const bonuses = this.run.bonuses.slice(before);
     const verdict = reached === 2 ? '完美雙城！' : reached === 1 ? '部分成功：一城達標' : '兩城尚未達標——故事繼續！';
     const lines = [
-      ...CITIES.map((c) => `${CITY_LABELS[c]}：${this.run.cities[c].arrived}/${this.run.settings.targets[c]}`),
+      `${CITY_LABELS[this.run.city]}廠：${this.run.cities[this.run.city].arrived}/${this.run.settings.targets[this.run.city]}　${CITY_LABELS[this.run.allyCity]}夥伴：${this.run.cities[this.run.allyCity].arrived}/${this.run.settings.targets[this.run.allyCity]}`,
       this.run.bossInitialDamage > 0 ? `雙城的光先削弱黑箱 ${this.run.bossInitialDamage} HP！` : '黑箱全血登場，但陽光不會停止。',
     ];
     interstitial({

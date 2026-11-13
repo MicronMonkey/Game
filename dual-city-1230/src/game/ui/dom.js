@@ -40,6 +40,7 @@ export function toast(msg, kind = '') {
   }
   const t = el('div', { class: `toast ${kind}`, text: msg });
   box.append(t);
+  while (box.children.length > 2) box.firstChild.remove();
   setTimeout(() => t.classList.add('out'), 1800);
   setTimeout(() => t.remove(), 2300);
 }

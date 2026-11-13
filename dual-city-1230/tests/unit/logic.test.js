@@ -104,16 +104,20 @@ test('pathing reaches zone and avoids a queued edge when cheaper', () => {
   assert.ok(!shortestPath(m, g, 'A', 'Z', cost).join('').includes('CF'));
 });
 
-test('boss: DPS, crit after 3s, grace reset, phases', () => {
-  const b = new BossSystem({ maxHp: 1000, seconds: 60, rng: () => 0.99 });
-  b.attackTimer = 999;
-  const body = { x: 200, y: 230 };
-  b.tick(1, body);
-  assert.ok(Math.abs(b.hp - 980) < 1e-6);
+const quiet = (b) => {
+  b.veilTimer = 1e9;
+  b.cloudTimer = 1e9;
+  return b;
+};
+
+test('boss: DPS, crit after 3s, grace reset, phases, initial damage', () => {
+  const b = quiet(new BossSystem({ maxHp: 1000, seconds: 60, rng: () => 0.99 }));
+  b.tick(1, { x: 120, y: 200 }); // body, off the weakpoint
+  assert.ok(Math.abs(b.hp - 980) < 1e-6, String(b.hp));
   const w = () => ({ x: b.weak.x, y: b.weak.y });
   for (let i = 0; i < 30; i++) b.tick(0.1, w());
   assert.equal(b.crits, 1);
-  assert.ok(Math.abs(b.hp - (980 - 105 - 80)) < 1e-6);
+  assert.ok(Math.abs(b.hp - (980 - 105 - 80)) < 1e-6, String(b.hp));
   b.tick(0.1, w());
   b.tick(0.3, { x: 5, y: 5 });
   assert.equal(b.charge, 0);
@@ -121,16 +125,73 @@ test('boss: DPS, crit after 3s, grace reset, phases', () => {
   assert.equal(new BossSystem({ maxHp: 1000, seconds: 60, initialDamage: 150 }).hp, 850);
 });
 
+test('boss: crowd bonus capped at +30% and landed veils weaken the beam', () => {
+  const b = quiet(new BossSystem({ maxHp: 1000, seconds: 60, powerBonus: 0.9 }));
+  assert.equal(b.power(), 1.3);
+  b.landed = [3, 3, 3];
+  assert.ok(Math.abs(b.power() - 1.3 * 0.5) < 1e-9);
+});
+
+test('boss: beam burns falling veils and charges the super; landed veil debuffs', () => {
+  const b = new BossSystem({ maxHp: 1000, seconds: 60, rng: () => 0.5 });
+  b.cloudTimer = 1e9;
+  b.veilTimer = 0;
+  b.tick(0.01, null); // spawns one veil
+  assert.equal(b.veils.length, 1);
+  const v = b.veils[0];
+  b.veilTimer = 1e9;
+  for (let i = 0; i < 10 && b.veils.length; i++) b.tick(0.05, { x: v.x, y: v.y });
+  assert.equal(b.veils.length, 0);
+  assert.equal(b.burned, 1);
+  assert.ok(b.superMeter > 0);
+  b.veils.push({ id: 99, x: 30, y: 360, vx: 0, vy: 100, burn: 0 });
+  b.tick(0.2, null);
+  assert.equal(b.landedCount, 1);
+  assert.equal(b.landed.length, 1);
+  b.superMeter = 1;
+  assert.ok(b.activateSuper());
+  assert.ok(b.superTime > 0 && b.superMeter === 0);
+  assert.equal(b.activateSuper(), false);
+});
+
+test('boss: phase 2 plates block the beam; phase 3 only locks in order take damage', () => {
+  const b = quiet(new BossSystem({ maxHp: 1000, seconds: 60, initialDamage: 500 }));
+  assert.equal(b.phase, 2);
+  const pl = b.plates()[0];
+  const behind = { x: pl.x + (pl.x - 200) * 0.01, y: pl.y - 30 };
+  assert.ok(b.blocker({ x: 200 + (pl.x - 200) * ((392 - (pl.y - 30)) / (392 - pl.y)), y: pl.y - 30 }) || b.blocker(behind));
+  const c = quiet(new BossSystem({ maxHp: 1000, seconds: 60, initialDamage: 850, rng: () => 0.3 }));
+  assert.equal(c.phase, 3);
+  c.plateAngle = Math.PI / 2; // move plates out of the beam's way as much as possible
+  const hp0 = c.hp;
+  c.tick(0.5, { x: 120, y: 200 }); // body: no damage in phase 3
+  assert.equal(c.hp, hp0);
+  const wrong = c.locks[1];
+  const before = c.hp;
+  c.plates = () => [];
+  for (let i = 0; i < 15; i++) c.tick(0.1, { x: wrong.x, y: wrong.y });
+  assert.equal(c.hp, before, 'hitting a later lock does nothing');
+  const first = c.currentLock();
+  for (let i = 0; i < 11; i++) c.tick(0.1, { x: first.x, y: first.y });
+  assert.equal(c.lockIndex, 1);
+  assert.equal(before - c.hp, 75);
+});
+
 test('boss: same-frame kill beats timeout; timeout with HP>0 loses', () => {
-  const b = new BossSystem({ maxHp: 1000, seconds: 0.5, rng: () => 0.99 });
-  b.attackTimer = 999;
+  const b = quiet(new BossSystem({ maxHp: 1000, seconds: 0.5, rng: () => 0.99 }));
   b.hp = 5;
   b.tick(1, { x: b.weak.x, y: b.weak.y });
   assert.equal(b.result, 'win');
-  const c = new BossSystem({ maxHp: 1000, seconds: 0.5, rng: () => 0.99 });
-  c.attackTimer = 999;
+  const c = quiet(new BossSystem({ maxHp: 1000, seconds: 0.5, rng: () => 0.99 }));
   c.tick(1, null);
   assert.equal(c.result, 'lose');
+});
+
+test('single-city run: player city + automatic partner city', async () => {
+  const s = createRunState('normal', 'taichung');
+  assert.equal(s.city, 'taichung');
+  assert.equal(s.allyCity, 'taoyuan');
+  assert.equal(createRunState('normal', 'bogus').city, 'taoyuan');
 });
 
 test('storage: namespace, migration, per-difficulty record', () => {

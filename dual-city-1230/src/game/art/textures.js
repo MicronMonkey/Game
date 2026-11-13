@@ -223,6 +223,14 @@ export function generateTextures(scene) {
     ctx.lineWidth = 3;
     ctx.beginPath(); ctx.ellipse(20, 8, 17, 6, 0, 0, Math.PI * 2); ctx.stroke();
   });
+  canvasTex(scene, 'halo', 56, 56, (ctx) => {
+    const g = ctx.createRadialGradient(28, 28, 2, 28, 28, 28);
+    g.addColorStop(0, 'rgba(255,255,255,0.95)');
+    g.addColorStop(0.55, 'rgba(255,255,255,0.45)');
+    g.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, 56, 56);
+  });
   canvasTex(scene, 'spark', 16, 16, (ctx) => {
     const g = ctx.createRadialGradient(8, 8, 0, 8, 8, 8);
     g.addColorStop(0, 'rgba(255,255,255,1)');
@@ -244,6 +252,16 @@ export function generateTextures(scene) {
     });
     ctx.fillStyle = 'rgba(30,34,44,0.6)';
     ctx.fillRect(28, 44, 44, 4);
+  });
+  canvasTex(scene, 'veil', 30, 24, (ctx) => {
+    // falling 黑幕: a black sheet with redaction bars and a red edge
+    ctx.fillStyle = '#050608';
+    ctx.fillRect(1, 1, 28, 22);
+    ctx.strokeStyle = '#E83B3B';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(1, 1, 28, 22);
+    ctx.fillStyle = '#2a2d36';
+    [5, 10, 15].forEach((y, i) => ctx.fillRect(5, y, 20 - i * 5, 3));
   });
   canvasTex(scene, 'dot', 8, 8, (ctx) => {
     ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(4, 4, 4, 0, Math.PI * 2); ctx.fill();

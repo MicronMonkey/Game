@@ -1,5 +1,4 @@
 // Stylised city backdrops drawn with Phaser Graphics (fictional, not site-accurate).
-import { FIELD_W, FIELD_H } from '../maps.js';
 
 const C = {
   ground: 0x1a1d24,
@@ -17,6 +16,8 @@ const C = {
 };
 
 export function drawCity(scene, container, map) {
+  const FIELD_W = map.w;
+  const FIELD_H = map.h;
   const g = scene.add.graphics();
   container.add(g);
   // ground with subtle tiles
@@ -47,7 +48,7 @@ export function drawCity(scene, container, map) {
       g.lineStyle(1, 0x5a6275, 1);
       for (let x = b.x + 8; x < b.x + b.w; x += 12) g.lineBetween(x, b.y + 4, x, b.y + 18);
       const cars = [0xe83b3b, 0x64748b, 0xf5f5f5, 0x5b8def];
-      cars.forEach((c, i) => {
+      cars.slice(0, Math.max(1, Math.floor((b.w - 4) / 16))).forEach((c, i) => {
         g.fillStyle(c, 0.85);
         g.fillRoundedRect(b.x + 4 + i * 16, b.y + 26 + (i % 2) * 8, 10, 14, 3);
       });
@@ -60,7 +61,7 @@ export function drawCity(scene, container, map) {
       g.fillStyle(C.food, 1);
       g.fillRoundedRect(b.x, b.y, b.w, b.h, 4);
       // stall awnings
-      for (let i = 0; i < 3; i++) {
+      for (let i = 0; i < Math.min(3, Math.floor((b.w - 4) / 18)); i++) {
         g.fillStyle(i % 2 ? 0xff9f1c : 0xe83b3b, 1);
         g.fillRect(b.x + 4 + i * 18, b.y + 6, 16, 6);
         g.fillStyle(0xf5f5f5, 0.8);
