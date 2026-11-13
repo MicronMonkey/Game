@@ -5,13 +5,14 @@ import Phaser from 'phaser';
 import { App, reducedMotion } from '../app.js';
 import { BALANCE, CITY_LABELS } from '../config.js';
 import { charKey, VARIANTS } from '../art/textures.js';
-import { R, ITEM_DEFS, applyCount, clampBaseRadius, effectiveRadius, formationSlot, generateStage, hazardLoss } from '../runner/runnerLogic.js';
+import { starsFor, R, ITEM_DEFS, applyCount, clampBaseRadius, effectiveRadius, formationSlot, generateStage, hazardLoss } from '../runner/runnerLogic.js';
 import { addBonus, addSun, registerRecruit, tickCombo } from '../systems/GameState.js';
 import { comboMultiplier } from '../systems/scoring.js';
 import { SKILL_DEFS, SkillSystem } from '../systems/SkillSystem.js';
+import { hasPerk, perkById } from '../perks/perks.js';
 import { Audio } from '../systems/AudioSystem.js';
 import { createHud } from '../ui/hud.js';
-import { toast } from '../ui/dom.js';
+import { clearToasts, toast } from '../ui/dom.js';
 import { pauseMenu } from '../ui/modal.js';
 
 const FONT = 'system-ui, "Noto Sans TC", "PingFang TC", sans-serif';
@@ -30,10 +31,23 @@ export function advanceAlly(run, dt, resonance) {
 export class RunnerScene extends Phaser.Scene {
   // subclasses set this.stage (0|1)
   init() {
+    // Phaser reuses scene instances between runs: reset EVERY per-run reference here
     this.paused = false;
     this.ended = false;
     this.elapsed = 0;
     this.lowFx = reducedMotion();
+    this.cdText = null;
+    this.bannerObjs = null;
+    this.bannerD = null;
+    this.recruitBatch = 0;
+    this.batchT = 0;
+    this.needHintAt = 0;
+    this.prevD = undefined;
+    this.inFog = false;
+    this.inMeeting = false;
+    this.drag = null;
+    this.dragTarget = null;
+    this.pauseUi = null;
   }
 
   create() {
@@ -43,7 +57,8 @@ export class RunnerScene extends Phaser.Scene {
     this.city = run.city;
     const st = this.stage;
     const mult = BALANCE.runner.stage_target_multiplier[st];
-    this.target = Math.round(run.settings.targets[this.city] * mult);
+    this.target = Math.round(run.settings.targets[this.city] * mult * (R.target_difficulty_multiplier?.[run.difficulty] ?? 1));
+    this.countdown = R.countdown_seconds ?? 0;
     // scroll speed per difficulty (config: runner.scroll_multiplier); the protagonist
     // walks faster on faster settings so the street stays controllable
     const sm = R.scroll_multiplier?.[run.difficulty] ?? 1;
@@ -54,7 +69,7 @@ export class RunnerScene extends Phaser.Scene {
     run.stageSeconds[st] = this.level.length / this.scrollSpeed;
     this.scroll = 0;
     this.crowd = 0;
-    this.baseRadius = R.radius_base;
+    this.baseRadius = R.radius_base + (hasPerk(run, 'radio_truck') ? 12 : 0);
     this.player = { x: VW / 2, d: 150, vx: 0, vd: 0, hitCd: 0, drainT: 0, flash: 0 };
     this.cameras.main.setBackgroundColor('#15171d');
 
@@ -132,6 +147,7 @@ export class RunnerScene extends Phaser.Scene {
     Audio.music(st === 0 ? 'gather' : 'sync');
     App.hooks.scene = this;
     this.banner(st === 0 ? '午休集結！' : '雙城同步！', `帶 ${this.target} 人抵達集結區`);
+    if (hasPerk(run, 'bento_station')) this.changeCrowd(5, '便當補給站');
     this.hud.hint('拖曳畫面（或方向鍵）移動，黃圈碰到的人會跟你走！');
   }
 
@@ -612,7 +628,10 @@ export class RunnerScene extends Phaser.Scene {
 
   // ---------- loop ----------
   update(time, deltaMs) {
-    if (this.paused || this.ended) return;
+    if (this.paused || this.ended) {
+      if (this.ended) this.positionWorld();
+      return;
+    }
     const dt = Math.min(0.1, deltaMs / 1000) * App.timeScale;
     const p = this.player;
     this.elapsed += dt;
@@ -622,7 +641,8 @@ export class RunnerScene extends Phaser.Scene {
     p.flash = Math.max(0, p.flash - dt);
     // camera scroll never stops: the bottom edge eventually pushes everyone over the finish line
     const maxScroll = this.level.length;
-    this.scroll = Math.min(maxScroll, this.scroll + this.scrollSpeed * dt);
+    if (this.countdown > 0) this.tickCountdown(dt);
+    else this.scroll = Math.min(maxScroll, this.scroll + this.scrollSpeed * dt);
     // movement
     const sp = this.playerSpeed;
     let vx = 0;
@@ -751,9 +771,26 @@ export class RunnerScene extends Phaser.Scene {
     if (p.d >= this.finishD) this.finish();
   }
 
+  /** 3·2·1 出發！ — the street waits, the player can already move. */
+  tickCountdown(dt) {
+    const before = Math.ceil(this.countdown / 0.8);
+    this.countdown = Math.max(0, this.countdown - dt);
+    const now = this.countdown > 0 ? Math.ceil(this.countdown / 0.8) : 0;
+    if (now === before && this.cdText) return;
+    this.cdText?.destroy();
+    const label = now > 0 ? String(now) : '出發！';
+    this.cdText = this.add.text(VW / 2, -(this.scroll + this.viewH * 0.55), label, { fontFamily: FONT, fontSize: now > 0 ? '64px' : '44px', fontStyle: 'bold', color: '#FFD447', stroke: '#101216', strokeThickness: 8, resolution: 3 }).setOrigin(0.5);
+    this.fxLayer.add(this.cdText);
+    Audio.sfx(now > 0 ? 'tick' : 'goal');
+    const t = this.cdText;
+    t.setScale(1.6);
+    this.tweens.add({ targets: t, scale: 1, duration: 260, ease: 'Back.easeOut' });
+    if (now === 0) this.tweens.add({ targets: t, alpha: 0, scale: 1.4, delay: 350, duration: 350, onComplete: () => t.destroy() });
+  }
+
   statusChips() {
     const S = this.skills;
-    const chips = [];
+    const chips = (this.run.perks || []).filter((id) => perkById(id)?.where !== 'Boss').map((id) => ({ kind: 'perk', text: `${perkById(id).icon} ${perkById(id).name}` }));
     if (S.isActive('rally')) chips.push({ kind: 'buff', text: '📣 號召力 ×1.6', left: S.active.rally, total: SKILL_DEFS.rally.duration_seconds });
     if (S.isActive('shield')) chips.push({ kind: 'buff shield', text: '🛡️ 護盾', left: S.active.shield, total: SKILL_DEFS.shield.duration_seconds });
     if (S.isActive('city_resonance')) chips.push({ kind: 'buff res', text: '🔗 吸人・得分×1.5', left: S.active.city_resonance, total: SKILL_DEFS.city_resonance.duration_seconds });
@@ -801,7 +838,34 @@ export class RunnerScene extends Phaser.Scene {
     const met = arrived >= this.target;
     if (met) addBonus(run, '集結達標', R.target_bonus);
     Audio.sfx(met ? 'goal' : 'event');
-    this.onStageEnd(arrived, met, run.bonuses.slice(before));
+    clearToasts();
+    run.stageStars = run.stageStars || [];
+    run.stageStars[this.stage] = starsFor(arrived, this.target);
+    const bonuses = run.bonuses.slice(before);
+    this.celebrate(arrived, met);
+    this.time.delayedCall(this.lowFx ? 300 : 1300, () => this.onStageEnd(arrived, met, bonuses));
+  }
+
+  /** Finish-line moment: confetti, everyone cheers, big banner. */
+  celebrate(arrived, met) {
+    const p = this.player;
+    this.hero.setTexture(charKey('hero', 0, 'down', 2));
+    this.followers.forEach((s) => {
+      const [, type, v] = s.texture.key.split('_');
+      s.setTexture(`ch_${type}_${v}_down_2`);
+      if (!this.lowFx) this.tweens.add({ targets: s, y: s.y - 6, yoyo: true, repeat: 3, duration: 160, delay: Math.random() * 200 });
+    });
+    const colors = [0xffd447, 0xff9f1c, 0xe83b3b, 0xf5f5f5, 0x7cf7c4, 0x7fe7ff];
+    for (let i = 0; i < (this.lowFx ? 10 : 46); i++) {
+      const c = this.add.rectangle(p.x + (Math.random() - 0.5) * 40, -p.d - 30, 5, 9, colors[i % colors.length]);
+      this.fxLayer.add(c);
+      const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4;
+      const sp = 90 + Math.random() * 160;
+      this.tweens.add({ targets: c, x: c.x + Math.cos(a) * sp, y: c.y + Math.sin(a) * sp + 120, angle: Math.random() * 720, alpha: 0, duration: 1200 + Math.random() * 300, ease: 'Quad.easeOut', onComplete: () => c.destroy() });
+    }
+    this.bannerD = null;
+    this.banner(met ? '抵達集結區！' : '抵達！', `${arrived} 人跟著你走到這裡`, met ? '#FFD447' : '#F5F5F5');
+    Audio.sfx('win');
   }
 }
 

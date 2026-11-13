@@ -18,6 +18,8 @@ export function defaultSave() {
     settings: { soundEnabled: true, reducedMotion: false },
     tutorialCompleted: false,
     introSeen: false,
+    perksEquipped: [],
+    bossTipSeen: false,
   };
 }
 
@@ -32,6 +34,7 @@ export function migrate(raw) {
   out.settings = { ...base.settings, ...(raw.settings || {}) };
   out.galleryViewed = { ...base.galleryViewed, ...(raw.galleryViewed || {}) };
   out.achievements = Array.isArray(raw.achievements) ? [...new Set(raw.achievements)] : [];
+  out.perksEquipped = Array.isArray(raw.perksEquipped) ? raw.perksEquipped.filter((x) => typeof x === 'string') : [];
   out.schemaVersion = SCHEMA_VERSION;
   out.gameId = 'dualCity1230';
   return out;

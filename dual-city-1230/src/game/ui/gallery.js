@@ -204,6 +204,7 @@ export async function openGallery(opts = {}) {
   if (opts.result) {
     const r = opts.result;
     inner.append(el('div', { class: 'g-result' }, [el('span', { text: `本局遊戲分數（${r.difficultyLabel}）` }), el('b', { text: r.score.toLocaleString('en-US') }), r.newHigh ? el('em', { text: '新紀錄！' }) : null]));
+    if (r.newPerks?.length) inner.append(el('div', { class: 'g-perks' }, [el('b', { text: '🎒 新夥伴解鎖' }), ...r.newPerks.map((p) => el('span', { text: `${p.icon} ${p.name}：${p.effect}` })), el('small', { text: '回首頁「夥伴裝備」即可裝備' })]));
   }
   const actions = el('div', { class: 'g-actions' }, [
     opts.onReplay ? el('button', { class: 'btn primary', onclick: () => { close(); opts.onReplay(); }, text: '↻ 再玩一次' }) : null,

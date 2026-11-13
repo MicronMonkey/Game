@@ -16,6 +16,7 @@ export class GatheringScene extends RunnerScene {
   onStageEnd(arrived, met, bonuses) {
     const r = this.run;
     interstitial({
+      stars: this.run.stageStars?.[this.stage] ?? 0,
       kicker: '12:30 · 第一幕完成',
       title: met ? `${CITY_LABELS[r.city]}收到！${arrived} 人抵達` : `抵達 ${arrived} 人（目標 ${this.target}）`,
       lines: [

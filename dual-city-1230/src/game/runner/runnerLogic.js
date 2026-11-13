@@ -13,6 +13,14 @@ export function applyCount(count, op, value) {
   }
 }
 
+/** Stage rating: ★ target met, ★★ ≥ 1.5×, ★★★ ≥ 2× the target. */
+export function starsFor(arrived, target) {
+  if (arrived >= target * 2) return 3;
+  if (arrived >= target * 1.5) return 2;
+  if (arrived >= target) return 1;
+  return 0;
+}
+
 /** Loss from an obstacle: a fixed minimum, or a fraction of a big crowd. */
 export function hazardLoss(crowd, min, fraction) {
   return Math.min(crowd, Math.max(min, Math.ceil(crowd * fraction)));
@@ -97,7 +105,7 @@ export function generateStage({ stage = 0, difficulty = 'normal', target = 30, s
   while (d < endD) {
     slot += 1;
     // always some bystanders: a cluster (3–6) at a random x
-    const n = 3 + Math.floor(rng() * 4);
+    const n = 2 + Math.floor(rng() * 3);
     const cx = 50 + rng() * (W - 100);
     for (let i = 0; i < n; i++) {
       npcs.push({ d: d + (rng() - 0.5) * 50, x: Math.max(24, Math.min(W - 24, cx + (rng() - 0.5) * 70)), type: pick(NPC_TYPES), need: 0 });

@@ -91,11 +91,11 @@ test('boss: DPS, crit after 3s, grace reset, phases, initial damage', () => {
   assert.equal(new BossSystem({ maxHp: 1000, seconds: 60, initialDamage: 150 }).hp, 850);
 });
 
-test('boss: crowd bonus capped at +30% and landed veils weaken the beam', () => {
+test('boss: beam bonus capped at +45% and landed veils weaken the beam', () => {
   const b = quiet(new BossSystem({ maxHp: 1000, seconds: 60, powerBonus: 0.9 }));
-  assert.equal(b.power(), 1.3);
+  assert.equal(b.power(), 1.45); // crowd (≤0.3) + 手電筒夥伴 (0.15)
   b.landed = [3, 3, 3];
-  assert.ok(Math.abs(b.power() - 1.3 * 0.5) < 1e-9);
+  assert.ok(Math.abs(b.power() - 1.45 * 0.5) < 1e-9);
 });
 
 test('boss: beam burns falling veils and charges the super; landed veil debuffs', () => {

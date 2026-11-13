@@ -239,7 +239,7 @@ button { font-family: inherit; }
 .lightbox .nav { justify-self: center; }
 
 /* ---------- toasts ---------- */
-#toasts { position: fixed; left: 50%; top: 34vh; transform: translateX(-50%); display: grid; gap: 6px; z-index: 50; pointer-events: none; width: max-content; max-width: 92vw; }
+#toasts { position: fixed; left: 50%; top: auto; bottom: calc(168px + var(--sab)); transform: translateX(-50%); display: grid; gap: 6px; z-index: 50; pointer-events: none; width: max-content; max-width: 92vw; }
 .toast { background: rgba(24, 27, 34, 0.96); border: 1px solid #3a3f4d; border-radius: 10px; padding: 6px 12px; font-size: 14px; font-weight: 700; text-align: center; transition: opacity 0.4s, transform 0.4s; }
 .toast.warn { border-color: var(--red); color: #ffd0d0; }
 .toast.good { border-color: var(--gold); color: var(--gold); }
@@ -440,3 +440,27 @@ button { font-family: inherit; }
   .joy { width: 100px; height: 100px; }
   .boss-controls .super-btn { min-height: 64px; }
 }
+
+/* perks */
+.btn.perks-btn { border-color: #7fe7ff; color: #7fe7ff; }
+.perk-list { display: grid; gap: 8px; }
+.perk-card { display: grid; grid-template-columns: 44px 1fr; gap: 10px; align-items: center; text-align: left; padding: 10px; border-radius: 12px; border: 2px solid #3a3f4d; background: #1b1e26; color: var(--white); font-family: inherit; cursor: pointer; min-height: 44px; }
+.perk-card .perk-icon { font-size: 28px; text-align: center; }
+.perk-card .perk-body { display: grid; gap: 2px; }
+.perk-card b em { font-style: normal; font-size: 11px; color: var(--muted); font-weight: 600; }
+.perk-card small { color: #cbd2df; line-height: 1.4; }
+.perk-card.locked { opacity: 0.65; }
+.perk-card.unlocked { border-color: #4b4226; }
+.perk-card.on { border-color: var(--gold); background: linear-gradient(180deg, #3a3212, #1b1e26); box-shadow: 0 0 12px rgba(255, 212, 71, 0.4); }
+.perk-state { color: var(--gold) !important; font-weight: 800; }
+.perk-prog { display: block; height: 6px; border-radius: 3px; background: #12141a; overflow: hidden; margin-top: 3px; }
+.perk-prog i { display: block; height: 100%; background: #7fe7ff; }
+.chip.perk { color: #7fe7ff; border-color: rgba(127, 231, 255, 0.6); }
+.g-perks { display: grid; gap: 4px; text-align: center; margin-top: 10px !important; padding: 10px; border-radius: 12px; border: 1.5px solid #7fe7ff; background: #142028; color: #dff8ff; }
+.g-perks b { color: #7fe7ff; }
+
+.stars { display: flex; justify-content: center; gap: 6px; font-size: 40px; line-height: 1; margin: 4px 0; }
+.stars span { color: #3a3f4d; text-shadow: 0 2px 0 #000; }
+.stars span.on { color: var(--gold); text-shadow: 0 0 14px rgba(255, 212, 71, 0.8), 0 2px 0 #7a5a00; animation: starPop 0.45s ease-out backwards; }
+@keyframes starPop { 0% { transform: scale(0) rotate(-40deg); } 70% { transform: scale(1.3); } 100% { transform: scale(1); } }
+.stars-hint { display: block; color: var(--muted); font-size: 11px; margin-bottom: 4px; }

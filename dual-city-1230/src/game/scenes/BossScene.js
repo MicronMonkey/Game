@@ -4,7 +4,9 @@
 import Phaser from 'phaser';
 import { App, reducedMotion } from '../app.js';
 import { BALANCE } from '../config.js';
-import { BEAM_SRC, BOSS_BODY, BOSS_FIELD, BOSS_TUNING, BossSystem } from '../systems/BossSystem.js';
+import { BEAM_SRC, BOSS_BODY, BOSS_FIELD, BOSS_TUNING, BossSystem, HELPER } from '../systems/BossSystem.js';
+import { charKey } from '../art/textures.js';
+import { hasPerk, perkById } from '../perks/perks.js';
 import { addBonus } from '../systems/GameState.js';
 import { bossRemainingBonus } from '../systems/scoring.js';
 import { Audio } from '../systems/AudioSystem.js';
@@ -19,9 +21,17 @@ export class BossScene extends Phaser.Scene {
   }
 
   init() {
+    // Phaser reuses scene instances between runs: reset EVERY per-run reference here
     this.paused = false;
     this.ended = false;
     this.intro = 1.8;
+    this.tapLabels = [];
+    this.lockTexts = null;
+    this.bannerObjs = null;
+    this.helperSprite = null;
+    this.lockFlash = 0;
+    this.lastChips = null;
+    this.pauseUi = null;
   }
 
   create() {
@@ -30,15 +40,20 @@ export class BossScene extends Phaser.Scene {
     this.lowFx = reducedMotion();
     this.cameras.main.setBackgroundColor('#0b0c10');
     const arrived = run.cities[run.city]?.arrived || 0;
+    this.perks = run.perks || [];
     this.boss = new BossSystem({
       maxHp: run.settings.bossHp,
-      seconds: run.settings.bossSeconds,
+      seconds: run.settings.bossSeconds + (hasPerk(run, 'lunch_extension') ? 8 : 0),
       initialDamage: run.bossInitialDamage,
-      powerBonus: Math.min(0.3, arrived / 200),
+      powerBonus: Math.min(0.2, arrived / 400) + (hasPerk(run, 'flashlight') ? 0.15 : 0),
+      critSeconds: hasPerk(run, 'flashlight') ? 2.4 : BALANCE.boss.critical_charge_seconds,
+      helper: hasPerk(run, 'sweeper'),
     });
-    this.aim = { x: 200, y: 200 };
-    this.keys = this.input.keyboard?.addKeys('LEFT,RIGHT,UP,DOWN');
+    this.aim = { x: BOSS_BODY.x, y: BOSS_BODY.y };
+    this.target = { kind: 'none' }; // 'none' | 'core' (weakpoint / current lock) | 'veil'
+    this.scrambleT = 6;
 
+    this.backdrop = this.add.graphics(); // full-screen sky + skyline behind the arena
     this.root = this.add.container(0, 0);
     this.bg = this.add.graphics();
     this.bossG = this.add.graphics();
@@ -47,7 +62,8 @@ export class BossScene extends Phaser.Scene {
     this.beamG = this.add.graphics();
     this.fx = this.add.container(0, 0);
     this.dimRect = this.add.rectangle(200, 200, 400, 400, 0x000000, 0);
-    this.root.add([this.bg, this.bossG, this.veilLayer, this.cloudLayer, this.beamG, this.fx, this.dimRect]);
+    this.haloG = this.add.graphics();
+    this.root.add([this.bg, this.bossG, this.veilLayer, this.cloudLayer, this.beamG, this.haloG, this.fx, this.dimRect]);
     this.drawBackground();
     this.cloudSprites = [];
     this.veilSprites = new Map();
@@ -56,17 +72,14 @@ export class BossScene extends Phaser.Scene {
     this.layout();
     this.scale.on('resize', this.layout, this);
 
-    // Touch screens aim ONLY with the on-screen joystick (a finger on the field would hide
-    // the target). A desktop mouse may still point directly; arrow keys also work.
+    if (this.boss.helper) this.buildHelper();
+    // Tap a blinking target to lock the beam on it; the beam then tracks it by itself
+    // (the finger lifts immediately, so it never covers what you're attacking).
     const onCanvas = (p) => !p.event || p.event.target === this.game.canvas;
     this.input.on('pointerdown', (p) => {
       Audio.unlock();
-      if (this.paused || this.ended || !onCanvas(p) || p.wasTouch) return;
-      this.setAimFromPointer(p);
-    });
-    this.input.on('pointermove', (p) => {
-      if (this.paused || this.ended || p.wasTouch || !onCanvas(p)) return;
-      this.setAimFromPointer(p);
+      if (this.paused || this.ended || !onCanvas(p)) return;
+      this.tapAt(this.toField(p));
     });
     this.keyHandler = (e) => {
       if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
@@ -76,6 +89,12 @@ export class BossScene extends Phaser.Scene {
       if (e.key === ' ' || e.key === 'Enter') {
         this.trySuper();
         e.preventDefault();
+      }
+      if (this.paused || this.ended) return;
+      if (e.key === 'q' || e.key === 'Q' || e.key === '1') this.lockTarget({ kind: 'core' });
+      if (e.key === 'e' || e.key === 'E' || e.key === '2') {
+        const low = [...this.boss.veils].sort((a, b) => b.y - a.y)[0];
+        if (low) this.lockTarget({ kind: 'veil', id: low.id });
       }
     };
     window.addEventListener('keydown', this.keyHandler);
@@ -94,7 +113,7 @@ export class BossScene extends Phaser.Scene {
 
     Audio.music('boss');
     Audio.sfx('boss');
-    this.banner('FINAL BOSS', '陽光照進黑箱！');
+    this.banner('FINAL BOSS', '點閃爍白光的目標攻擊！');
     App.hooks.scene = this;
   }
 
@@ -113,7 +132,7 @@ export class BossScene extends Phaser.Scene {
       el('button', { class: 'btn-icon', 'aria-label': '暫停', onclick: () => this.pauseGame(), text: '⏸' }),
     ]);
     this.chips = el('div', { class: 'status-chips' });
-    this.hintText = el('div', { class: 'hud-hint', 'aria-live': 'polite', text: '用左下「瞄準」搖桿移動準星到橘色弱點；光束掃過黑幕可燒掉它！' });
+    this.hintText = el('div', { class: 'hud-hint', 'aria-live': 'polite', text: '點「閃爍白光」的目標：光束會自動鎖定攻擊。黑幕落下時先點它！' });
     this.chargeFill = el('i');
     this.superFill = el('i');
     this.superBtn = el('button', { class: 'super-btn', disabled: true, 'aria-label': '雙城合擊' }, [
@@ -121,13 +140,9 @@ export class BossScene extends Phaser.Scene {
       el('span', { class: 'super-label' }, [el('b', { text: '🔆 雙城合擊' }), el('small', { text: '燒掉黑幕充能' })]),
     ]);
     onPress(this.superBtn, () => this.trySuper());
-    this.joy = { x: 0, y: 0 };
-    this.joyKnob = el('span', { class: 'joy-knob' });
-    this.joyBase = el('div', { class: 'joy', role: 'application', 'aria-label': '武器控制器：拖曳移動瞄準點' }, [el('span', { class: 'joy-ring' }), this.joyKnob, el('small', { class: 'joy-label', text: '瞄準' })]);
-    this.bindJoystick(this.joyBase);
     const bottom = el('div', { class: 'hud-bottom' }, [
       el('div', { class: 'charge' }, [el('span', { text: '暴擊充能' }), el('span', { class: 'charge-bar' }, this.chargeFill)]),
-      el('div', { class: 'boss-controls' }, [this.joyBase, this.superBtn]),
+      this.superBtn,
       this.hintText,
     ]);
     this.hud.append(el('div', { class: 'hud-topwrap' }, [top, this.chips]), bottom);
@@ -135,44 +150,179 @@ export class BossScene extends Phaser.Scene {
     this.hudBottom = bottom;
   }
 
-  /** Virtual joystick: deflection → reticle velocity. Uses pointer capture so it keeps
-   *  tracking even when the thumb slides off, and works alongside the super button. */
-  bindJoystick(base) {
-    let id = null;
-    const R = 46;
-    const set = (e) => {
-      const r = base.getBoundingClientRect();
-      let dx = e.clientX - (r.left + r.width / 2);
-      let dy = e.clientY - (r.top + r.height / 2);
-      const len = Math.hypot(dx, dy);
-      if (len > R) {
-        dx = (dx / len) * R;
-        dy = (dy / len) * R;
+  drawBackdrop() {
+    const g = this.backdrop;
+    const W = this.scale.width;
+    const H = this.scale.height;
+    g.clear();
+    const bands = 18;
+    for (let i = 0; i < bands; i++) {
+      const t = i / (bands - 1);
+      const r = Math.round(0x0b + (0x2a - 0x0b) * t);
+      const gg = Math.round(0x0c + (0x14 - 0x0c) * t);
+      const b = Math.round(0x10 + (0x14 - 0x10) * t);
+      g.fillStyle((r << 16) | (gg << 8) | b, 1);
+      g.fillRect(0, (H * i) / bands, W, H / bands + 1);
+    }
+    // warm glow from the crowd's light below the arena
+    const fieldBottom = this.root.y + BOSS_FIELD.h * this.fieldScale;
+    g.fillStyle(0xffd447, 0.07);
+    g.fillCircle(W / 2, fieldBottom, Math.max(W, H) * 0.45);
+    g.fillStyle(0xffd447, 0.06);
+    g.fillCircle(W / 2, fieldBottom, Math.max(W, H) * 0.25);
+    // distant factory skyline above the arena
+    const s = this.fieldScale;
+    const top = this.root.y;
+    g.fillStyle(0x1b1e26, 1);
+    for (let x = 0, i = 0; x < W; x += 46 * s, i++) {
+      const bh = (40 + ((i * 29) % 50)) * s;
+      g.fillRect(x, top - bh, 40 * s, bh + 2);
+      g.fillStyle(0xffd447, 0.35);
+      for (let wy = top - bh + 8 * s; wy < top - 6 * s; wy += 12 * s) if ((i + Math.round(wy)) % 3) g.fillRect(x + 8 * s, wy, 6 * s, 4 * s);
+      g.fillStyle(0x1b1e26, 1);
+    }
+    // crowd silhouettes below the arena
+    g.fillStyle(0x0b0b0e, 1);
+    for (let x = 6 * s, i = 0; x < W; x += 14 * s, i++) {
+      g.fillCircle(x, fieldBottom + (14 + (i % 3) * 3) * s, 6 * s);
+      g.fillRect(x - 6 * s, fieldBottom + (20 + (i % 3) * 3) * s, 12 * s, 40 * s);
+    }
+  }
+
+  toField(p) {
+    return { x: (p.x - this.root.x) / this.fieldScale, y: (p.y - this.root.y) / this.fieldScale };
+  }
+
+  corePos() {
+    const b = this.boss;
+    if (b.phase === 3) {
+      const lk = b.currentLock();
+      return lk ? { x: lk.x, y: lk.y, r: lk.r } : { x: BOSS_BODY.x, y: BOSS_BODY.y, r: 30 };
+    }
+    return { x: b.weak.x, y: b.weak.y, r: b.weak.r };
+  }
+
+  /** Pick what was tapped: veils first (they're urgent), then the weakpoint / lock / box. */
+  tapAt(pt) {
+    const b = this.boss;
+    let best = null;
+    let bd = 40;
+    for (const v of b.veils) {
+      const d = Math.hypot(v.x - pt.x, v.y - pt.y);
+      if (d < bd) {
+        bd = d;
+        best = { kind: 'veil', id: v.id };
       }
-      this.joy.x = dx / R;
-      this.joy.y = dy / R;
-      this.joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+    }
+    if (!best) {
+      const c = this.corePos();
+      const onBox = Math.abs(pt.x - BOSS_BODY.x) <= BOSS_BODY.w / 2 + 20 && Math.abs(pt.y - BOSS_BODY.y) <= BOSS_BODY.h / 2 + 20;
+      if (Math.hypot(c.x - pt.x, c.y - pt.y) < c.r + 30 || onBox) best = { kind: 'core' };
+    }
+    if (best) this.lockTarget(best);
+    else {
+      this.hintText.textContent = '點「閃爍白光」的目標才會攻擊：黑幕、弱點或鎖';
+      this.tapMiss(pt);
+    }
+  }
+
+  /** Beam goes idle until the player taps a target again. */
+  dropLock(title, sub) {
+    this.target = { kind: 'none' };
+    this.hintText.textContent = `${title}${sub}`;
+    this.floatText(200, 236, title, '#FFFFFF', 15);
+    Audio.sfx('event');
+  }
+
+  lockTarget(t) {
+    this.target = t;
+    this.lockFlash = 0.35;
+    Audio.sfx('select');
+    const pos = t.kind === 'veil' ? this.boss.veils.find((v) => v.id === t.id) : this.corePos();
+    if (pos) this.ringAt(pos.x, pos.y, 0xffd447);
+    this.hintText.textContent = t.kind === 'veil' ? '鎖定黑幕！燒掉它可累積雙城合擊' : this.boss.phase === 3 ? '鎖定鎖頭！照滿 1 秒擊破' : '鎖定弱點！持續照射觸發暴擊';
+  }
+
+  tapMiss(pt) {
+    const g = this.add.graphics();
+    this.fx.add(g);
+    const o = { r: 6, a: 0.8 };
+    this.tweens.add({ targets: o, r: 22, a: 0, duration: 300, onUpdate: () => { g.clear(); g.lineStyle(2, 0x8a93a3, o.a); g.strokeCircle(pt.x, pt.y, o.r); }, onComplete: () => g.destroy() });
+  }
+
+  ringAt(x, y, color) {
+    const g = this.add.graphics();
+    this.fx.add(g);
+    const o = { r: 34, a: 1 };
+    this.tweens.add({ targets: o, r: 12, a: 0.2, duration: 220, onUpdate: () => { g.clear(); g.lineStyle(3, color, o.a); g.strokeCircle(x, y, o.r); }, onComplete: () => g.destroy() });
+  }
+
+  buildHelper() {
+    this.helperSprite = this.add.image(372, 352, charKey('volunteer', 1, 'side', 0)).setOrigin(0.5, 0.92).setScale(0.75).setFlipX(true);
+    const tag = this.add.text(372, 300, '🧹 小幫手', { fontFamily: FONT, fontSize: '10px', fontStyle: 'bold', color: '#101216', backgroundColor: '#7FE7FF', padding: { x: 3, y: 1 }, resolution: 3 }).setOrigin(0.5, 1);
+    const zone = this.add.graphics();
+    zone.fillStyle(0x7fe7ff, 0.06);
+    zone.fillRect(10, HELPER.zoneY, 380, BOSS_TUNING.veilLandY - HELPER.zoneY);
+    zone.lineStyle(1, 0x7fe7ff, 0.5);
+    for (let x = 10; x < 390; x += 14) zone.lineBetween(x, HELPER.zoneY, x + 7, HELPER.zoneY);
+    const zl = this.add.text(16, HELPER.zoneY + 2, '減速區', { fontFamily: FONT, fontSize: '9px', color: '#7FE7FF', resolution: 3 });
+    this.root.addAt(zone, 1);
+    this.fx.add([this.helperSprite, tag, zl]);
+  }
+
+  /** Blinking white halos = "tap here"; the locked target gets gold brackets. */
+  drawHalos(time) {
+    const g = this.haloG;
+    g.clear();
+    const b = this.boss;
+    const blink = 0.45 + 0.55 * Math.abs(Math.sin(time / 170));
+    const grow = (time / 600) % 1;
+    const lockedVeil = this.target.kind === 'veil' ? this.target.id : null;
+    const halo = (x, y, r, urgent) => {
+      g.fillStyle(0xffffff, 0.16 * blink);
+      g.fillCircle(x, y, r + 6);
+      g.lineStyle(urgent ? 5 : 4, urgent ? 0xffe0e0 : 0xffffff, blink);
+      g.strokeCircle(x, y, r);
+      if (!this.lowFx) {
+        g.lineStyle(2, 0xffffff, (1 - grow) * 0.6);
+        g.strokeCircle(x, y, r + grow * 14);
+      }
     };
-    const reset = () => {
-      id = null;
-      this.joy.x = 0;
-      this.joy.y = 0;
-      this.joyKnob.style.transform = 'translate(0px, 0px)';
-      base.classList.remove('on');
-    };
-    base.addEventListener('pointerdown', (e) => {
-      if (id !== null) return;
-      e.preventDefault();
-      Audio.unlock();
-      id = e.pointerId;
-      base.setPointerCapture?.(e.pointerId);
-      base.classList.add('on');
-      set(e);
+    const labels = [];
+    for (const v of b.veils) {
+      if (v.id === lockedVeil) continue;
+      halo(v.x, v.y, 20, v.y > 280);
+      labels.push({ x: v.x, y: v.y - 30, text: v.y > 280 ? '快點！' : '點我' });
+    }
+    const c = this.corePos();
+    if (this.target.kind !== 'core') {
+      halo(c.x, c.y, c.r + 8, false);
+      labels.push({ x: c.x, y: c.y - c.r - 22, text: b.phase === 3 ? `點鎖 ${b.currentLock()?.n ?? ''}` : '點弱點' });
+    }
+    // "tap" labels (pooled texts), blinking with the halos
+    this.tapLabels = this.tapLabels || [];
+    while (this.tapLabels.length < labels.length) {
+      const t = this.add.text(0, 0, '', { fontFamily: FONT, fontSize: '11px', fontStyle: 'bold', color: '#101216', backgroundColor: '#FFFFFF', padding: { x: 4, y: 1 }, resolution: 3 }).setOrigin(0.5);
+      this.fx.add(t);
+      this.tapLabels.push(t);
+    }
+    this.tapLabels.forEach((t, i) => {
+      const l = labels[i];
+      if (!l) return t.setVisible(false);
+      t.setVisible(true).setPosition(l.x, Math.max(12, l.y)).setText(l.text).setAlpha(0.55 + 0.45 * blink);
     });
-    base.addEventListener('pointermove', (e) => e.pointerId === id && set(e));
-    base.addEventListener('pointerup', (e) => e.pointerId === id && reset());
-    base.addEventListener('pointercancel', (e) => e.pointerId === id && reset());
-    base.addEventListener('lostpointercapture', (e) => e.pointerId === id && reset());
+    // lock-on brackets on the current target
+    const t = this.target.kind === 'veil' ? b.veils.find((v) => v.id === lockedVeil) : this.target.kind === 'core' ? c : null;
+    if (t) {
+      const r = (t.r || 18) + 10 + Math.sin(time / 120) * 2 + (this.lockFlash > 0 ? this.lockFlash * 30 : 0);
+      g.lineStyle(3, 0xffd447, 1);
+      for (let k = 0; k < 4; k++) {
+        const a = (k * Math.PI) / 2 + time / 500;
+        g.beginPath();
+        g.arc(t.x, t.y, r, a, a + 0.6);
+        g.strokePath();
+      }
+    }
   }
 
   layout() {
@@ -184,12 +334,7 @@ export class BossScene extends Phaser.Scene {
     const s = Math.min(w / BOSS_FIELD.w, h / BOSS_FIELD.h) * dpr;
     this.fieldScale = s;
     this.root.setScale(s).setPosition((w * dpr - BOSS_FIELD.w * s) / 2, t * dpr + (h * dpr - BOSS_FIELD.h * s) / 2);
-  }
-
-  setAimFromPointer(p) {
-    const s = this.fieldScale;
-    this.aim.x = Phaser.Math.Clamp((p.x - this.root.x) / s, 0, BOSS_FIELD.w);
-    this.aim.y = Phaser.Math.Clamp((p.y - this.root.y) / s, 0, 360);
+    this.drawBackdrop();
   }
 
   trySuper() {
@@ -456,34 +601,38 @@ export class BossScene extends Phaser.Scene {
   update(time, deltaMs) {
     if (this.paused || this.ended) return;
     const dt = Math.min(0.1, deltaMs / 1000) * App.timeScale;
-    if (this.keys) {
-      const sp = 230 * dt;
-      if (this.keys.LEFT.isDown) this.aim.x -= sp;
-      if (this.keys.RIGHT.isDown) this.aim.x += sp;
-      if (this.keys.UP.isDown) this.aim.y -= sp;
-      if (this.keys.DOWN.isDown) this.aim.y += sp;
+    // beam auto-tracks the locked target; a burned/landed veil hands control back to the core
+    if (this.target.kind === 'veil' && !this.boss.veils.some((v) => v.id === this.target.id)) {
+      this.target = { kind: 'core' };
+      this.hintText.textContent = '黑幕處理完畢，光束回到弱點。看到新的白光就點它！';
     }
-    const jl = Math.hypot(this.joy.x, this.joy.y);
-    if (jl > 0.08 && !this.paused) {
-      // ease-in curve: small tilts for fine aiming, full tilt for fast sweeps
-      const v = 300 * Math.pow(Math.min(1, jl), 1.4);
-      this.aim.x += (this.joy.x / jl) * v * dt;
-      this.aim.y += (this.joy.y / jl) * v * dt;
+    // phase 2: the box scrambles the beam every few seconds → re-lock by tapping again
+    if (this.boss.phase === 2 && this.intro <= 0) {
+      this.scrambleT -= dt;
+      if (this.scrambleT <= 0) {
+        this.scrambleT = 6;
+        if (this.target.kind === 'core') this.dropLock('黑箱干擾！', '光束被甩開，再點一次弱點');
+      }
     }
-    this.aim.x = Phaser.Math.Clamp(this.aim.x, 0, 400);
-    this.aim.y = Phaser.Math.Clamp(this.aim.y, 0, 360);
+    const dest = this.target.kind === 'veil' ? this.boss.veils.find((v) => v.id === this.target.id) : this.target.kind === 'core' ? this.corePos() : { x: BEAM_SRC.x, y: 300 };
+    const k = Math.min(1, dt * 9);
+    this.aim.x += (dest.x - this.aim.x) * k;
+    this.aim.y += (dest.y - this.aim.y) * k;
+    this.lockFlash = Math.max(0, (this.lockFlash || 0) - dt);
     let firing = true;
     if (this.intro > 0) {
       this.intro -= dt;
       firing = false;
     }
-    const evs = firing ? this.boss.tick(dt, this.aim) : [];
+    const shooting = firing && this.target.kind !== 'none';
+    const evs = firing ? this.boss.tick(dt, shooting ? this.aim : null) : [];
     if (firing) this.run.runClock += dt;
     for (const e of evs) this.onBossEvent(e);
     this.drawBoss(time);
     this.ensureLockLabels();
     this.syncSprites();
-    this.drawBeam(time, firing);
+    this.drawBeam(time, shooting);
+    this.drawHalos(time);
     const hit = this.boss.lastHit;
     if (firing && (hit === 'weak' || hit === 'body' || hit === 'lock') && Math.random() < 0.5) this.impact(this.aim.x, this.aim.y, false);
     this.dimRect.fillAlpha = this.boss.landed.length ? 0.12 * Math.min(2, this.boss.landed.length) : 0;
@@ -523,6 +672,10 @@ export class BossScene extends Phaser.Scene {
         Audio.sfx('crit');
         this.impact(e.x, e.y, true, 0xffffff);
         this.floatText(e.x, e.y - 24, `鎖 ${e.n} 擊破！`, '#FFFFFF', 18);
+        if (this.target.kind === 'core') {
+          this.target = { kind: 'none' };
+          this.hintText.textContent = `鎖 ${e.n} 擊破！點下一道閃白光的鎖`;
+        }
         if (!this.lowFx) this.cameras.main.shake(180, 0.008);
         break;
       case 'attack':
@@ -532,6 +685,7 @@ export class BossScene extends Phaser.Scene {
         break;
       case 'phase':
         Audio.sfx('boss');
+        if (this.target.kind === 'core') this.target = { kind: 'none' };
         if (e.phase === 2) {
           this.banner('第二階段', '護盾環繞・弱點移動');
           this.hintText.textContent = '灰色護盾會擋光！趁空隙照射移動的弱點';
@@ -539,6 +693,14 @@ export class BossScene extends Phaser.Scene {
         if (e.phase === 3) this.banner('最後一道鎖', '依序擊破 1→2→3', '#E83B3B');
         break;
       case 'super':
+        break;
+      case 'weakMoved':
+        if (this.target.kind === 'core') this.dropLock('弱點移動了！', '點新的白光弱點');
+        break;
+      case 'helperBurn':
+        this.impact(e.x, e.y, false, 0x7fe7ff);
+        this.floatText(e.x, e.y - 10, '小幫手燒掉黑幕！', '#7FE7FF', 11);
+        if (this.helperSprite) this.tweens.add({ targets: this.helperSprite, y: 344, yoyo: true, duration: 120 });
         break;
       default:
     }
@@ -558,7 +720,7 @@ export class BossScene extends Phaser.Scene {
     this.superBtn.classList.toggle('ready', can);
     this.superBtn.classList.toggle('active', b.superTime > 0);
     this.scoreText.textContent = fmtScore(this.run.score);
-    const chips = [];
+    const chips = this.perks.filter((id) => perkById(id)?.where === 'Boss').map((id) => `<span class="chip perk"><span>${perkById(id)?.icon} ${perkById(id)?.name}</span></span>`);
     if (b.powerBonus > 0) chips.push(`<span class="chip buff"><span>👥 夥伴之光 光束 +${Math.round(b.powerBonus * 100)}%</span></span>`);
     if (b.superTime > 0) chips.push(`<span class="chip buff res"><span>🔆 雙城合擊</span><b>${Math.ceil(b.superTime)}s</b></span>`);
     if (b.landed.length) chips.push(`<span class="chip debuff"><span>⬛ 黑幕落地 光束 -${Math.min(2, b.landed.length) * 25}%</span><b>${Math.ceil(Math.max(...b.landed))}s</b></span>`);

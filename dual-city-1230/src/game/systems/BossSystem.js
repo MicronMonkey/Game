@@ -26,13 +26,15 @@ export const BOSS_TUNING = {
   landedDebuffPower: 0.25, // −25% beam power per landed veil (max 2 stacks)
   superPerBurn: 1 / 7,
   superSeconds: 2.6,
-  superDps: 110,
+  superDps: 80,
   superWidth: 26,
   lockHoldSeconds: 1.0,
   lockDamageFrac: 0.075,
   plateOrbit: 104,
   plateRadius: 22,
 };
+
+export const HELPER = { zoneY: 280, slow: 0.5, every: 8 };
 
 const ANCHORS = [
   { x: 150, y: 115 },
@@ -62,13 +64,16 @@ export function segDist(p, a, b) {
 }
 
 export class BossSystem {
-  constructor({ maxHp, seconds, initialDamage = 0, powerBonus = 0, rng = Math.random }) {
+  constructor({ maxHp, seconds, initialDamage = 0, powerBonus = 0, critSeconds = B.critical_charge_seconds, helper = false, rng = Math.random }) {
+    this.critSeconds = critSeconds;
+    // 掃黑幕小幫手: slows veils in the lower field and burns one every few seconds
+    this.helper = helper ? { y: HELPER.zoneY, slow: HELPER.slow, every: HELPER.every, timer: HELPER.every } : null;
     this.maxHp = maxHp;
     this.hp = Math.max(1, maxHp - initialDamage);
     this.time = seconds;
     this.initialTime = seconds;
     this.rng = rng;
-    this.powerBonus = Math.max(0, Math.min(0.3, powerBonus));
+    this.powerBonus = Math.max(0, Math.min(0.45, powerBonus));
     this.phase = phaseFor(this.hp, maxHp);
     this.anchorIndex = 0;
     this.rotateTimer = BOSS_TUNING.rotateSeconds;
@@ -182,7 +187,8 @@ export class BossSystem {
     }
     for (const v of this.veils) {
       v.x = Math.max(14, Math.min(386, v.x + v.vx * dt));
-      v.y += v.vy * dt;
+      v.slowed = !!this.helper && v.y >= this.helper.y;
+      v.y += v.vy * dt * (v.slowed ? this.helper.slow : 1);
       if (aim && segDist(v, BEAM_SRC, aim) <= BOSS_TUNING.veilRadius + beamWidth / 2) {
         v.burn += dt;
         if (v.burn >= (this.superTime > 0 ? 0.01 : BOSS_TUNING.veilBurnSeconds)) {
@@ -197,6 +203,19 @@ export class BossSystem {
         this.landed.push(BOSS_TUNING.landedDebuffSeconds);
         this.landedCount += 1;
         this.emit('landed', { x: v.x });
+      }
+    }
+    if (this.helper) {
+      this.helper.timer -= dt;
+      if (this.helper.timer <= 0) {
+        this.helper.timer = this.helper.every;
+        const low = this.veils.filter((v) => !v.dead).sort((a, b) => b.y - a.y)[0];
+        if (low) {
+          low.dead = true;
+          this.burned += 1;
+          this.superMeter = Math.min(1, this.superMeter + BOSS_TUNING.superPerBurn);
+          this.emit('helperBurn', { x: low.x, y: low.y });
+        }
       }
     }
     this.veils = this.veils.filter((v) => !v.dead);
@@ -268,7 +287,7 @@ export class BossSystem {
     if (this.lastHit === 'weak') {
       this.offWeakFor = 0;
       this.charge += dt;
-      if (this.charge >= B.critical_charge_seconds) {
+      if (this.charge >= this.critSeconds) {
         dmg += B.critical_damage;
         this.charge = 0;
         this.crits += 1;

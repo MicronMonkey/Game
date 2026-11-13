@@ -32,6 +32,10 @@ export function clearUi() {
   uiRoot().replaceChildren();
 }
 
+export function clearToasts() {
+  document.getElementById('toasts')?.replaceChildren();
+}
+
 export function toast(msg, kind = '') {
   let box = document.getElementById('toasts');
   if (!box) {
