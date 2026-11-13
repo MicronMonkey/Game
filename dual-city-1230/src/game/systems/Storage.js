@@ -12,7 +12,7 @@ export function defaultSave() {
       normal: { highest: 0, bestClearSeconds: null },
       hell: { highest: 0, bestClearSeconds: null },
     },
-    stats: { played: 0, bossWins: 0, longestCombo: 0, lunchArrivals: 0, skillsUsed: 0, bossFailedSinceWin: false },
+    stats: { played: 0, bossWins: 0, longestCombo: 0, lunchArrivals: 0, skillsUsed: 0, bossFailedSinceWin: false, noManagerRun: false, threeStars: false },
     achievements: [],
     galleryViewed: { taoyuan: false, taichung: false },
     settings: { soundEnabled: true, reducedMotion: false },
