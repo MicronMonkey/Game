@@ -8,7 +8,7 @@ import { BEAM_SRC, BOSS_BODY, BOSS_FIELD, BOSS_TUNING, BossSystem } from '../sys
 import { addBonus } from '../systems/GameState.js';
 import { bossRemainingBonus } from '../systems/scoring.js';
 import { Audio } from '../systems/AudioSystem.js';
-import { el, fmtScore, fmtTime, layer, toast } from '../ui/dom.js';
+import { el, fmtScore, fmtTime, layer, onPress, toast } from '../ui/dom.js';
 import { pauseMenu } from '../ui/modal.js';
 
 const FONT = 'system-ui, "Noto Sans TC", "PingFang TC", sans-serif';
@@ -56,15 +56,24 @@ export class BossScene extends Phaser.Scene {
     this.layout();
     this.scale.on('resize', this.layout, this);
 
+    // aim with one finger; a second finger on the 雙城合擊 button doesn't move the aim
+    const onCanvas = (p) => !p.event || p.event.target === this.game.canvas;
     this.input.on('pointerdown', (p) => {
       Audio.unlock();
-      if (this.paused || this.ended) return;
+      if (this.paused || this.ended || !onCanvas(p)) return;
+      if (this.aimId != null && p.wasTouch) return;
+      if (p.wasTouch) this.aimId = p.id;
       this.setAimFromPointer(p);
     });
     this.input.on('pointermove', (p) => {
       if (this.paused || this.ended) return;
-      if (p.isDown || !p.wasTouch) this.setAimFromPointer(p);
+      if (p.wasTouch ? p.id === this.aimId && p.isDown : true) this.setAimFromPointer(p);
     });
+    const release = (p) => {
+      if (p.id === this.aimId) this.aimId = null;
+    };
+    this.input.on('pointerup', release);
+    this.input.on('pointerupoutside', release);
     this.keyHandler = (e) => {
       if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
         if (this.paused) this.resumeGame();
@@ -113,10 +122,11 @@ export class BossScene extends Phaser.Scene {
     this.hintText = el('div', { class: 'hud-hint', 'aria-live': 'polite', text: '拖曳瞄準橘色弱點；光束掃過黑幕可燒掉它！' });
     this.chargeFill = el('i');
     this.superFill = el('i');
-    this.superBtn = el('button', { class: 'super-btn', disabled: true, onclick: () => this.trySuper(), 'aria-label': '雙城合擊' }, [
+    this.superBtn = el('button', { class: 'super-btn', disabled: true, 'aria-label': '雙城合擊' }, [
       el('span', { class: 'super-fill' }, this.superFill),
       el('span', { class: 'super-label' }, [el('b', { text: '🔆 雙城合擊' }), el('small', { text: '燒掉黑幕充能' })]),
     ]);
+    onPress(this.superBtn, () => this.trySuper());
     const bottom = el('div', { class: 'hud-bottom' }, [
       el('div', { class: 'charge' }, [el('span', { text: '暴擊充能' }), el('span', { class: 'charge-bar' }, this.chargeFill)]),
       this.superBtn,

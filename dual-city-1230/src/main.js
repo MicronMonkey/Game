@@ -25,7 +25,7 @@ const game = new Phaser.Game({
   height: window.innerHeight * dpr,
   scale: { mode: Phaser.Scale.NONE, zoom: 1 / dpr },
   render: { antialias: true, roundPixels: false },
-  input: { activePointers: 2 },
+  input: { activePointers: 3 },
   disableContextMenu: true,
   banner: false,
   fps: { target: 60, min: 20 },

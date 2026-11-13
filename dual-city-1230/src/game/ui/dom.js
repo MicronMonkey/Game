@@ -45,6 +45,24 @@ export function toast(msg, kind = '') {
   setTimeout(() => t.remove(), 2300);
 }
 
+/**
+ * Make a button fire on touch-down. Phones don't fire `click` while another finger is
+ * on the screen (e.g. steering), so game buttons act on pointerdown instead. Keyboard
+ * activation (Enter/Space → click with detail 0) still works.
+ */
+export function onPress(btn, fn) {
+  btn.addEventListener('pointerdown', (e) => {
+    if (e.button > 0) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (!btn.disabled) fn(e);
+  });
+  btn.addEventListener('click', (e) => {
+    if (e.detail === 0 && !btn.disabled) fn(e);
+  });
+  return btn;
+}
+
 export function fmtTime(sec) {
   const s = Math.max(0, Math.ceil(sec));
   return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
