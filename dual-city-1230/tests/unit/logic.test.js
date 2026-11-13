@@ -3,10 +3,7 @@ import assert from 'node:assert/strict';
 import { BALANCE, difficultySettings, virtualClock } from '../../src/game/config.js';
 import { comboMultiplier, arrivalScore, remainingSecondsBonus, bossRemainingBonus, bossInitialDamage } from '../../src/game/systems/scoring.js';
 import { createRunState, registerArrival, tickCombo, sprinterTimeBonus, citiesReached, spendSun, addSun } from '../../src/game/systems/GameState.js';
-import { SkillSystem } from '../../src/game/systems/SkillSystem.js';
 import { BossSystem, phaseFor } from '../../src/game/systems/BossSystem.js';
-import { buildGraph, shortestPath, edgeKey } from '../../src/game/systems/pathing.js';
-import { MAPS } from '../../src/game/maps.js';
 import { defaultSave, migrate, recordRun, SAVE_KEY } from '../../src/game/systems/Storage.js';
 import { evaluateAchievements } from '../../src/game/systems/achievements.js';
 
@@ -71,37 +68,6 @@ test('citiesReached counts targets', () => {
   const s = createRunState('normal');
   s.cities.taoyuan.arrived = 30;
   assert.equal(citiesReached(s), 1);
-});
-
-test('skills: cost, cooldown, non-stacking speed, tick-driven', () => {
-  const s = createRunState('normal');
-  const k = new SkillSystem(s);
-  assert.match(k.cast('city_resonance').reason, /陽光不足/);
-  s.sun = 100;
-  assert.ok(k.cast('lunch_sprint').ok);
-  assert.ok(k.cast('city_resonance').ok);
-  assert.equal(k.speedBonus(), 0.4); // max, not 0.7
-  assert.match(k.reason('lunch_sprint'), /冷卻/);
-  k.tick(15);
-  s.sun = 100;
-  assert.equal(k.reason('lunch_sprint'), null);
-  assert.equal(k.isActive('lunch_sprint'), false);
-  k.blocked.city_resonance = '訊號中斷';
-  assert.equal(k.reason('city_resonance'), '訊號中斷');
-});
-
-test('pathing reaches zone and avoids a queued edge when cheaper', () => {
-  const m = MAPS.taoyuan;
-  const g = buildGraph(m);
-  const p = shortestPath(m, g, 'A', 'Z');
-  assert.equal(p[0], 'A');
-  assert.equal(p.at(-1), 'Z');
-  for (const map of Object.values(MAPS)) {
-    const gg = buildGraph(map);
-    for (const n of Object.keys(map.nodes)) assert.ok(shortestPath(map, gg, n, 'Z'), `${map.id}:${n}`);
-  }
-  const cost = new Map([[edgeKey('C', 'F'), 100]]);
-  assert.ok(!shortestPath(m, g, 'A', 'Z', cost).join('').includes('CF'));
 });
 
 const quiet = (b) => {

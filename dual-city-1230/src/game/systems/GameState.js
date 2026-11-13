@@ -13,6 +13,7 @@ export function createRunState(difficulty = 'normal', city = 'taoyuan') {
     city: mine, // the city the player runs
     allyCity: mine === 'taichung' ? 'taoyuan' : 'taichung', // advances automatically
     allyProgress: 0,
+    seed: Math.floor(Math.random() * 1e6),
     score: 0,
     sun: TUNING.startingSun,
     sunCapacity: BALANCE.scoring.sun_capacity,
@@ -76,6 +77,19 @@ export function registerArrival(state, cityId, charId, type, opts = {}) {
   c.arrived += 1;
   c.byType[type] = (c.byType[type] || 0) + 1;
   return { points, combo: state.combo, multiplier: comboMultiplier(state.combo), sunGain, arrived: c.arrived };
+}
+
+/** Runner: a bystander joined the crowd. Combo + score (resonance ×1.5). */
+export function registerRecruit(state, opts = {}) {
+  const window = BALANCE.scoring.combo_window_seconds;
+  if (state.runClock - state.lastArrivalAt <= window) state.combo += 1;
+  else state.combo = 1;
+  state.lastArrivalAt = state.runClock;
+  state.longestCombo = Math.max(state.longestCombo, state.combo);
+  const points = arrivalScore(state.combo, !!opts.resonance);
+  state.score += points;
+  state.recruits = (state.recruits || 0) + 1;
+  return { points, combo: state.combo, multiplier: comboMultiplier(state.combo) };
 }
 
 /** Combo resets when the window expires. Call every tick. */

@@ -34,7 +34,7 @@ export class BossScene extends Phaser.Scene {
       maxHp: run.settings.bossHp,
       seconds: run.settings.bossSeconds,
       initialDamage: run.bossInitialDamage,
-      powerBonus: Math.min(0.3, arrived / 100),
+      powerBonus: Math.min(0.3, arrived / 200),
     });
     this.aim = { x: 200, y: 200 };
     this.keys = this.input.keyboard?.addKeys('LEFT,RIGHT,UP,DOWN');

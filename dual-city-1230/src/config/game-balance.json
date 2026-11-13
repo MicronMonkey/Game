@@ -53,23 +53,23 @@
     }
   },
   "skills": {
-    "lunch_sprint": {
-      "sun_cost": 25,
-      "cooldown_seconds": 15,
-      "duration_seconds": 10,
-      "speed_bonus": 0.4
+    "rally": {
+      "sun_cost": 30,
+      "cooldown_seconds": 12,
+      "duration_seconds": 6,
+      "radius_multiplier": 1.6
     },
-    "sunlight": {
-      "sun_cost": 35,
-      "cooldown_seconds": 20,
-      "remove_cloud_events": 1
+    "shield": {
+      "sun_cost": 40,
+      "cooldown_seconds": 18,
+      "duration_seconds": 6
     },
     "city_resonance": {
       "sun_cost": 60,
-      "cooldown_seconds": 45,
-      "duration_seconds": 10,
-      "speed_bonus": 0.3,
-      "score_bonus": 0.5
+      "cooldown_seconds": 30,
+      "duration_seconds": 8,
+      "score_bonus": 0.5,
+      "magnet_multiplier": 2.2
     }
   },
   "boss": {
@@ -100,5 +100,36 @@
       "boss_hp_multiplier": 1.25
     }
   },
-  "design_disclaimer": "All in-game attendance figures are fictional."
+  "design_disclaimer": "All in-game attendance figures are fictional.",
+  "runner": {
+    "_note": "Scrolling crowd-runner acts. Distances are logical units; the view is 360 wide.",
+    "view_width": 360,
+    "view_height": 640,
+    "scroll_speed": [
+      58,
+      64
+    ],
+    "stage_length": [
+      3300,
+      3700
+    ],
+    "stage_target_multiplier": [
+      1.5,
+      2.4
+    ],
+    "player_speed": 230,
+    "radius_base": 52,
+    "radius_min": 26,
+    "radius_max": 130,
+    "sun_per_recruit": 2,
+    "finish_points_per_person": 50,
+    "target_bonus": 3000,
+    "manager_pull": 5,
+    "meeting_drain_interval": 0.6,
+    "fog_radius_multiplier": 0.6,
+    "car_hit_loss": 2,
+    "manager_pull_fraction": 0.15,
+    "meeting_drain_fraction": 0.04,
+    "car_hit_fraction": 0.05
+  }
 }

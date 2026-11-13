@@ -62,10 +62,10 @@ export class EndingScene extends Phaser.Scene {
       longestCombo: run.longestCombo,
       bossWin,
       clearSeconds: run.clearSeconds,
-      lunchArrivals: (run.cities.taoyuan.byType.lunch || 0) + (run.cities.taichung.byType.lunch || 0),
+      lunchArrivals: run.recruits || 0,
       skillsUsed: run.skillsUsed,
     });
-    const unlocked = evaluateAchievements(save, { citiesReached: citiesReached(run), bossWin, difficulty: run.difficulty, bossFailedBefore });
+    const unlocked = evaluateAchievements(save, { citiesReached: run.citiesReachedFinal ?? citiesReached(run), bossWin, difficulty: run.difficulty, bossFailedBefore });
     save.stats.bossFailedSinceWin = bossWin ? false : true;
     persist();
     run.newHigh = newHigh;
@@ -129,8 +129,8 @@ export class EndingScene extends Phaser.Scene {
           difficultyLabel: run.settings.label,
           bossWin: run.bossResult === 'win',
           cities: {
-            taoyuan: { arrived: run.cities.taoyuan.arrived, target: run.settings.targets.taoyuan },
-            taichung: { arrived: run.cities.taichung.arrived, target: run.settings.targets.taichung },
+            [run.city]: { arrived: run.cities[run.city].arrived, target: (run.stageTargets || []).reduce((a, b) => a + (b || 0), 0) || run.settings.targets[run.city] },
+            [run.allyCity]: { arrived: run.cities[run.allyCity].arrived, target: run.settings.targets[run.allyCity] },
           },
         }),
     }).then((g) => (this.gallery = g));
