@@ -144,8 +144,11 @@ try {
   const missing = await page.locator('.photo-missing').count();
   await shot(page, '02-gallery-empty');
   pass('首頁「11/13 真實紀錄」無條件直達相簿', true);
-  pass('沒有真實照片時兩城皆顯示「照片整理中」', missing === 2 && (await page.locator('text=桃園真實活動照片整理中').count()) === 1);
-  pass('相簿無偽造照片（無 <img>）', (await page.locator('.gallery img').count()) === 0);
+  pass('桃園尚無照片 → 顯示「照片整理中」', missing === 1 && (await page.locator('text=桃園真實活動照片整理中').count()) === 1);
+  const imgs = await page.evaluate(() => [...document.querySelectorAll('.gallery img')].map((i) => ({ src: i.getAttribute('src'), ok: i.complete && i.naturalWidth > 0, fit: getComputedStyle(i).objectFit })));
+  pass('台中真實照片從 JSON 載入並完整顯示（contain）', imgs.length === 1 && /assets\/photos\/taichung-01\.webp$/.test(imgs[0].src) && imgs[0].ok && imgs[0].fit === 'contain', JSON.stringify(imgs));
+  const exif = await page.evaluate(async () => { const b = new Uint8Array(await (await fetch('assets/photos/taichung-01.webp')).arrayBuffer()); return new TextDecoder('latin1').decode(b.slice(0, 4096)).includes('EXIF'); });
+  pass('公開照片不含 EXIF/GPS 中繼資料', !exif);
   await page.keyboard.press('Escape');
   await page.waitForSelector('.menu-card');
   pass('鍵盤返回首頁', !(await page.locator('.gallery').count()));
@@ -381,6 +384,17 @@ try {
   const hpAfter = await page.evaluate(() => window.__dc.App.hooks.scene.boss.hp);
   await shot(page, '06-boss');
   pass('滑鼠瞄準弱點造成 Boss 扣血', hpAfter < wk.hp, `${wk.hp.toFixed(0)} → ${hpAfter.toFixed(0)}`);
+  // weapon controller (joystick) moves the reticle
+  const jb = await page.locator('.joy').boundingBox();
+  const a0 = await page.evaluate(() => ({ ...window.__dc.App.hooks.scene.aim }));
+  await page.mouse.move(jb.x + jb.width / 2, jb.y + jb.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(jb.x + jb.width / 2 + 60, jb.y + jb.height / 2, { steps: 4 });
+  await page.waitForTimeout(500);
+  await page.mouse.up();
+  const a1 = await page.evaluate(() => ({ ...window.__dc.App.hooks.scene.aim, joy: window.__dc.App.hooks.scene.joy.x }));
+  await shot(page, '06b-joystick');
+  pass('武器控制器（搖桿）移動攻擊點、放開後回中', a1.x > a0.x + 60 && a1.joy === 0, `${a0.x.toFixed(0)} → ${a1.x.toFixed(0)}`);
   await bossAim(page, 'win');
   await page.evaluate(() => (window.__dc.App.timeScale = 4));
   await waitScene(page, 'Ending', 60000);
@@ -495,6 +509,53 @@ try {
   const x1t = await page.evaluate(() => window.__dc.App.hooks.scene.player.x);
   await touch('touchEnd', []);
   pass('一指拖曳中，另一指可按技能（技能施放、拖曳不中斷）', mid.rally && mid.drag && x1t > x0t + 40, JSON.stringify({ ...mid, x0: Math.round(x0t), x1: Math.round(x1t) }));
+  await page.context().close();
+
+  // ---------- 7c. boss on a phone: finger on the field does NOT move the aim; joystick + super together ----------
+  page = await newPage(browser, { viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
+  await page.goto(`${BASE}?test=1`);
+  await page.click('text=略過').catch(() => {});
+  await startGame(page, 'normal', 'taichung');
+  await page.evaluate(() => { window.__dc.App.run.bossInitialDamage = 0; window.__dc.App.hooks.scene.scene.start('Boss'); });
+  await waitScene(page, 'Boss');
+  await page.waitForTimeout(500);
+  const cdp2 = await page.context().newCDPSession(page);
+  const t2 = (type, pts) => cdp2.send('Input.dispatchTouchEvent', { type, touchPoints: pts.map((p) => ({ ...p, radiusX: 4, radiusY: 4, force: 1 })) });
+  const aimA = await page.evaluate(() => ({ ...window.__dc.App.hooks.scene.aim }));
+  await t2('touchStart', [{ x: 120, y: 300, id: 1 }]);
+  await t2('touchMove', [{ x: 300, y: 260, id: 1 }]);
+  await t2('touchEnd', []);
+  await page.waitForTimeout(100);
+  const aimB = await page.evaluate(() => ({ ...window.__dc.App.hooks.scene.aim }));
+  pass('手機：手指點戰場不會移動攻擊點（不遮擋）', Math.abs(aimB.x - aimA.x) < 1 && Math.abs(aimB.y - aimA.y) < 1);
+  await page.evaluate(() => { window.__dc.App.hooks.scene.boss.superMeter = 1; });
+  await page.waitForTimeout(80);
+  const jb2 = await page.locator('.joy').boundingBox();
+  const sb2 = await page.locator('.super-btn').boundingBox();
+  const jc = { x: jb2.x + jb2.width / 2, y: jb2.y + jb2.height / 2, id: 1 };
+  await t2('touchStart', [jc]);
+  await t2('touchMove', [{ ...jc, y: jc.y - 50 }]);
+  await t2('touchStart', [{ ...jc, y: jc.y - 50 }, { x: sb2.x + sb2.width / 2, y: sb2.y + sb2.height / 2, id: 2 }]);
+  await page.waitForTimeout(400);
+  const both = await page.evaluate(() => ({ superOn: window.__dc.App.hooks.scene.boss.superTime > 0, joyY: window.__dc.App.hooks.scene.joy.y, aimY: window.__dc.App.hooks.scene.aim.y }));
+  await t2('touchEnd', []);
+  await shot(page, '06c-boss-phone');
+  pass('手機：左手搖桿＋右手雙城合擊可同時操作', both.superOn && both.joyY < -0.5 && both.aimY < aimA.y - 30, JSON.stringify(both));
+  await page.context().close();
+
+  // ---------- 7d. scroll speed per difficulty ----------
+  page = await newPage(browser);
+  await page.goto(`${BASE}?test=1`);
+  await page.click('text=略過').catch(() => {});
+  const speeds = {};
+  for (const d of ['easy', 'normal', 'hell']) {
+    await startGame(page, d, 'taoyuan');
+    speeds[d] = await page.evaluate(() => window.__dc.App.hooks.scene.scrollSpeed);
+    await page.evaluate(() => window.__dc.App.hooks.scene.scene.start('Menu'));
+    await waitScene(page, 'Menu');
+  }
+  const oldHell = 58 / 0.85;
+  pass('地獄難度捲動為原本兩倍，其他難度依序變快', Math.abs(speeds.hell / oldHell - 2) < 0.02 && speeds.easy < speeds.normal && speeds.normal < speeds.hell, JSON.stringify(speeds));
   await page.context().close();
 
   // ---------- 8. viewports ----------

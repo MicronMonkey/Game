@@ -56,24 +56,18 @@ export class BossScene extends Phaser.Scene {
     this.layout();
     this.scale.on('resize', this.layout, this);
 
-    // aim with one finger; a second finger on the 雙城合擊 button doesn't move the aim
+    // Touch screens aim ONLY with the on-screen joystick (a finger on the field would hide
+    // the target). A desktop mouse may still point directly; arrow keys also work.
     const onCanvas = (p) => !p.event || p.event.target === this.game.canvas;
     this.input.on('pointerdown', (p) => {
       Audio.unlock();
-      if (this.paused || this.ended || !onCanvas(p)) return;
-      if (this.aimId != null && p.wasTouch) return;
-      if (p.wasTouch) this.aimId = p.id;
+      if (this.paused || this.ended || !onCanvas(p) || p.wasTouch) return;
       this.setAimFromPointer(p);
     });
     this.input.on('pointermove', (p) => {
-      if (this.paused || this.ended) return;
-      if (p.wasTouch ? p.id === this.aimId && p.isDown : true) this.setAimFromPointer(p);
+      if (this.paused || this.ended || p.wasTouch || !onCanvas(p)) return;
+      this.setAimFromPointer(p);
     });
-    const release = (p) => {
-      if (p.id === this.aimId) this.aimId = null;
-    };
-    this.input.on('pointerup', release);
-    this.input.on('pointerupoutside', release);
     this.keyHandler = (e) => {
       if (e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
         if (this.paused) this.resumeGame();
@@ -119,7 +113,7 @@ export class BossScene extends Phaser.Scene {
       el('button', { class: 'btn-icon', 'aria-label': '暫停', onclick: () => this.pauseGame(), text: '⏸' }),
     ]);
     this.chips = el('div', { class: 'status-chips' });
-    this.hintText = el('div', { class: 'hud-hint', 'aria-live': 'polite', text: '拖曳瞄準橘色弱點；光束掃過黑幕可燒掉它！' });
+    this.hintText = el('div', { class: 'hud-hint', 'aria-live': 'polite', text: '用左下「瞄準」搖桿移動準星到橘色弱點；光束掃過黑幕可燒掉它！' });
     this.chargeFill = el('i');
     this.superFill = el('i');
     this.superBtn = el('button', { class: 'super-btn', disabled: true, 'aria-label': '雙城合擊' }, [
@@ -127,14 +121,58 @@ export class BossScene extends Phaser.Scene {
       el('span', { class: 'super-label' }, [el('b', { text: '🔆 雙城合擊' }), el('small', { text: '燒掉黑幕充能' })]),
     ]);
     onPress(this.superBtn, () => this.trySuper());
+    this.joy = { x: 0, y: 0 };
+    this.joyKnob = el('span', { class: 'joy-knob' });
+    this.joyBase = el('div', { class: 'joy', role: 'application', 'aria-label': '武器控制器：拖曳移動瞄準點' }, [el('span', { class: 'joy-ring' }), this.joyKnob, el('small', { class: 'joy-label', text: '瞄準' })]);
+    this.bindJoystick(this.joyBase);
     const bottom = el('div', { class: 'hud-bottom' }, [
       el('div', { class: 'charge' }, [el('span', { text: '暴擊充能' }), el('span', { class: 'charge-bar' }, this.chargeFill)]),
-      this.superBtn,
+      el('div', { class: 'boss-controls' }, [this.joyBase, this.superBtn]),
       this.hintText,
     ]);
     this.hud.append(el('div', { class: 'hud-topwrap' }, [top, this.chips]), bottom);
     this.hudTop = this.chips;
     this.hudBottom = bottom;
+  }
+
+  /** Virtual joystick: deflection → reticle velocity. Uses pointer capture so it keeps
+   *  tracking even when the thumb slides off, and works alongside the super button. */
+  bindJoystick(base) {
+    let id = null;
+    const R = 46;
+    const set = (e) => {
+      const r = base.getBoundingClientRect();
+      let dx = e.clientX - (r.left + r.width / 2);
+      let dy = e.clientY - (r.top + r.height / 2);
+      const len = Math.hypot(dx, dy);
+      if (len > R) {
+        dx = (dx / len) * R;
+        dy = (dy / len) * R;
+      }
+      this.joy.x = dx / R;
+      this.joy.y = dy / R;
+      this.joyKnob.style.transform = `translate(${dx}px, ${dy}px)`;
+    };
+    const reset = () => {
+      id = null;
+      this.joy.x = 0;
+      this.joy.y = 0;
+      this.joyKnob.style.transform = 'translate(0px, 0px)';
+      base.classList.remove('on');
+    };
+    base.addEventListener('pointerdown', (e) => {
+      if (id !== null) return;
+      e.preventDefault();
+      Audio.unlock();
+      id = e.pointerId;
+      base.setPointerCapture?.(e.pointerId);
+      base.classList.add('on');
+      set(e);
+    });
+    base.addEventListener('pointermove', (e) => e.pointerId === id && set(e));
+    base.addEventListener('pointerup', (e) => e.pointerId === id && reset());
+    base.addEventListener('pointercancel', (e) => e.pointerId === id && reset());
+    base.addEventListener('lostpointercapture', (e) => e.pointerId === id && reset());
   }
 
   layout() {
@@ -424,9 +462,16 @@ export class BossScene extends Phaser.Scene {
       if (this.keys.RIGHT.isDown) this.aim.x += sp;
       if (this.keys.UP.isDown) this.aim.y -= sp;
       if (this.keys.DOWN.isDown) this.aim.y += sp;
-      this.aim.x = Phaser.Math.Clamp(this.aim.x, 0, 400);
-      this.aim.y = Phaser.Math.Clamp(this.aim.y, 0, 360);
     }
+    const jl = Math.hypot(this.joy.x, this.joy.y);
+    if (jl > 0.08 && !this.paused) {
+      // ease-in curve: small tilts for fine aiming, full tilt for fast sweeps
+      const v = 300 * Math.pow(Math.min(1, jl), 1.4);
+      this.aim.x += (this.joy.x / jl) * v * dt;
+      this.aim.y += (this.joy.y / jl) * v * dt;
+    }
+    this.aim.x = Phaser.Math.Clamp(this.aim.x, 0, 400);
+    this.aim.y = Phaser.Math.Clamp(this.aim.y, 0, 360);
     let firing = true;
     if (this.intro > 0) {
       this.intro -= dt;

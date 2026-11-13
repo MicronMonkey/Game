@@ -44,8 +44,11 @@ export class RunnerScene extends Phaser.Scene {
     const st = this.stage;
     const mult = BALANCE.runner.stage_target_multiplier[st];
     this.target = Math.round(run.settings.targets[this.city] * mult);
-    // easy = slower scroll (more time), hell = faster
-    this.scrollSpeed = R.scroll_speed[st] / run.settings.timeMultiplier;
+    // scroll speed per difficulty (config: runner.scroll_multiplier); the protagonist
+    // walks faster on faster settings so the street stays controllable
+    const sm = R.scroll_multiplier?.[run.difficulty] ?? 1;
+    this.scrollSpeed = R.scroll_speed[st] * sm;
+    this.playerSpeed = R.player_speed * (0.55 + 0.45 * sm);
     this.level = generateStage({ stage: st, difficulty: run.difficulty, target: this.target, seed: run.seed + st });
     run.stageSeconds = run.stageSeconds || [];
     run.stageSeconds[st] = this.level.length / this.scrollSpeed;
@@ -621,7 +624,7 @@ export class RunnerScene extends Phaser.Scene {
     const maxScroll = this.level.length;
     this.scroll = Math.min(maxScroll, this.scroll + this.scrollSpeed * dt);
     // movement
-    const sp = R.player_speed;
+    const sp = this.playerSpeed;
     let vx = 0;
     let vd = 0;
     const K = this.keys;
