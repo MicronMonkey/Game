@@ -33,7 +33,3 @@ Game
 ## 新遊戲：《12:30！雙城集結令》
 
 獨立的新遊戲，原始碼在 [dual-city-1230/](dual-city-1230/)（Phaser 3 + Vite），上線後網址為 https://micronmonkey.github.io/Game/dual-city-1230/ 。與上面的遊戲完全分開，存檔使用自己的 `dualCity1230.save.v1`，不會動到其他遊戲的紀錄。說明見 [dual-city-1230/README.md](dual-city-1230/README.md)。
-
-## 聲援頁：挺光連署 Stand with Micron Workers
-
-[stand-with-micron-workers/](stand-with-micron-workers/index.html)（上線後為 https://micronmonkey.github.io/Game/stand-with-micron-workers/ ）：支持台灣美光勞工的獨立公開信頁面，紫／黑配色，含公開信、事件時間線、訴求與同業分潤比較、連署表單、安全提醒、FAQ 與資料來源。連署目前為示範版，簽名只存在瀏覽器 localStorage，尚未接後端。
