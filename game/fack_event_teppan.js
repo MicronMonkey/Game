@@ -31,7 +31,8 @@ function record(res){rec.plays++;
 const COURSES=[[0,'前菜'],[.15,'沙拉'],[.3,'湯品'],[.45,'主餐'],[.7,'炒飯'],[.85,'甜點']];
 const DISHES=['和牛','龍蝦','干貝','蒜香炒飯','鐵板豆芽','鵝肝','明蝦'];
 const TREATS=['炙燒干貝','主廚特製和牛捲','火焰香蕉','招待海鮮湯'];
-const MEAL=120;
+// 平衡參數（以自動玩家實測調到目標破關率）
+const TUNE={meal:61};
 const MAX_EXTENDS=8;
 const MOOD=3;                // 心情要到 3（加點／請客／熱茶各 +1）法克才肯簽名         // 最多延長 8 次（吃不下了），避免無限拖時間              // 法克正常吃完一頓的秒數
 const def={
@@ -63,7 +64,7 @@ const def={
  start(g){g.tip('🍳 撿 5 份 📄 連署書，再讓法克加點、請客、喝熱茶讓他心情變好，別被他回頭看到',7);},
  update(g,dt){const F=g.F,P=g.P;
   // 用餐進度
-  const rate=(F.state==='startled'?2.2:1)/MEAL;g.meal=Math.min(1,g.meal+dt*rate);
+  const rate=(F.state==='startled'?2.2:1)/TUNE.meal;g.meal=Math.min(1,g.meal+dt*rate);
   const ci=COURSES.filter(c=>g.meal>=c[0]).length-1;if(ci>g.lastCourse){g.lastCourse=ci;g.msg('🍽️ 法克開始吃'+COURSES[ci][1]+'了'+(ci>=5?'——吃完就要結帳了！':''));}
   if(g.meal>=1){g.fail('法克吃完結帳離開了…');return;}
   // 法克回頭：預告 → 看 → 繼續吃
@@ -147,7 +148,7 @@ def.drawSolidFn=function(g,s){const c=g.ctx;
  return false;};
 A.Game.prototype.drawSolid=function(s){if(this.def&&this.def.id==='teppan'&&def.drawSolidFn(this,s))return;return baseDraw.call(this,s);};
 delete def.drawSolid;
-window.FackEvent={KEY,def,TITLES,get data(){return rec;},get status(){return status;},record,save,
+window.FackEvent={KEY,def,TITLES,TUNE,get data(){return rec;},get status(){return status;},record,save,
  // 活動稱號是否已取得（供成就圖鑑使用）
  titles(){return TITLES.filter(t=>t.ok(rec));}};
 })();

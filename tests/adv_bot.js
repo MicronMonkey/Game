@@ -44,7 +44,7 @@ window.__advBot=function(maxSec,opts){opts=opts||{};const g=window.fackAdvGame;i
   if(g.paused)g.resume();
   const tg=goal(g)||g.P,P=g.P;let v=null;
   // 被追就先跑開；原地等待時若踩在預告紅圈裡也要移開
-  const chaser=g.guards.find(o=>o.state==='chase'&&dist(o,P)<150);
+  const chaser=g.def.id==='teppan'&&g.guards.find(o=>o.state==='chase'&&dist(o,P)<150);
   if(chaser){let dx=P.x-chaser.x,dy=P.y-chaser.y,l=Math.hypot(dx,dy)||1;dx/=l;dy/=l;const cx=g.W/2-P.x,cy=g.H*.6-P.y,cl=Math.hypot(cx,cy)||1;dx+=cx/cl*.9;dy+=cy/cl*.9;l=Math.hypot(dx,dy)||1;g.debug.setInput({x:dx/l,y:dy/l,m:1});g.step(dt);t+=dt;continue;}
   if(tg.hold&&!g.teles.some(o=>o.kind==='circle'&&Math.hypot(P.x-o.x,P.y-o.y)<o.r+22)){g.debug.setInput(null);g.step(dt);t+=dt;continue;}
   if(tg.hold){const o=g.teles.find(o=>o.kind==='circle'&&Math.hypot(P.x-o.x,P.y-o.y)<o.r+22),dx=P.x-o.x,dy=P.y-o.y,l=Math.hypot(dx,dy)||1;g.debug.setInput({x:dx/l,y:dy/l,m:1});g.step(dt);t+=dt;continue;}

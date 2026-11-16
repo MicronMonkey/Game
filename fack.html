@@ -33,9 +33,10 @@ header a,header button{font:600 13px system-ui;color:#eef3f5;background:#1d3747;
 .modes button.adv{background:linear-gradient(150deg,#3b6a52,#1f3d33);border-color:#9fe3c4}
 .modes button.cont{grid-column:1/-1;background:linear-gradient(150deg,#6a5a2b,#3b3118);border-color:#ffd98f;min-height:60px}
 .modes button[hidden]{display:none}
-.modes button.event{grid-column:1/-1;background:linear-gradient(120deg,#ff9a3c,#c0392b);color:#fff;border-color:#ffd56b;min-height:64px;box-shadow:0 6px 24px #ff7a3c55;animation:evGlow 2.4s ease-in-out infinite}
+.modes a.event{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border:1px solid;border-radius:14px;padding:14px 8px;font:900 17px system-ui;text-decoration:none;cursor:pointer;grid-column:1/-1;background:linear-gradient(120deg,#ff9a3c,#c0392b);color:#fff;border-color:#ffd56b;min-height:64px;box-shadow:0 6px 24px #ff7a3c55;animation:evGlow 2.4s ease-in-out infinite}
 @keyframes evGlow{50%{box-shadow:0 6px 34px #ffb35c99}}
-@media (prefers-reduced-motion:reduce){.modes button.event{animation:none}}
+#hero .modes a.event small{font:600 11px system-ui;opacity:.88;line-height:1.4;color:inherit;margin:0;max-width:none}
+@media (prefers-reduced-motion:reduce){.modes a.event{animation:none}}
 .cz-card .x-home-row{display:flex;justify-content:center;margin-top:8px}
 #hero small{color:var(--mut);font-size:11px;line-height:1.7;max-width:460px;margin-top:8px}
 #toast{position:fixed;left:50%;top:calc(env(safe-area-inset-top,0px) + 60px);transform:translateX(-50%);background:var(--ac);color:#111;font-weight:800;padding:8px 16px;border-radius:999px;z-index:50;opacity:0;transition:opacity .3s;pointer-events:none}
@@ -55,7 +56,7 @@ header a,header button{font:600 13px system-ui;color:#eef3f5;background:#1d3747;
    <p>警報響起，神隱很久的法克出現了！<br>你是桃園會長，抱著一箱連署書去追他。</p>
    <p class="best" id="best"></p><p class="hall" id="hall"></p><p class="hall" id="hall2"></p>
    <div class="modes">
-    <button class="event" id="event" type="button">🔥 11/16 限定活動：鐵板燒偶遇<small id="eventInfo">法克竟然出現在鐵板燒店！限定稱號＋裝備</small></button>
+    <a class="event" id="event" href="fack_teppan.html">🔥 11/16 限定活動：鐵板燒偶遇<small id="eventInfo">法克竟然出現在鐵板燒店！限定稱號＋裝備</small></a>
     <button class="cont" id="cont" type="button" hidden>▶ 繼續冒險<small id="contInfo"></small></button>
     <button class="main" id="go" type="button">🏃 經典模式<small>原本的 2,600 份連署書挑戰<br>四種難度・原紀錄保留</small></button>
     <button class="adv" id="adv" type="button">🗺️ 冒險模式<small>四大關卡・隨機 Buff<br>Boss 戰・隱藏線索</small></button>
@@ -148,7 +149,6 @@ function start(){
 function adventure(direct){closeAll();$('#hero').style.display='none';shell=FackAdventure.openAdventure($('#stage'),{direct,onExit:()=>{shell=null;backToHero();}});}
 function daily(){closeAll();$('#hero').style.display='none';shell=FackAdventure.openDaily($('#stage'),{onExit:()=>{shell=null;backToHero();}});}
 $('#go').onclick=start;
-$('#event').onclick=()=>{location.href='fack_teppan.html';};
 $('#adv').onclick=()=>adventure();
 $('#cont').onclick=()=>adventure('continue');
 $('#daily').onclick=daily;
