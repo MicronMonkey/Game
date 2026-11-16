@@ -188,8 +188,8 @@ function Game(layer,cfg){
 }
 A.Game=Game;
 const G=Game.prototype;
-G.layout=function(){const r=this.ctx.canvas.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);this.VW=Math.max(200,r.width);this.VH=Math.max(200,r.height);this.ctx.canvas.width=this.VW*dpr;this.ctx.canvas.height=this.VH*dpr;this.ctx.setTransform(dpr,0,0,dpr,0,0);this.k=Math.min(this.VW,this.VH)/(this.def.view||430);};
-G.cam=function(snap){const g=this,vw=g.VW/g.k,vh=g.VH/g.k;let tx=clamp(g.P.x-vw/2,0,Math.max(0,g.W-vw)),ty=clamp(g.P.y-vh/2,0,Math.max(0,g.H-vh));if(g.W<vw)tx=(g.W-vw)/2;if(g.H<vh)ty=(g.H-vh)/2;
+G.layout=function(){const r=this.ctx.canvas.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);this.VW=Math.max(200,r.width);this.VH=Math.max(200,r.height);this.ctx.canvas.width=this.VW*dpr;this.ctx.canvas.height=this.VH*dpr;this.ctx.setTransform(dpr,0,0,dpr,0,0);this.k=this.fitWidth?this.VW/this.W:Math.min(this.VW,this.VH)/(this.viewOverride||this.def.view||430);};
+G.cam=function(snap){const g=this,vw=g.VW/g.k,vh=g.VH/g.k;let tx=clamp(g.P.x-vw/2,0,Math.max(0,g.W-vw)),ty=clamp(g.P.y-vh/2,0,Math.max(0,g.H-vh));if(g.W<vw)tx=(g.W-vw)/2;if(g.H<vh)ty=g.camTop?0:(g.H-vh)/2;
  if(snap){g.camX=tx;g.camY=ty;}else{g.camX=lerp(g.camX,tx,.18);g.camY=lerp(g.camY,ty,.18);}};
 G.rect=function(x,y,w,h,o){return Object.assign({x,y,w,h},o||{});};
 G.inRects=function(x,y,pad,list){return (list||this.blockers()).some(s=>x>s.x-pad&&x<s.x+s.w+pad&&y>s.y-pad&&y<s.y+s.h+pad);};

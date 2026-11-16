@@ -57,19 +57,20 @@ header a,header button{font:600 13px system-ui;color:#fff1df;background:#4a2414;
    </div>
    <p class="rec" id="rec"></p><p class="titles" id="titles"></p>
    <div class="row"><button id="go" type="button">🍳 走進店裡</button></div>
+   <div class="row"><button class="alt" id="tut" type="button">📖 玩法教學（示範一遍）</button></div>
    <div class="row"><button class="alt" id="ach" type="button">🏆 成就・稱號・裝備</button><a class="alt" href="fack.html">🏠 回主選單</a></div>
    <small>單一難度，不套用冒險 Buff 與裝備，所有人條件相同。活動紀錄獨立保存，不影響經典與冒險模式。<br>本遊戲為虛構創作，店家、人物與事件皆為想像，不代表任何真實人物、店家的行為或配置。</small>
   </div>
  </div>
 </div>
 <script src="game/chase_v2.js?v=20261105-hell-tuned-official-refresh2"></script>
-<script src="game/fack_store.js?v=20261116-e1"></script>
+<script src="game/fack_store.js?v=20261116-e2"></script>
 <script src="game/achievements_live_v2.js?v=20261105"></script>
-<script src="game/fack_adv_core.js?v=20261116-e1"></script>
-<script src="game/fack_adv_stages.js?v=20261116-e1"></script>
-<script src="game/fack_event_teppan.js?v=20261116-e1"></script>
-<script src="game/fack_gear.js?v=20261116-e1"></script>
-<script src="game/fack_adv_ui.js?v=20261116-e1"></script>
+<script src="game/fack_adv_core.js?v=20261116-e2"></script>
+<script src="game/fack_adv_stages.js?v=20261116-e2"></script>
+<script src="game/fack_event_teppan.js?v=20261116-e2"></script>
+<script src="game/fack_gear.js?v=20261116-e2"></script>
+<script src="game/fack_adv_ui.js?v=20261116-e2"></script>
 <script>
 (function(){
 'use strict';
@@ -87,6 +88,16 @@ $('#ach').onclick=()=>FackAdventure.openGallery({onClose:showRec});
 function close(){if(game){game.stop();game=null;}if(layer){layer.remove();layer=null;}window.fackAdvState=null;}
 function home(){close();showRec();$('#hero').style.display='';}
 function card(html){layer.querySelectorAll('.ax-card').forEach(e=>e.remove());const d=document.createElement('div');d.className='ax-card';d.innerHTML=html;layer.append(d);return d;}
+// 第一次進店先看教學示範，之後直接開始
+function enter(){if(!E.data.tutorialSeen)tutorial(true);else start();}
+function tutorial(thenPlay){close();$('#hero').style.display='none';layer=A.layer($('#stage'));
+ let done=false;const finish=()=>{if(done)return;done=true;E.markTutorial();if(game){game.stop();game=null;}layer.querySelectorAll('.ax-tut').forEach(e=>e.remove());layer.classList.remove('tut');
+  const d=card('<div class="ax-kick">READY?</div><h2>👍 準備好了嗎？</h2><p>重點複習：<br>📄 撿齊 5 份連署書　😋 讓法克心情到 3<br>👀 他回頭時躲到桌子後面　✍️ 從側面走到他身邊</p><div class="ax-row"><button data-a="go">🍳 開始挑戰</button><button class="alt" data-a="again">🔁 再看一次教學</button><button class="alt" data-a="home">返回活動首頁</button></div>');
+  d.querySelector('[data-a=go]').onclick=start;d.querySelector('[data-a=again]').onclick=()=>tutorial(false);d.querySelector('[data-a=home]').onclick=home;};
+ game=new A.Game(layer,{stage:E.def,diff:A.DIFFS.normal,buffs:{},seed:12345,mode:'daily',tutorial:true,onSkip:finish,onPause:g=>{g.resume();},onEnd:finish});
+ layer.querySelector('.ax-name').textContent='📖 教學示範';
+ layer.querySelector('.ax-pause').onclick=finish;
+ window.fackAdvState=()=>game?Object.assign(game.state(),{tutorial:true,step:game.tStep}):null;if(/[?&]fackdebug=1/.test(location.search))window.fackAdvGame=game;}
 function start(){close();$('#hero').style.display='none';layer=A.layer($('#stage'));
  const pb=layer.querySelector('.ax-pause');
  const debug=/[?&]fackdebug=1/.test(location.search);
@@ -106,7 +117,8 @@ function end(r){const fresh=E.record(r);fresh.forEach(t=>A.toast(t.icon,'🏅 �
   +'<div class="ax-row"><button data-a="re">🔁 '+(r.win?'再玩一次':'再挑戰一次')+'</button><button class="alt" data-a="share">分享</button><button class="alt" data-a="ach">🏆 稱號・裝備</button><button class="alt" data-a="home">返回活動首頁</button></div>');
  if(r.win)[1,2,3].forEach(i=>{if(i<=r.stars)setTimeout(()=>{const e=d.querySelector('[data-s="'+i+'"]');if(e)e.classList.add('on');},350+i*320);});
  d.querySelector('[data-a=re]').onclick=start;d.querySelector('[data-a=share]').onclick=()=>share(r);d.querySelector('[data-a=ach]').onclick=()=>FackAdventure.openGallery({});d.querySelector('[data-a=home]').onclick=home;}
-$('#go').onclick=start;
+$('#go').onclick=enter;
+$('#tut').onclick=()=>tutorial(false);
 })();
 </script>
 </body></html>

@@ -189,7 +189,7 @@ fs.writeFileSync(LEGACY_PATH,require('node:child_process').execSync('git show f0
  await check('限定活動：主選單有活動入口，點了進入 fack_teppan.html；頁面標示限定推出、永久開放',async()=>{const {ctx,p}=await page();await p.goto(BASE+'fack.html');await p.click('#event');await p.waitForURL(/fack_teppan\.html$/);
   const t=await p.textContent('#hero');assert(t.includes('11/16 限定推出')&&t.includes('永久開放')&&t.includes('虛構店家'),'hero text');await ctx.close();return '入口 → fack_teppan.html';});
  await check('限定活動：紀錄只存在 fack.event.teppan1116；通關後解鎖限定稱號與「鐵板鍋鏟」，經典與冒險紀錄不變',async()=>{const {ctx,p}=await page();await p.goto(BASE+'fack_teppan.html?fackdebug=1');await seed(p,OLD);await p.reload();
-  const before=await dump(p);await p.click('#go');await p.waitForFunction(()=>window.fackAdvGame&&!window.fackAdvGame.over);
+  await p.evaluate(()=>FackEvent.markTutorial());const before=await dump(p);await p.click('#go');await p.waitForFunction(()=>window.fackAdvGame&&!window.fackAdvGame.over);
   await p.evaluate(()=>{const g=window.fackAdvGame;g.papersGot=5;g.extends=3;g.F.state='eat';g.F.t=9;g.P.x=g.F.x-10;g.P.y=g.F.y+10;for(let i=0;i<150;i++)g.step(1/30);});
   await p.waitForSelector('.ax-card');const card=await p.textContent('.ax-card');assert(card.includes('法克簽名了'),'no win card');
   const after=await dump(p);CLASSIC_KEYS.forEach(k=>assert(after[k]===OLD[k],'classic changed '+k));
@@ -199,7 +199,7 @@ fs.writeFileSync(LEGACY_PATH,require('node:child_process').execSync('git show f0
   await p.click('.ax-card [data-a=ach]');await p.selectOption('.axg select','event:teppanMeet');await p.click('.axg [data-a=x]');
   await p.goto(BASE+'fack.html');const hall=await p.textContent('#hall');const evInfo=await p.textContent('#eventInfo');assert(hall.includes('鐵板燒偶遇者')&&evInfo.includes('已通關'),'hall '+hall+' / '+evInfo);
   await ctx.close();return '變動的 Key：'+changed.join('、')+'；展示稱號「鐵板燒偶遇者」';});
- await check('限定活動：心情未滿 3 不肯簽；加點會延長用餐並 +1 心情；最多延長 8 次',async()=>{const {ctx,p}=await page();await p.goto(BASE+'fack_teppan.html?fackdebug=1');await p.click('#go');await p.waitForFunction(()=>window.fackAdvGame&&!window.fackAdvGame.over);
+ await check('限定活動：心情未滿 3 不肯簽；加點會延長用餐並 +1 心情；最多延長 8 次',async()=>{const {ctx,p}=await page();await p.goto(BASE+'fack_teppan.html?fackdebug=1');await p.evaluate(()=>FackEvent.markTutorial());await p.click('#go');await p.waitForFunction(()=>window.fackAdvGame&&!window.fackAdvGame.over);
   const r=await p.evaluate(()=>{const g=window.fackAdvGame;g.papersGot=5;g.F.state='eat';g.F.t=30;g.P.x=g.F.x-10;g.P.y=g.F.y+10;for(let i=0;i<10;i++)g.step(1/30);const noSign=!g.over&&g.celebrate<=0;
    g.meal=.5;g.P.x=450;g.P.y=1000;g.carry='order';g.P.x=g.orderZone.x+50;g.P.y=g.orderZone.y+40;g.step(1/30);const m1=g.meal,e1=g.extends;
    for(let i=0;i<12;i++)g.extend(g,.1,'x');return {noSign,m1,e1,cap:g.extends};});
@@ -207,6 +207,16 @@ fs.writeFileSync(LEGACY_PATH,require('node:child_process').execSync('git show f0
  await check('限定活動：損毀的活動紀錄會先備份再重置，不影響其他資料',async()=>{const {ctx,p}=await page();await p.goto(BASE+'fack_teppan.html');await seed(p,Object.assign({},OLD,{'fack.event.teppan1116':'{oops'}));await p.reload();
   const st=await p.evaluate(()=>FackEvent.status);const d=await dump(p);const bk=Object.keys(d).filter(k=>k.startsWith('fack.event.teppan1116.corrupt.'));
   assert(st==='recovered'&&bk.length===1&&d[bk[0]]==='{oops','backup');CLASSIC_KEYS.forEach(k=>assert(d[k]===OLD[k],'classic changed'));await ctx.close();return bk[0];});
+ await check('限定活動教學：第一次進店自動播放示範並完整跑完；可跳過；不算遊玩次數；第二次直接開始',async()=>{const {ctx,p}=await page();await p.goto(BASE+'fack_teppan.html?fackdebug=1');await p.evaluate(()=>localStorage.clear());await p.reload();
+  await p.click('#go');await p.waitForSelector('.ax-tut');const steps=[];const t0=Date.now();
+  while(Date.now()-t0<90000){const st=await p.evaluate(()=>{const s=window.fackAdvState&&window.fackAdvState();return s&&s.tutorial?s.step:null;});if(st==null)break;if(!steps.includes(st))steps.push(st);await p.waitForTimeout(250);}
+  await p.waitForSelector('.ax-card [data-a=go]');const n=await p.evaluate(()=>FackEvent.TUT_STEPS);assert(steps.length===n,'steps '+steps.join(','));
+  const rec1=await p.evaluate(()=>FackEvent.data);assert(rec1.tutorialSeen>0&&rec1.plays===0,'record '+JSON.stringify(rec1));
+  await p.click('.ax-card [data-a=again]');await p.waitForSelector('.ax-tut-skip');await p.click('.ax-tut-skip');await p.waitForSelector('.ax-card [data-a=go]');
+  await p.click('.ax-card [data-a=go]');await p.waitForFunction(()=>window.fackAdvState&&window.fackAdvState()&&!window.fackAdvState().tutorial);
+  await p.evaluate(()=>{const b=document.querySelector('.ax-pause');b.click();});await p.click('[data-a=out]');await p.click('#go');await p.waitForTimeout(400);
+  const direct=await p.evaluate(()=>{const s=window.fackAdvState&&window.fackAdvState();return !!s&&!s.tutorial&&!document.querySelector('.ax-tut');});assert(direct,'second entry not direct');
+  await ctx.close();return '教學 '+steps.length+' 步完整播完（約 '+Math.round((Date.now()-t0)/1000)+' 秒內）；跳過可用；第二次直接開始';});
  await check('限定活動：自動玩家實際遊玩 10 次',async()=>{const {ctx,p}=await page();await p.goto(BASE+'fack_teppan.html?fackdebug=1');await p.addScriptTag({content:BOT});
   const r=await p.evaluate(()=>{const A=FackAdv,out=[];for(let k=0;k<10;k++){const l=A.layer(document.getElementById('stage'));let res=null;const g=new A.Game(l,{stage:FackEvent.def,diff:A.DIFFS.normal,buffs:{},seed:Math.floor(Math.random()*1e9),mode:'daily',debug:true,onEnd(x){res=x;}});window.fackAdvGame=g;window.__advBot(600);g.stop();l.remove();out.push(res?(res.win?'勝 '+res.used+'s 延長'+res.extra.extends:'敗('+res.reason+')'):'逾時');}return out;});
   const wins=r.filter(x=>x.startsWith('勝')).length;assert(wins>=3,r.join('；'));await ctx.close();return wins+'/10 勝｜'+r.join('；');});
