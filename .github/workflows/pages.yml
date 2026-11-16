@@ -38,6 +38,8 @@ jobs:
           node --check game/fack_adv_core.js
           node --check game/fack_adv_stages.js
           node --check game/fack_adv_ui.js
+          node --check game/fack_event_teppan.js
+          node --check game/fack_gear.js
           node tests/smoke.cjs
           node tests/director.cjs
           node tests/drill.cjs

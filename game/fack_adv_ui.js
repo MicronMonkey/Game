@@ -31,7 +31,8 @@ function checkAch(){const d=D(),fresh=[];
  checkGear();return fresh;}
 function announce(list){list.forEach(a=>A.toast(a.icon,'🏆 解鎖成就：'+a.name,'獲得稱號「'+a.title+'」'));}
 function classicTitle(){try{return window.FackTrophies?window.FackTrophies.title():'見習追緝員';}catch(e){return '見習追緝員';}}
-function displayTitle(){const t=D().title;if(t&&t.src==='adv'){const a=ACH.find(x=>x.id===t.id);if(a&&D().ach[a.id])return a.title;}return classicTitle();}
+function eventTitles(){try{return window.FackEvent?window.FackEvent.titles():[];}catch(e){return [];}}
+function displayTitle(){const t=D().title;if(t&&t.src==='adv'){const a=ACH.find(x=>x.id===t.id);if(a&&D().ach[a.id])return a.title;}if(t&&t.src==='event'){const e=eventTitles().find(x=>x.id===t.id);if(e)return e.title;}return classicTitle();}
 function summary(){const d=D();return {got:ACH.filter(a=>d.ach[a.id]).length,total:ACH.length,title:displayTitle(),cleared:A.STAGES.filter(s=>(d.adventure.stages[s.id]||{}).clears>0).length,unlocked:d.adventure.unlocked,run:d.adventure.run};}
 
 function mergeItems(res){const u=D().stats.itemsUsed;Object.keys(res.itemsUsed||{}).forEach(k=>{if(A.ITEMS[k]&&!u[k])u[k]=Date.now();});}
@@ -195,10 +196,12 @@ function openGallery(opts){opts=opts||{};if(!document.getElementById('axg-style'
  document.addEventListener('keydown',esc,true);o.onclick=e=>{if(e.target===o)close();};
  const stars=t=>t>5?'🌈 傳說級':'★'.repeat(t)+'☆'.repeat(5-t);
  const fmtV=(r,v)=>v==null?'—':r.low?v+(r.unit||''):Number(v).toLocaleString('zh-TW');
- function achHtml(){const d=D(),got=ACH.filter(a=>d.ach[a.id]).length,pct=Math.round(got/ACH.length*100),cur=d.title&&d.title.src==='adv'?d.title.id:'classic';
-  const opt='<option value="classic"'+(cur==='classic'?' selected':'')+'>經典稱號：'+classicTitle()+'</option>'+ACH.filter(a=>d.ach[a.id]).map(a=>'<option value="'+a.id+'"'+(cur===a.id?' selected':'')+'>冒險稱號：'+a.title+'</option>').join('');
+ function achHtml(){const d=D(),got=ACH.filter(a=>d.ach[a.id]).length,pct=Math.round(got/ACH.length*100),cur=d.title&&(d.title.src==='adv'||d.title.src==='event')?d.title.id:'classic',evt=eventTitles(),allEvt=window.FackEvent?window.FackEvent.TITLES:[];
+  const opt='<option value="classic"'+(cur==='classic'?' selected':'')+'>經典稱號：'+classicTitle()+'</option>'+ACH.filter(a=>d.ach[a.id]).map(a=>'<option value="'+a.id+'"'+(cur===a.id?' selected':'')+'>冒險稱號：'+a.title+'</option>').join('')+evt.map(e=>'<option value="event:'+e.id+'"'+(cur===e.id?' selected':'')+'>🔥 活動稱號：'+e.title+'</option>').join('');
   return '<p class="axg-m">已解鎖 <b>'+got+' / '+ACH.length+'</b> 項（'+pct+'%）。冒險成就與經典成就分開保存，經典紀錄不受影響。</p><div class="axg-bar"><i style="width:'+pct+'%"></i></div>'
-   +'<p class="axg-m">展示稱號：<select aria-label="展示稱號">'+opt+'</select></p><div class="axg-l">'
+   +'<p class="axg-m">展示稱號：<select aria-label="展示稱號">'+opt+'</select></p>'
+   +(allEvt.length?'<p class="axg-m"><b>🔥 限定活動稱號</b>（11/16 鐵板燒偶遇）</p><div class="axg-l" style="margin-bottom:12px">'+allEvt.map(e=>{const ok=evt.some(x=>x.id===e.id);return '<div class="axg-i'+(ok?'':' lk')+'" style="border-color:#ff9a3c88"><b>'+e.icon+' '+e.title+(ok?' ✓':' 🔒')+'</b><span class="main">🔥 限定</span><br>'+e.desc+'</div>';}).join('')+'</div>':'')
+   +'<div class="axg-l">'
    +ACH.map(a=>{const ok=!!d.ach[a.id],v=Math.min(a.goal,Math.max(0,a.cur())),hid=a.hidden&&!ok;
     return '<div class="axg-i'+(ok?'':' lk')+'"><b>'+(hid?'❔ ？？？':a.icon+' '+a.name)+(ok?' ✓':' 🔒')+'</b>'+(a.main?'<span class="main">主要</span>':'')+(a.hidden?'<span class="main">隱藏</span>':'')+'<br>'+(hid?'隱藏成就：達成特定條件後揭曉':a.desc)+'<br>稱號｜'+(ok?a.title:'？？？')+'<div class="pb"><i style="width:'+(hid?0:v/a.goal*100)+'%"></i></div>'+(hid?'':v+' / '+a.goal)+(ok?'　🕒 '+fmtDate(d.ach[a.id]):'')+'</div>';}).join('')+'</div>';}
  function gearHtml(){const gd=A.gear.gearData(),eq=A.gear.equipped(),got=A.GEAR.filter(x=>gd.unlocked[x.id]).length;
@@ -206,7 +209,7 @@ function openGallery(opts){opts=opts||{};if(!document.getElementById('axg-style'
    +(eq?'<p class="axg-m"><button type="button" data-un="1">卸下裝備</button></p>':'')+'<div class="axg-l">'
    +A.GEAR.map(x=>{const ok=!!gd.unlocked[x.id],on=eq&&eq.id===x.id;
     const leg=x.tier>5?'background:linear-gradient(150deg,#4a3410,#1f2a3a 60%);border-color:#ffd56b;':'';
-    return '<div class="axg-i'+(ok?'':' lk')+'" style="'+leg+(on?'border-color:#f1d09a;box-shadow:0 0 0 1px #f1d09a':'')+'"><b>'+x.icon+' '+x.name+(ok?' ✓':' 🔒')+'</b><span class="main">'+stars(x.tier)+'</span><br>效果｜<b style="font-size:12px;color:#a7ffd6">'+x.effect+'</b>'
+    return '<div class="axg-i'+(ok?'':' lk')+'" style="'+leg+(on?'border-color:#f1d09a;box-shadow:0 0 0 1px #f1d09a':'')+'"><b>'+x.icon+' '+x.name+(ok?' ✓':' 🔒')+'</b><span class="main">'+stars(x.tier)+'</span>'+(x.limited?'<span class="main" style="background:#7a2e10">🔥 限定</span>':'')+'<br>效果｜<b style="font-size:12px;color:#a7ffd6">'+x.effect+'</b>'
      +x.reqs.map(r=>{const v=r.cur(),okR=A.gear.reqDone(r),pc=r.low?(v==null?0:Math.min(100,r.goal/v*100)):Math.min(100,(Number(v)||0)/r.goal*100);
       return '<div style="margin-top:5px">'+(okR?'✅ ':'⬜ ')+r.label+(r.low?'在 '+r.goal+(r.unit||'')+' 內':'')+'</div><div class="pb"><i style="width:'+pc+'%"></i></div>'+(r.low?'目前最佳：'+fmtV(r,v):fmtV(r,Math.min(Number(v)||0,r.goal))+' / '+r.goal.toLocaleString('zh-TW'));}).join('')
      +(ok?'<br>🕒 取得：'+fmtDate(gd.unlocked[x.id])+'<br><button type="button" data-eq="'+x.id+'"'+(on?' disabled':'')+' style="margin-top:6px">'+(on?'裝備中':'裝備')+'</button>':'')+'</div>';}).join('')+'</div>';}
@@ -215,7 +218,7 @@ function openGallery(opts){opts=opts||{};if(!document.getElementById('axg-style'
   o.querySelector('[data-a=x]').onclick=close;
   o.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{tab=b.dataset.t;paint();});
   o.querySelector('[data-a=classic]').onclick=()=>{close();if(window.FackTrophies)window.FackTrophies.open();};
-  const sel=o.querySelector('select');if(sel)sel.onchange=e=>{const v=e.target.value,d=D();d.title=v==='classic'?{src:'classic'}:{src:'adv',id:v};S.save();paint();document.dispatchEvent(new Event('fack-title-changed'));};
+  const sel=o.querySelector('select');if(sel)sel.onchange=e=>{const v=e.target.value,d=D();d.title=v==='classic'?{src:'classic'}:v.startsWith('event:')?{src:'event',id:v.slice(6)}:{src:'adv',id:v};S.save();paint();document.dispatchEvent(new Event('fack-title-changed'));};
   o.querySelectorAll('[data-eq]').forEach(b=>b.onclick=()=>{const x=A.GEAR.find(g=>g.id===b.dataset.eq);if(A.gear.equip(x.id)){A.toast(x.icon,'🎽 已裝備：'+x.name,x.effect);paint();document.dispatchEvent(new Event('fack-title-changed'));}});
   const un=o.querySelector('[data-un]');if(un)un.onclick=()=>{A.gear.equip(null);paint();document.dispatchEvent(new Event('fack-title-changed'));};}
  paint();o.querySelector('[data-a=x]').focus();}

@@ -21,6 +21,18 @@ function goal(g){const id=g.def.id,P=g.P,near=list=>list.slice().sort((a,b)=>dis
   const st=g.items.filter(i=>i.type==='stamp');const pref=st.filter(s=>window.__botAvoidMiddle?s.route!=='中路':s.route!=='右路');return near(pref.length?pref:st);}
  if(id==='boss'){const F=g.F;if(F.phase===3&&!F.frozen){const fr=g.items.find(i=>i.type==='freeze');if(fr)return fr;}
   if(F.phase===2&&g.clones.length){/* 只追有 📄 的真法克 */}return F;}
+ if(id==='teppan'){const F=g.F,inR=(p,r)=>p.x>r.x&&p.x<r.x+r.w&&p.y>r.y&&p.y<r.y+r.h;
+  if(g.carry==='order')return{x:g.orderZone.x+55,y:g.orderZone.y+40};
+  if(g.ing>=3)return{x:g.chefZone.x+33,y:g.chefZone.y+35};
+  const pet=g.items.filter(i=>i.type==='petition');if(pet.length)return near(pet);
+  const needMood=g.extends<3;const ord=g.items.find(i=>i.type==='order');if(ord&&(needMood||g.meal>.35))return ord;
+  const tea=g.items.find(i=>i.type==='tea');if(tea&&dist(tea,P)<260)return tea;
+  const tea2=g.items.find(i=>i.type==='tea');if(tea2&&needMood)return tea2;
+  const ing=g.items.filter(i=>i.type==='ingredient');if(ing.length&&(needMood||g.meal>.5))return near(ing);
+  // 從法克左側接近；他回頭時在側面等待
+  const side={x:F.x-75,y:F.y+28};
+  if(F.state!=='eat'||F.t<1.2){g._botCommit=false;return dist(P,side)<12?{x:side.x,y:side.y,hold:true}:side;}
+  if(dist(P,side)<30)g._botCommit=true;return g._botCommit?F:side;}
  if(id==='daily'){if(g.F)return g.F;if(g.target)return near(g.papers)||P;const tk=g.items.filter(i=>i.type==='ticket');if(tk.length)return near(tk);return{x:g.exit.x+40,y:g.exit.y+30};}
  return P;}
 function danger(g,nx,ny){const t=.45;return g.hazards.some(h=>{if(g.eff.freeze>0)return false;const ph=h.ph+t/h.period*(window.FackAdv.HAZARD_SPEED||1),s=(Math.sin(ph*Math.PI*2)+1)/2,x=h.ax+(h.bx-h.ax)*s,y=h.ay+(h.by-h.ay)*s;
@@ -31,7 +43,11 @@ window.__advBot=function(maxSec,opts){opts=opts||{};const g=window.fackAdvGame;i
  while(!g.over&&t<maxSec){
   if(g.paused)g.resume();
   const tg=goal(g)||g.P,P=g.P;let v=null;
-  if(tg.hold){g.debug.setInput(null);g.step(dt);t+=dt;continue;}
+  // 被追就先跑開；原地等待時若踩在預告紅圈裡也要移開
+  const chaser=g.guards.find(o=>o.state==='chase'&&dist(o,P)<150);
+  if(chaser){let dx=P.x-chaser.x,dy=P.y-chaser.y,l=Math.hypot(dx,dy)||1;dx/=l;dy/=l;const cx=g.W/2-P.x,cy=g.H*.6-P.y,cl=Math.hypot(cx,cy)||1;dx+=cx/cl*.9;dy+=cy/cl*.9;l=Math.hypot(dx,dy)||1;g.debug.setInput({x:dx/l,y:dy/l,m:1});g.step(dt);t+=dt;continue;}
+  if(tg.hold&&!g.teles.some(o=>o.kind==='circle'&&Math.hypot(P.x-o.x,P.y-o.y)<o.r+22)){g.debug.setInput(null);g.step(dt);t+=dt;continue;}
+  if(tg.hold){const o=g.teles.find(o=>o.kind==='circle'&&Math.hypot(P.x-o.x,P.y-o.y)<o.r+22),dx=P.x-o.x,dy=P.y-o.y,l=Math.hypot(dx,dy)||1;g.debug.setInput({x:dx/l,y:dy/l,m:1});g.step(dt);t+=dt;continue;}
   if(g.los(P,tg)){const dx=tg.x-P.x,dy=tg.y-P.y,l=Math.hypot(dx,dy);if(l>2)v={x:dx/l,y:dy/l};}
   else{const key=Math.round(tg.x/25)+','+Math.round(tg.y/25);fieldT-=dt;if(key!==fieldKey||fieldT<=0){field=g.nav.bfs(g.nav.cell(tg.x,tg.y));fieldKey=key;fieldT=.5;}v=g.nav.dir(field,P.x,P.y);}
   // 攻擊預告（直線衝刺）中就往側面閃

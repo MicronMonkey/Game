@@ -33,3 +33,7 @@ Game
 ## 新遊戲：《12:30！雙城集結令》
 
 獨立的新遊戲，原始碼在 [dual-city-1230/](dual-city-1230/)（Phaser 3 + Vite），上線後網址為 https://micronmonkey.github.io/Game/dual-city-1230/ 。與上面的遊戲完全分開，存檔使用自己的 `dualCity1230.save.v1`，不會動到其他遊戲的紀錄。說明見 [dual-city-1230/README.md](dual-city-1230/README.md)。
+
+## 限定活動：11/16 鐵板燒偶遇
+
+[fack_teppan.html](fack_teppan.html)（主選單的 🔥 按鈕進入）：法克出現在虛構店家「好簽鐵板燒」，撿回 5 份連署書、用加點單／主廚請客／熱茶拖住他並讓他心情變好，再趁他沒回頭時遞上連署書。單一難度、永久開放；紀錄獨立存於 `fack.event.teppan1116`，限定獎勵為 3 個活動稱號與冒險裝備「🍳 鐵板鍋鏟」。

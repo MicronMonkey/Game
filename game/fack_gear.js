@@ -37,6 +37,9 @@ const GEAR=[
   reqs:[req('經典模式單局最高連擊（5 秒內連撿）',10,()=>n(C().maxCombo))]},
  {id:'glasses',icon:'🕶️',name:'識破墨鏡',tier:2,effect:'Boss 分身頭上出現「？」、撿取範圍 +10',fx:{cloneMark:true,pick:10},
   reqs:[req('Boss 戰累積戳破假分身',30,()=>n(st().clonesPopped))]},
+ // 🔥 限定活動獎勵（11/16 鐵板燒偶遇）：二星等級的小加成
+ {id:'spatula',icon:'🍳',name:'鐵板鍋鏟',tier:2,limited:true,effect:'跑速 +2%、撿取範圍 +10',fx:{speed:.02,pick:10},
+  reqs:[req('通關 11/16 限定活動「鐵板燒偶遇」',1,()=>n(readJSON('fack.event.teppan1116').clears))]},
  // ★3 高手：強力單一加成，或兩項中等加成
  {id:'glove',icon:'🧤',name:'強力磁鐵手套',tier:3,effect:'磁鐵吸附範圍 ×1.5',fx:{magnetMul:1.5},
   reqs:[req('經典模式累積收集連署書',100000,()=>n(C().papers))]},
