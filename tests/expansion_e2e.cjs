@@ -133,15 +133,19 @@ fs.writeFileSync(LEGACY_PATH,require('node:child_process').execSync('git show f0
   await p.click('#adv');if(mode==='run')await p.click('[data-a=cont]');else await p.click('[data-s="'+idx+'"]');
   await p.click('[data-a=go]');if(idx===3){await p.waitForSelector('.ax-boss');await p.click('.ax-boss');}
   await p.waitForFunction(()=>window.fackAdvGame&&!window.fackAdvGame.over);
-  const r=await p.evaluate(()=>window.__advBot(400));await p.waitForSelector('.ax-card');
+  // 真人起步時機不固定：先隨機等 0–1.5 秒再開始操作
+  const r=await p.evaluate(()=>{window.fackAdvGame.debug.step(Math.floor(Math.random()*45),1/30);return window.__advBot(400);});await p.waitForSelector('.ax-card');
   const res=await p.evaluate(()=>window.fackAdvState());return Object.assign({t:r.t},res.result||{});}
  {const {ctx,p}=await page();await p.goto(BASE+'fack.html?fackdebug=1');await p.evaluate(()=>localStorage.clear());await p.reload();await p.addScriptTag({content:BOT});
   for(const [i,name] of [[0,'第一關 深夜追蹤'],[1,'第二關 連署書保衛戰'],[2,'第三關 十日倒數'],[3,'最終關 Boss 三階段']]){
    for(const diff of ['easy','normal','hard','hell']){const runs=[];
     for(let k=0;k<3;k++){const r=await playStage(p,i,diff,'single');runs.push(r);await p.click('[data-a=hub]');await p.click('[data-a=back]');}
     balance[name+'｜'+diff]=runs.map(r=>(r.win?'勝':'敗('+r.reason+')')+' '+r.used+'s ★'+r.stars+(r.extra&&r.extra.bundles!=null?' 📦'+r.extra.bundles:'')).join('；');
+    // 3 局全輸時再補 3 局，避免機率造成的誤判（目標 67% 時 3 連敗約 4%）
+    if(diff!=='hell'&&!runs.some(r=>r.win))for(let k=0;k<3;k++){const r=await playStage(p,i,diff,'single');runs.push(r);await p.click('[data-a=hub]');await p.click('[data-a=back]');}
+    balance[name+'｜'+diff]=runs.map(r=>(r.win?'勝':'敗('+r.reason+')')+' '+r.used+'s ★'+r.stars+(r.extra&&r.extra.bundles!=null?' 📦'+r.extra.bundles:'')).join('；');
     const wins=runs.filter(r=>r.win).length;
-    rec('自動玩家實玩 '+name+'（'+diff+'）',diff==='hell'?true:wins>0,wins+'/3 勝｜'+balance[name+'｜'+diff]);}
+    rec('自動玩家實玩 '+name+'（'+diff+'）',diff==='hell'?true:wins>0,wins+'/'+runs.length+' 勝｜'+balance[name+'｜'+diff]);}
   }
   await ctx.close();}
  await check('連續冒險：通關→選 Buff→下一關；重新整理後進度、待選 Buff 與選項都保留',async()=>{const {ctx,p}=await page();await p.goto(BASE+'fack.html?fackdebug=1');await p.evaluate(()=>localStorage.clear());await p.reload();await p.addScriptTag({content:BOT});
@@ -207,9 +211,13 @@ fs.writeFileSync(LEGACY_PATH,require('node:child_process').execSync('git show f0
  await check('限定活動：損毀的活動紀錄會先備份再重置，不影響其他資料',async()=>{const {ctx,p}=await page();await p.goto(BASE+'fack_teppan.html');await seed(p,Object.assign({},OLD,{'fack.event.teppan1116':'{oops'}));await p.reload();
   const st=await p.evaluate(()=>FackEvent.status);const d=await dump(p);const bk=Object.keys(d).filter(k=>k.startsWith('fack.event.teppan1116.corrupt.'));
   assert(st==='recovered'&&bk.length===1&&d[bk[0]]==='{oops','backup');CLASSIC_KEYS.forEach(k=>assert(d[k]===OLD[k],'classic changed'));await ctx.close();return bk[0];});
- await check('限定活動教學：第一次進店自動播放示範並完整跑完；可跳過；不算遊玩次數；第二次直接開始',async()=>{const {ctx,p}=await page();await p.goto(BASE+'fack_teppan.html?fackdebug=1');await p.evaluate(()=>localStorage.clear());await p.reload();
+ await check('限定活動教學：第一次進店自動播放示範；示範中「下一步」不能按、示範完按了才進下一步；可跳過；不算遊玩次數；第二次直接開始',async()=>{const {ctx,p}=await page();await p.goto(BASE+'fack_teppan.html?fackdebug=1');await p.evaluate(()=>localStorage.clear());await p.reload();
   await p.click('#go');await p.waitForSelector('.ax-tut');const steps=[];const t0=Date.now();
-  while(Date.now()-t0<90000){const st=await p.evaluate(()=>{const s=window.fackAdvState&&window.fackAdvState();return s&&s.tutorial?s.step:null;});if(st==null)break;if(!steps.includes(st))steps.push(st);await p.waitForTimeout(250);}
+  let disabledSeen=false;
+  while(Date.now()-t0<90000){const st=await p.evaluate(()=>{const s=window.fackAdvState&&window.fackAdvState();return s&&s.tutorial?s.step:null;});if(st==null)break;if(!steps.includes(st))steps.push(st);
+   const nb=await p.$('.ax-tut-next');if(nb){if(await nb.isDisabled())disabledSeen=true;else{const before=st;await nb.click();await p.waitForFunction(b=>{const s=window.fackAdvState&&window.fackAdvState();return !s||!s.tutorial||s.step!==b;},before,{timeout:5000});}}
+   await p.waitForTimeout(200);}
+  assert(disabledSeen,'next button never disabled during demo');
   await p.waitForSelector('.ax-card [data-a=go]');const n=await p.evaluate(()=>FackEvent.TUT_STEPS);assert(steps.length===n,'steps '+steps.join(','));
   const rec1=await p.evaluate(()=>FackEvent.data);assert(rec1.tutorialSeen>0&&rec1.plays===0,'record '+JSON.stringify(rec1));
   await p.click('.ax-card [data-a=again]');await p.waitForSelector('.ax-tut-skip');await p.click('.ax-tut-skip');await p.waitForSelector('.ax-card [data-a=go]');
@@ -217,6 +225,8 @@ fs.writeFileSync(LEGACY_PATH,require('node:child_process').execSync('git show f0
   await p.evaluate(()=>{const b=document.querySelector('.ax-pause');b.click();});await p.click('[data-a=out]');await p.click('#go');await p.waitForTimeout(400);
   const direct=await p.evaluate(()=>{const s=window.fackAdvState&&window.fackAdvState();return !!s&&!s.tutorial&&!document.querySelector('.ax-tut');});assert(direct,'second entry not direct');
   await ctx.close();return '教學 '+steps.length+' 步完整播完（約 '+Math.round((Date.now()-t0)/1000)+' 秒內）；跳過可用；第二次直接開始';});
+ await check('手機防誤觸縮放：主選單與活動頁都關閉點兩下放大（touch-action: manipulation、maximum-scale=1）',async()=>{const out=[];for(const u of ['fack.html','fack_teppan.html']){const {ctx,p}=await page(devices['iPhone 13']);await p.goto(BASE+u);
+  const r=await p.evaluate(()=>({ta:getComputedStyle(document.body).touchAction,vp:document.querySelector('meta[name=viewport]').content}));assert(r.ta==='manipulation'&&r.vp.includes('maximum-scale=1'),u+' '+JSON.stringify(r));out.push(u+':'+r.ta);await ctx.close();}return out.join('、');});
  await check('限定活動：自動玩家實際遊玩 10 次',async()=>{const {ctx,p}=await page();await p.goto(BASE+'fack_teppan.html?fackdebug=1');await p.addScriptTag({content:BOT});
   const r=await p.evaluate(()=>{const A=FackAdv,out=[];for(let k=0;k<10;k++){const l=A.layer(document.getElementById('stage'));let res=null;const g=new A.Game(l,{stage:FackEvent.def,diff:A.DIFFS.normal,buffs:{},seed:Math.floor(Math.random()*1e9),mode:'daily',debug:true,onEnd(x){res=x;}});window.fackAdvGame=g;window.__advBot(600);g.stop();l.remove();out.push(res?(res.win?'勝 '+res.used+'s 延長'+res.extra.extends:'敗('+res.reason+')'):'逾時');}return out;});
   const wins=r.filter(x=>x.startsWith('勝')).length;assert(wins>=3,r.join('；'));await ctx.close();return wins+'/10 勝｜'+r.join('；');});

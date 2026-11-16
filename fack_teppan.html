@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="zh-Hant"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>全民找法克｜11/16 限定活動・鐵板燒偶遇</title>
 <meta name="description" content="限定活動：避難演練沒抓到的法克，11/16 竟然出現在鐵板燒店！趁他回頭前遞上連署書，還能讓他加點菜、讓主廚請客拖住他。">
 <meta property="og:type" content="website">
@@ -13,7 +13,7 @@
 <style>
 :root{--fg:#f3eee4;--ac:#f1d09a;--mut:#d9c2ad}
 *{box-sizing:border-box}
-html,body{height:100%;margin:0;background:radial-gradient(ellipse at 50% 0,#5a2c18,#1a0c07 70%);color:var(--fg);font-family:system-ui,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;overflow:hidden;overscroll-behavior:none}
+html,body{height:100%;margin:0;touch-action:manipulation;-webkit-text-size-adjust:100%;background:radial-gradient(ellipse at 50% 0,#5a2c18,#1a0c07 70%);color:var(--fg);font-family:system-ui,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif;overflow:hidden;overscroll-behavior:none}
 #wrap{height:100dvh;display:flex;flex-direction:column;max-width:980px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 44px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)}
 header{display:flex;align-items:center;gap:8px;padding:8px 12px}
 header b{flex:1;font-size:15px;color:#ffd98f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -63,12 +63,19 @@ header a,header button{font:600 13px system-ui;color:#fff1df;background:#4a2414;
   </div>
  </div>
 </div>
+<script>
+// 防止手機「點兩下放大」與雙指縮放後回不去：只在遊戲頁面生效，一般點擊按鈕不受影響
+(function(){let last=0;
+ document.addEventListener('touchend',e=>{const t=e.target,now=Date.now();if(now-last<320&&!(t.closest&&t.closest('button,a,input,select,textarea,label'))){e.preventDefault();}last=now;},{passive:false});
+ ['gesturestart','gesturechange'].forEach(n=>document.addEventListener(n,e=>e.preventDefault(),{passive:false}));
+ document.addEventListener('dblclick',e=>e.preventDefault(),{passive:false});})();
+</script>
 <script src="game/chase_v2.js?v=20261105-hell-tuned-official-refresh2"></script>
 <script src="game/fack_store.js?v=20261116-e3"></script>
 <script src="game/achievements_live_v2.js?v=20261105"></script>
 <script src="game/fack_adv_core.js?v=20261116-e3"></script>
 <script src="game/fack_adv_stages.js?v=20261116-e3"></script>
-<script src="game/fack_event_teppan.js?v=20261116-e3"></script>
+<script src="game/fack_event_teppan.js?v=20261116-e5"></script>
 <script src="game/fack_gear.js?v=20261116-e3"></script>
 <script src="game/fack_adv_ui.js?v=20261116-e3"></script>
 <script>

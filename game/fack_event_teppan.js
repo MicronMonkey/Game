@@ -57,7 +57,7 @@ const def={
   g.P.x=g.entry.x;g.P.y=g.entry.y+10;
   g.maxHearts=g.hearts=4;
   // 教學：地圖縮放到剛好填滿寬度；說明框放在資訊列與地圖之間，不會擋住畫面
-  if(g.cfg.tutorial){g.fitWidth=true;g.F.state='eat';g.F.t=999;g.orderT=g.teaT=g.flameT=1e9;return;}
+  if(g.cfg.tutorial){g.fitWidth=true;g.P.x=320;g.P.y=470;g.F.state='eat';g.F.t=999;g.orderT=g.teaT=g.flameT=1e9;return;}
   // 5 份連署書：4 份散落在用餐區、1 份掉在備料區
   for(let i=0;i<5;i++){const area=i===4?g.kitchen:g.dining;const p=g.free({pad:24,area,far:g.P,farD:110,avoid:g.items.filter(x=>x.type==='petition'),gap:i===4?40:140});g.addPetition(g,p.x,p.y);}
   g.addGuard([{x:200,y:300},{x:440,y:300},{x:440,y:650},{x:200,y:650}],{name:'服務生',range:150,chase:115});
@@ -157,14 +157,15 @@ const TUT=[
   target:g=>Math.hypot(g.P.x-300,g.P.y-235)<14||g.tSide?(g.tSide=1,g.F):{x:300,y:235},done:()=>false}
 ];
 function tutorial(g,dt){
- if(g.tStep==null){g.tStep=-1;g.tWait=0;}
+ if(g.tStep==null){g.tStep=-1;g.tReady=false;g.tNext=true;}
  const st=TUT[g.tStep];
- if(g.tStep<0||(st&&g.tWait>0&&(g.tWait-=dt)<=0)){g.tStep++;const n=TUT[g.tStep];if(!n)return;g.tT=0;g.tWait=0;if(n.enter)n.enter(g);tutCaption(g);return;}
- if(!st||g.tWait>0)return;
+ // 玩家按「下一步」才進入下一個示範（每個人閱讀速度不同）
+ if(g.tNext){g.tNext=false;g.tStep++;const n=TUT[g.tStep];if(!n)return;g.tT=0;g.tReady=false;g.botInput=null;if(n.enter)n.enter(g);tutCaption(g);return;}
+ if(!st||g.tReady)return;
  g.tT+=dt;
- // 先讓玩家讀說明 1 秒再開始示範；每一步至少顯示 3.5 秒
+ // 先讓玩家讀說明 1 秒再開始示範
  if(g.tT<1){g.botInput=null;return;}
- const fin=(st.done?st.done(g,dt):g.tT>=st.hold)&&g.tT>=3.5;if(fin){g.tWait=1.3;g.botInput=null;return;}
+ const fin=st.done?st.done(g,dt):g.tT>=st.hold;if(fin){g.tReady=true;g.botInput=null;tutButton(g);return;}
  const tg=st.target?st.target(g):null;g.botInput=tg?tutMove(g,tg):null;
 }
 function tutMove(g,tg){const P=g.P;if(!tg)return null;let v=null;
@@ -172,10 +173,14 @@ function tutMove(g,tg){const P=g.P;if(!tg)return null;let v=null;
  else{const key=Math.round(tg.x/25)+','+Math.round(tg.y/25);if(key!==g.tKey){g.tField=g.nav.bfs(g.nav.cell(tg.x,tg.y));g.tKey=key;}v=g.nav.dir(g.tField,P.x,P.y);}
  return v?{x:v.x,y:v.y,m:.85}:null;}
 function tutCaption(g){let e=g.layer.querySelector('.ax-tut');if(!e){e=document.createElement('div');e.className='ax-tut';g.layer.querySelector('.ax-chips').after(e);g.layer.classList.add('tut');}
- e.innerHTML='<div class="ax-tut-h"><span class="ax-tut-k">📖 教學示範 '+(g.tStep+1)+' / '+TUT.length+'</span><button type="button" class="ax-tut-skip">跳過教學 ⏭</button></div><div class="ax-tut-t">'+TUT[g.tStep].text+'</div>';
- e.querySelector('.ax-tut-skip').onclick=()=>{if(g.cfg.onSkip)g.cfg.onSkip();};g.layout();}
+ const last=g.tStep===TUT.length-1;
+ e.innerHTML='<div class="ax-tut-h"><span class="ax-tut-k">📖 教學 '+(g.tStep+1)+' / '+TUT.length+'</span><span class="ax-tut-b"><button type="button" class="ax-tut-skip">跳過 ⏭</button>'+(last?'':'<button type="button" class="ax-tut-next" disabled>示範中…</button>')+'</span></div><div class="ax-tut-t">'+TUT[g.tStep].text+'</div>';
+ e.querySelector('.ax-tut-skip').onclick=()=>{if(g.cfg.onSkip)g.cfg.onSkip();};
+ const nb=e.querySelector('.ax-tut-next');if(nb)nb.onclick=()=>{if(g.tReady){nb.disabled=true;g.tNext=true;}};g.layout();}
+function tutButton(g){const nb=g.layer.querySelector('.ax-tut-next');if(!nb)return;nb.disabled=false;nb.textContent='下一步 ▶';try{nb.focus({preventScroll:true});}catch(e){}}
 const TUT_CSS='.ax-tut{flex-shrink:0;position:relative;margin:6px 8px;min-height:104px;background:#1a0c07;border:2px solid #ffb35c;border-radius:12px;padding:9px 12px 8px;color:#fff1df}'
  +'.ax-tut-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}.ax-tut-k{font:900 12px system-ui;color:#ffb35c;letter-spacing:1px}.ax-tut-t{font:700 14px/1.6 system-ui}.ax-tut-t b{color:#ffe08a}'
+ +'.ax-tut-b{display:flex;gap:6px;flex-shrink:0}.ax-tut-next{background:#f1d09a;color:#2a140c;border:0;border-radius:999px;padding:7px 16px;font:900 14px system-ui;cursor:pointer;min-height:36px;min-width:92px;animation:axFlip .3s both}.ax-tut-next:disabled{background:#4a2414;color:#d9c2ad;animation:none;cursor:default}'
  +'.ax-tut-skip{flex-shrink:0;background:#4a2414;color:#fff1df;border:1px solid #b07a4f;border-radius:999px;padding:7px 14px;font:800 13px system-ui;cursor:pointer;min-height:36px}'
  +'.ax-layer.teppan .ax-msg{top:124px}.ax-layer.tut .ax-joy,.ax-layer.tut .ax-dash{display:none!important}.ax-layer.tut .ax-msg{top:auto;bottom:calc(14px + env(safe-area-inset-bottom,0px))}';
 (function(){if(document.getElementById('ax-tut-css'))return;const st=document.createElement('style');st.id='ax-tut-css';st.textContent=TUT_CSS;document.head.append(st);})();
