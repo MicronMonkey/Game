@@ -189,7 +189,7 @@ function Game(layer,cfg){
 A.Game=Game;
 const G=Game.prototype;
 G.layout=function(){const r=this.ctx.canvas.getBoundingClientRect(),dpr=Math.min(2,window.devicePixelRatio||1);this.VW=Math.max(200,r.width);this.VH=Math.max(200,r.height);this.ctx.canvas.width=this.VW*dpr;this.ctx.canvas.height=this.VH*dpr;this.ctx.setTransform(dpr,0,0,dpr,0,0);this.k=this.fitWidth?this.VW/this.W:Math.min(this.VW,this.VH)/(this.viewOverride||this.def.view||430);};
-G.cam=function(snap){const g=this,vw=g.VW/g.k,vh=g.VH/g.k;let tx=clamp(g.P.x-vw/2,0,Math.max(0,g.W-vw)),ty=clamp(g.P.y-vh/2,0,Math.max(0,g.H-vh));if(g.W<vw)tx=(g.W-vw)/2;if(g.H<vh)ty=g.camTop?0:(g.H-vh)/2;
+G.cam=function(snap){const g=this,vw=g.VW/g.k,vh=g.VH/g.k,fp=g.camFocus?g.camFocus(g):g.P,tp=(g.camTopPad||0)/g.k;let tx=clamp(fp.x-vw/2,0,Math.max(0,g.W-vw)),ty=clamp(fp.y-vh/2,-tp,Math.max(-tp,g.H-vh));if(g.W<vw)tx=(g.W-vw)/2;if(g.H<vh)ty=g.camTop?0:(g.H-vh)/2;
  if(snap){g.camX=tx;g.camY=ty;}else{g.camX=lerp(g.camX,tx,.18);g.camY=lerp(g.camY,ty,.18);}};
 G.rect=function(x,y,w,h,o){return Object.assign({x,y,w,h},o||{});};
 G.inRects=function(x,y,pad,list){return (list||this.blockers()).some(s=>x>s.x-pad&&x<s.x+s.w+pad&&y>s.y-pad&&y<s.y+s.h+pad);};
@@ -305,6 +305,8 @@ G.person=function(e,body,hair,name,o){const c=this.ctx;o=o||{};const bob=e.mv?Ma
  c.globalAlpha=o.alpha==null?1:o.alpha;c.fillStyle='#0006';c.beginPath();c.ellipse(e.x,e.y+e.r*.95,e.r*(o.shadow===false?0:1),e.r*.38,0,0,7);c.fill();
  c.save();c.translate(e.x,e.y+bob);c.scale(1/sq,sq);
  c.fillStyle=body;c.beginPath();c.arc(0,0,e.r,0,7);c.fill();
+ if(o.back){c.fillStyle=hair;c.beginPath();c.arc(0,-e.r*.2,e.r*.6,0,7);c.fill();c.restore();c.globalAlpha=1;// 背對：只看到後腦勺
+  if(name){rr(c,e.x-24,e.y-e.r-28+bob,48,18,9);c.fillStyle=o.tag||'#0b1620cc';c.fill();txt(c,name,e.x,e.y-e.r-19+bob,12,'#fff');}return;}
  c.fillStyle='#f1c9a5';c.beginPath();c.arc(0,-e.r*.15,e.r*.55,0,7);c.fill();
  c.fillStyle=hair;c.beginPath();c.arc(0,-e.r*.35,e.r*.58,Math.PI,0);c.fill();
  const fx=e.fx!=null?e.fx:Math.cos(e.ang||0),fy=e.fy!=null?e.fy:Math.sin(e.ang||0);c.fillStyle='#1b1b1b';c.beginPath();c.arc(fx*3-2.5,-e.r*.12+fy*2,1.4,0,7);c.arc(fx*3+2.5,-e.r*.12+fy*2,1.4,0,7);c.fill();
@@ -341,7 +343,9 @@ G.render=function(){const g=this,c=g.ctx,P=g.P,now=performance.now()/1000;
   else{c.fillStyle=col+'44';c.fillRect(t.x,t.y,t.w,t.h);c.strokeStyle=col;c.lineWidth=2;c.setLineDash([6,5]);c.strokeRect(t.x,t.y,t.w,t.h);c.setLineDash([]);}
   const lab=t.always!=null?(t.label||''):(t.closed?'關閉 '+Math.ceil(t.left)+'s':t.phase==='warn'?'即將關閉！':'開啟 '+Math.ceil(t.left)+'s');if(g.eff.pass>0)txt(c,'🎫 通行中',t.x+t.w/2,t.y-11,11,'#9fe3c4',900);else if(lab)txt(c,lab,t.x+t.w/2,t.y-11,11,col==='#8a6d00'?'#f1c40f':col,900);});
  g.papers.forEach(p=>{c.fillStyle='#fff6';c.beginPath();c.arc(p.x,p.y,p.r*1.35,0,7);c.fill();txt(c,'📝',p.x,p.y,18,'#fff');});
- g.items.forEach(it=>{if(it.hiddenUntilNear&&dist(it,P)>110)return;const r=it.r+5+Math.sin(it.bob)*2;c.fillStyle=it.glow||'#f9dd7f55';c.beginPath();c.arc(it.x,it.y,r,0,7);c.fill();c.strokeStyle=it.ring||'#ffe09c';c.lineWidth=2;c.stroke();txt(c,it.icon||A.ITEMS[it.type].icon,it.x,it.y+Math.sin(it.bob)*2,24,'#fff');});
+ g.items.forEach(it=>{if(it.hiddenUntilNear&&dist(it,P)>110)return;const r=it.r+5+Math.sin(it.bob)*2;c.fillStyle=it.glow||'#f9dd7f55';c.beginPath();c.arc(it.x,it.y,r,0,7);c.fill();c.strokeStyle=it.ring||'#ffe09c';c.lineWidth=2;c.stroke();txt(c,it.icon||A.ITEMS[it.type].icon,it.x,it.y+Math.sin(it.bob)*2,24,'#fff');
+  // 道具名稱標籤（輔助辨認）
+  if(it.label){c.font='800 11px system-ui,"PingFang TC",sans-serif';const lw=c.measureText(it.label).width+12,ly=it.y-it.r-17;rr(c,it.x-lw/2,ly-9,lw,18,9);c.fillStyle=it.labelBg||'#0b1620dd';c.fill();txt(c,it.label,it.x,ly,11,'#fff',800);}});
  g.hazards.forEach(h=>{c.fillStyle='#0006';rr(c,h.x+3,h.y+5,h.w,h.h,8);c.fill();c.fillStyle=h.color||'#e67e22';rr(c,h.x,h.y,h.w,h.h,8);c.fill();c.strokeStyle='#ffd23f';c.lineWidth=3;c.stroke();txt(c,h.icon||'🚜',h.x+h.w/2,h.y+h.h/2,Math.min(h.w,h.h)*.7,'#fff');if(g.eff.freeze>0)txt(c,'🧊',h.x+h.w,h.y,16,'#fff');});
  if(g.def.under)g.def.under(g,c,now);
  // 預警範圍（紅色漸滿）

@@ -32,13 +32,14 @@ const COURSES=[[0,'前菜'],[.15,'沙拉'],[.3,'湯品'],[.45,'主餐'],[.7,'炒
 const DISHES=['和牛','龍蝦','干貝','蒜香炒飯','鐵板豆芽','鵝肝','明蝦'];
 const TREATS=['炙燒干貝','主廚特製和牛捲','火焰香蕉','招待海鮮湯'];
 // 平衡參數（以自動玩家實測調到目標破關率）
-const TUNE={meal:57};
+const TUNE={meal:56};
 const MAX_EXTENDS=8;
+const secs=a=>Math.round(a*TUNE.meal);  // 延長量換算成秒數（顯示用）
 const MOOD=3;                // 心情要到 3（加點／請客／熱茶各 +1）法克才肯簽名         // 最多延長 8 次（吃不下了），避免無限拖時間              // 法克正常吃完一頓的秒數
 const def={
  id:'teppan',event:true,icon:'🍳',name:'11/16 鐵板燒偶遇',full:'限定活動｜11/16 鐵板燒偶遇',kick:'LIMITED EVENT / 11.16',
  story:'避難演練那天沒抓到法克……過了一陣子，11/16 晚上，會長走進一家鐵板燒店，竟然看到法克一個人坐在吧台大口吃和牛！',
- goals:['📄 撿回散落在店裡的 5 份連署書（有一份掉在備料區）','😋 讓法克加點、主廚請客或喝熱茶，心情到 3 他才肯簽','🤫 趁法克不注意，從他看不到的地方走到他身邊遞上連署書','🍽️ 法克吃完甜點就會結帳離開——要在那之前完成'],
+ goals:['📝 撿回散落在店裡的 5 份連署書（有一份掉在備料區）','😋 讓法克加點、主廚請客或喝熱茶，心情到 3 他才肯簽','🤫 趁法克不注意，從他看不到的地方走到他身邊遞上連署書','🍽️ 法克吃完甜點就會結帳離開——要在那之前完成'],
  tips:['法克會不定時回頭：先出現「嗯？」預告，接著紅色扇形就是他的視線。被看到他會吃得更快（用餐 +10%），躲到桌子後面或從側面接近','🧾 撿到加點單送到「點餐台」，法克就會加點、吃更久（最多延長 8 次）','🦐🥩🥚 備料區的食材湊齊交給主廚，主廚會請客；🍵 熱茶也能拖一下時間','服務生會巡場，被攔下會被帶回入口；師傅的火焰秀有紅圈預告，被燙到會扣愛心'],
  view:430,customTime:true,carry:'',theme:{floor:'#7a5a40',wall:'#4a3426',grid:'#0000001a'},
  setup(g){g.W=640;g.H=780;g.limit=900;g.meal=0;g.papersGot=0;g.carry=null;g.ing=0;g.extends=0;g.treats=0;g.lastCourse=0;
@@ -56,15 +57,14 @@ const def={
   g.P.x=g.entry.x;g.P.y=g.entry.y+10;
   g.maxHearts=g.hearts=4;
   // 教學：地圖縮放到剛好填滿寬度；說明框放在資訊列與地圖之間，不會擋住畫面
-  if(g.cfg.tutorial){g.fitWidth=true;g.F.state='eat';g.F.t=999;g.orderT=g.teaT=g.flameT=1e9;g.addPapers(4,{v:50,area:g.dining});return;}
+  if(g.cfg.tutorial){g.fitWidth=true;g.F.state='eat';g.F.t=999;g.orderT=g.teaT=g.flameT=1e9;return;}
   // 5 份連署書：4 份散落在用餐區、1 份掉在備料區
   for(let i=0;i<5;i++){const area=i===4?g.kitchen:g.dining;const p=g.free({pad:24,area,far:g.P,farD:110,avoid:g.items.filter(x=>x.type==='petition'),gap:i===4?40:140});g.addPetition(g,p.x,p.y);}
   g.addGuard([{x:200,y:300},{x:440,y:300},{x:440,y:650},{x:200,y:650}],{name:'服務生',range:150,chase:115});
   g.addGuard([{x:25,y:455},{x:615,y:455}],{name:'服務生',range:150,chase:115});
   g.orderT=6;g.teaT=12;g.flameT=7;g.spawnIng(g);
-  g.addPapers(8,{v:50,area:g.dining});
  },
-  start(g){if(g.cfg.tutorial)return;g.tip('🍳 撿 5 份 📄 連署書，再讓法克加點、請客、喝熱茶讓他心情變好，別被他回頭看到',7);},
+  start(g){if(g.cfg.tutorial)return;g.tip('🍳 撿 5 份 📝 連署書，再讓法克加點、請客、喝熱茶讓他心情變好，別被他回頭看到',7);},
  update(g,dt){const F=g.F,P=g.P;
   // 用餐進度
   if(g.cfg.tutorial)tutorial(g,dt);
@@ -78,7 +78,7 @@ const def={
   else if((F.state==='look'||F.state==='startled')&&F.t<=0){F.state='eat';F.t=5+g.rng()*3.5;}
   if(F.state==='look'&&g.fackSees(g)){F.state='startled';F.t=2;g.spotted=(g.spotted||0)+1;g.meal=Math.min(1,g.meal+.08);g.shake=.2;snd().sfx('shout');g.puff(F.x,F.y-30,'被發現！用餐 +8%','#ff8a7a',8);g.msg('😳 法克：「會長？我、我只是路過吃個飯…」他吃得更快了！',3);}
   // 走到法克身邊
-  if(dist(F,P)<F.r+P.r+6&&!(g.needMsg>0)){if(g.papersGot<5){g.needMsg=2.5;g.msg('📄 連署書還沒撿齊（'+g.papersGot+'/5）！');}
+  if(dist(F,P)<F.r+P.r+6&&!(g.needMsg>0)){if(g.papersGot<5){g.needMsg=2.5;g.msg('📝 連署書還沒撿齊（'+g.papersGot+'/5）！');}
    else if(g.extends<MOOD){g.needMsg=2.5;g.msg('🍖 法克：「我還在吃，沒心情簽！」（心情 '+g.extends+'/'+MOOD+'：讓他加點、請客或喝熱茶）',3);}
    else if(F.state!=='look'&&F.state!=='startled')g.win();}
   g.needMsg=(g.needMsg||0)-dt;
@@ -115,15 +115,21 @@ const def={
    if(F.state==='warn'){c.setLineDash([8,8]);c.strokeStyle='#ffd23f';c.lineWidth=3;c.stroke();c.setLineDash([]);c.fillStyle='#ffd23f14';c.fill();}else{c.fillStyle=F.state==='startled'?'#ff3b3044':'#ff5b4d33';c.fill();}}},
  drawSolid(g,s){},
  actors(g,c,now){const F=g.F,ch=g.chef;
-  g.guests.forEach((q,i)=>g.person({x:q.x,y:q.y,r:13,fx:0,fy:-1,mv:0},['#6b8e9e','#a0785a','#7a6aa0'][i%3],'#333',null));
+  g.guests.forEach((q,i)=>g.person({x:q.x,y:q.y,r:13,fx:0,fy:-1,mv:0},['#6b8e9e','#a0785a','#7a6aa0'][i%3],'#333',null,{back:true}));
   g.person(ch,'#f5f5f5','#ddd','主廚');txt(c,'👨‍🍳',ch.x,ch.y-ch.r-34,16,'#fff');if(g.chefSay>0)A.fx.bubble(c,'這道我請客！',ch.x,ch.y-60);
-  g.person(F,'#b5432e','#e2e1dd','法克',{tag:F.state==='look'||F.state==='startled'?'#9b2f2fdd':null});
+  // 吃飯時面向吧台（背對玩家）；回頭時才轉向下方
+  const eating=F.state==='eat';F.fx=0;F.fy=eating?-1:1;
+  g.person(F,'#b5432e','#e2e1dd','法克',{back:eating,tag:F.state==='look'||F.state==='startled'?'#9b2f2fdd':null});
   txt(c,'🍽️',F.x+F.r+6,F.y+6,14,'#fff');
   if(F.state==='warn')A.fx.bubble(c,'嗯？',F.x,F.y-56);else if(F.state==='startled')A.fx.bubble(c,'會、會長？！',F.x,F.y-56);else if(F.state==='eat'&&((now*2|0)%3===0))txt(c,'🥩',F.x,F.y-F.r-34,14,'#fff');
-  // 用餐進度條（在法克頭上）
-  const w=90,x=F.x-w/2,y=F.y-F.r-58;if(F.state==='eat'){rr(c,x,y,w,10,5);c.fillStyle='#0008';c.fill();rr(c,x,y,w*g.meal,10,5);c.fillStyle=g.meal>.8?'#ff6b5e':'#ffd23f';c.fill();}},
+  },
+ // 用餐進度條：固定在畫面最上方
+ screen(g,c){const ci=COURSES.filter(x=>g.meal>=x[0]).length-1,pct=Math.round(g.meal*100),x=8,y=6,w=g.VW-16,h=26;
+  rr(c,x,y,w,h,13);c.fillStyle='#1a0c07e6';c.fill();c.strokeStyle='#ffb35c';c.lineWidth=1.5;c.stroke();
+  if(g.meal>0){rr(c,x+2,y+2,Math.max(10,(w-4)*g.meal),h-4,11);c.fillStyle=g.meal>.8?'#e0533f':g.meal>.6?'#f0a03a':'#e8c34a';c.fill();}
+  txt(c,'🍽️ 法克用餐進度：'+COURSES[ci][1]+' '+pct+'%'+(g.meal>.8?'（快吃完了！）':''),g.VW/2,y+h/2+1,13,'#fff',900);},
  over(g,c){if(g.carry==='order')txt(c,'🧾',g.P.x+g.P.r,g.P.y-g.P.r-4,15,'#fff');if(g.ing)txt(c,['','🦐','🦐🥩','🦐🥩🥚'][g.ing],g.P.x,g.P.y+g.P.r+14,12,'#fff');},
- hud(g){const ci=COURSES.filter(c=>g.meal>=c[0]).length-1;return [['🍽️ '+COURSES[ci][1]+' '+Math.round(g.meal*100)+'%',g.meal>.8?'warn':''],['📄 '+g.papersGot+'/5',g.papersGot>=5?'ok':''],[g.extends>=MOOD?'😋 '+MOOD+'/'+MOOD+'・延長 '+g.extends+'/'+MAX_EXTENDS:'😋 心情 '+g.extends+'/'+MOOD,g.extends>=MOOD?'ok':'']].concat(g.carry==='order'?[['🧾 送點餐台','ok']]:[]).concat(g.ing?[['食材 '+g.ing+'/3',g.ing>=3?'ok':'']]:[]);},
+ hud(g){const ci=COURSES.filter(c=>g.meal>=c[0]).length-1;return [['🍽️ '+Math.round(g.meal*100)+'%',g.meal>.8?'warn':''],['📝 '+g.papersGot+'/5',g.papersGot>=5?'ok':''],[g.extends>=MOOD?'😋 '+MOOD+'/'+MOOD+'・延長 '+g.extends+'/'+MAX_EXTENDS:'😋 心情 '+g.extends+'/'+MOOD,g.extends>=MOOD?'ok':'']].concat(g.carry==='order'?[['🧾 送點餐台','ok']]:[]).concat(g.ing?[['食材 '+g.ing+'/3',g.ing>=3?'ok':'']]:[]);},
  targets(g){const t=[];if(g.carry==='order')t.push({x:g.orderZone.x+50,y:g.orderZone.y+40,label:'🧾 點餐台',color:'#9ff0bf'});if(g.ing>=3)t.push({x:g.chefZone.x+33,y:g.chefZone.y+35,label:'👨‍🍳 主廚',color:'#ffe08a'});
   const ready=g.papersGot>=5&&g.extends>=MOOD;t.push({x:g.F.x,y:g.F.y,label:ready?'法克 ✍️':'法克',color:ready?'#ff8a7a':'#c9b8a8'});return t;},
  radar(g){return g.items.map(i=>({x:i.x,y:i.y,label:i.icon||'?',color:'#9ae7ff'}));},
@@ -138,15 +144,15 @@ const def={
 const inRect=(p,r)=>p.x>r.x&&p.x<r.x+r.w&&p.y>r.y&&p.y<r.y+r.h;
 /* ── 教學示範：用真正的遊戲畫面自動走一遍，每一步都有大字說明 ── */
 const TUT=[
- {text:'🍳 這是<b>會長（你）</b>。法克坐在吧台吃飯，頭上的<b>黃色條是用餐進度</b>，吃完甜點他就會結帳離開！',hold:4.5,enter(g){g.meal=.3;}},
- {text:'📄 <b>第一步：撿連署書</b>。走過去就會撿起來（正式遊戲要撿齊 <b>5 份</b>，有一份在左上角備料區）。',enter(g){g.tPet=g.addPetition(g,190,610);},target:g=>g.tPet,done:g=>g.papersGot>=1},
+ {text:'🍳 這是<b>會長（你）</b>。法克背對大家坐在吧台吃飯，<b>畫面最上方是他的用餐進度</b>，吃完甜點他就會結帳離開！',hold:4.5,enter(g){g.meal=.3;}},
+ {text:'📝 <b>第一步：撿連署書</b>（白底 📝，上面寫著「連署書」）。走過去就會撿起來（正式遊戲要撿齊 <b>5 份</b>，有一份在左上角備料區）。',enter(g){g.tPet=g.addPetition(g,190,610);},target:g=>g.tPet,done:g=>g.papersGot>=1},
  {text:'👀 <b>法克會回頭！</b>先出現「嗯？」<b>黃色虛線預告</b>，接著<b>紅色扇形</b>是他的視線。躲到<b>桌子後面</b>就看不到你；被看到他會吃得更快。',
   enter(g){g.tPhase=0;},target:()=>({x:322,y:612}),done(g,dt){const F=g.F,P=g.P;if(g.tPhase===0&&Math.hypot(P.x-322,P.y-612)<10){g.tPhase=1;F.state='warn';F.t=1.2;g.msg('👀 法克：「嗯？」他要回頭了！');}
    if(g.tPhase===1&&F.state==='warn'){F.t-=dt;if(F.t<=0){F.state='look';F.t=2.4;}}else if(g.tPhase===1&&F.state==='look'){F.t-=dt;if(F.t<=0){F.state='eat';F.t=999;g.tPhase=2;g.msg('😮‍💨 躲過了！桌子擋住了他的視線');}}return g.tPhase===2;}},
  {text:'🧾 <b>加點單</b>：撿起來，送到右邊的<b>「點餐台」</b> → 法克加點、吃更久，<b>心情 +1</b>。',enter(g){g.tOrd=g.addOrder(g,440,420);},target:g=>g.carry==='order'?{x:g.orderZone.x+42,y:g.orderZone.y+35}:g.tOrd,done:g=>g.extends>=1},
  {text:'👨‍🍳 <b>主廚請客</b>：到左上角<b>備料區</b>收集 🦐🥩🥚 三種食材，交給吧台左邊的<b>主廚</b> → 主廚請客，<b>心情 +1</b>。',enter(g){g.spawnIng(g);},
   target:g=>{if(g.ing>=3)return{x:g.chefZone.x+28,y:g.chefZone.y+28};const L=g.items.filter(i=>i.type==='ingredient');return L.sort((a,b)=>Math.hypot(a.x-g.P.x,a.y-g.P.y)-Math.hypot(b.x-g.P.x,b.y-g.P.y))[0];},done:g=>g.extends>=2},
- {text:'🍵 <b>招待熱茶</b>：撿到就會送上桌，法克慢慢喝，<b>心情 +1</b>。（加點、請客、熱茶最多延長 8 次）',enter(g){g.tTea=g.addTea(g,170,440);},target:g=>g.tTea,done:g=>g.extends>=3},
+ {text:'🍵 <b>招待熱茶</b>：撿到就會送上桌，法克慢慢喝，<b>心情 +1</b>。道具上的「+秒數」就是能延長多久。（加點、請客、熱茶最多延長 8 次）',enter(g){g.tTea=g.addTea(g,170,440);},target:g=>g.tTea,done:g=>g.extends>=3},
  {text:'✍️ <b>心情 3/3、連署書 5/5</b> 之後，趁法克<b>沒回頭</b>時走到他身邊，他就會簽名！從<b>側面</b>接近最安全。',enter(g){g.papersGot=5;g.F.state='eat';g.F.t=999;},
   target:g=>Math.hypot(g.P.x-300,g.P.y-235)<14||g.tSide?(g.tSide=1,g.F):{x:300,y:235},done:()=>false}
 ];
@@ -166,22 +172,24 @@ function tutMove(g,tg){const P=g.P;if(!tg)return null;let v=null;
  else{const key=Math.round(tg.x/25)+','+Math.round(tg.y/25);if(key!==g.tKey){g.tField=g.nav.bfs(g.nav.cell(tg.x,tg.y));g.tKey=key;}v=g.nav.dir(g.tField,P.x,P.y);}
  return v?{x:v.x,y:v.y,m:.85}:null;}
 function tutCaption(g){let e=g.layer.querySelector('.ax-tut');if(!e){e=document.createElement('div');e.className='ax-tut';g.layer.querySelector('.ax-chips').after(e);g.layer.classList.add('tut');}
- e.innerHTML='<div class="ax-tut-k">📖 教學示範 '+(g.tStep+1)+' / '+TUT.length+'</div><div class="ax-tut-t">'+TUT[g.tStep].text+'</div><button type="button" class="ax-tut-skip">跳過教學 ⏭</button>';
+ e.innerHTML='<div class="ax-tut-h"><span class="ax-tut-k">📖 教學示範 '+(g.tStep+1)+' / '+TUT.length+'</span><button type="button" class="ax-tut-skip">跳過教學 ⏭</button></div><div class="ax-tut-t">'+TUT[g.tStep].text+'</div>';
  e.querySelector('.ax-tut-skip').onclick=()=>{if(g.cfg.onSkip)g.cfg.onSkip();};g.layout();}
 const TUT_CSS='.ax-tut{flex-shrink:0;position:relative;margin:6px 8px;min-height:104px;background:#1a0c07;border:2px solid #ffb35c;border-radius:12px;padding:9px 12px 8px;color:#fff1df}'
- +'.ax-tut-k{font:900 12px system-ui;color:#ffb35c;letter-spacing:1px;margin-bottom:3px;padding-right:110px}.ax-tut-t{font:700 14px/1.6 system-ui}.ax-tut-t b{color:#ffe08a}'
- +'.ax-tut-skip{position:absolute;top:6px;right:8px;background:#4a2414;color:#fff1df;border:1px solid #b07a4f;border-radius:999px;padding:7px 14px;font:800 13px system-ui;cursor:pointer;min-height:36px}'
- +'.ax-layer.tut .ax-joy,.ax-layer.tut .ax-dash{display:none!important}.ax-layer.tut .ax-msg{top:auto;bottom:calc(14px + env(safe-area-inset-bottom,0px))}';
+ +'.ax-tut-h{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:4px}.ax-tut-k{font:900 12px system-ui;color:#ffb35c;letter-spacing:1px}.ax-tut-t{font:700 14px/1.6 system-ui}.ax-tut-t b{color:#ffe08a}'
+ +'.ax-tut-skip{flex-shrink:0;background:#4a2414;color:#fff1df;border:1px solid #b07a4f;border-radius:999px;padding:7px 14px;font:800 13px system-ui;cursor:pointer;min-height:36px}'
+ +'.ax-layer.teppan .ax-msg{top:124px}.ax-layer.tut .ax-joy,.ax-layer.tut .ax-dash{display:none!important}.ax-layer.tut .ax-msg{top:auto;bottom:calc(14px + env(safe-area-inset-bottom,0px))}';
 (function(){if(document.getElementById('ax-tut-css'))return;const st=document.createElement('style');st.id='ax-tut-css';st.textContent=TUT_CSS;document.head.append(st);})();
 
 // 法克的視線：面向入口（正下方）、張角約 90 度、會被桌子和客人擋住
 def.fackSeesFn=function(g){const F=g.F,P=g.P,d=dist(F,P);if(d>330)return false;let a=Math.atan2(P.y-F.y,P.x-F.x)-Math.PI/2;a=Math.atan2(Math.sin(a),Math.cos(a));if(Math.abs(a)>.78)return false;return g.los(F,P);};
 const baseSetup=def.setup;
-def.setup=function(g){g.fackSees=def.fackSeesFn;g.spawnIng=function(g){['🦐','🥩','🥚'].forEach(ic=>{const p=g.free({pad:22,area:g.kitchen,gap:40,avoid:g.items});g.addItem('ingredient',p.x,p.y,{icon:ic,onPick:(g)=>{g.ing=Math.min(3,g.ing+1);snd().sfx('coin');g.msg(g.ing>=3?'🦐🥩🥚 食材湊齊了！交給吧台左邊的主廚':'食材 '+g.ing+'/3');}});});};
- g.addPetition=function(g,x,y){return g.addItem('petition',x,y,{icon:'📄',onPick:(g,it)=>{g.papersGot++;snd().sfx('coin');g.puff(it.x,it.y,'連署書 '+g.papersGot+'/5','#ffe09c',10);if(!g.cfg.tutorial)g.msg(g.papersGot>=5?'📄 連署書撿齊了！找機會走到法克身邊':'📄 連署書 '+g.papersGot+'/5');}});};
- g.addOrder=function(g,x,y){return g.addItem('order',x,y,{icon:'🧾',onPick:(g)=>{g.carry='order';if(!g.cfg.tutorial)g.msg('🧾 拿到加點單！送到右邊的「點餐台」');}});};
- g.addTea=function(g,x,y){return g.addItem('tea',x,y,{icon:'🍵',onPick:(g)=>{g.extend(g,.06,'🍵 招待熱茶送上桌，法克慢慢喝…');}});};
- g.extend=function(g,amt,text){if(g.extends>=MAX_EXTENDS){g.msg('🫃 法克：「吃不下了！再點我就要結帳了！」（最多延長 '+MAX_EXTENDS+' 次）',3);return;}g.meal=Math.max(0,g.meal-amt);g.extends++;snd().sfx('win');g.puff(g.F.x,g.F.y-30,'用餐時間延長！','#9ff0bf',14);g.msg(text,3);};
+def.setup=function(g){g.layer.classList.add('teppan');g.camTopPad=36;// 上方留給用餐進度條
+ if(g.cfg.tutorial)g.camFocus=g=>({x:g.P.x,y:(g.P.y+g.F.y)/2});// 教學：讓會長和法克盡量同時入鏡
+ g.fackSees=def.fackSeesFn;g.spawnIng=function(g){['🦐','🥩','🥚'].forEach(ic=>{const p=g.free({pad:22,area:g.kitchen,gap:40,avoid:g.items});g.addItem('ingredient',p.x,p.y,{icon:ic,label:'食材→主廚',labelBg:'#8a5a2bdd',onPick:(g)=>{g.ing=Math.min(3,g.ing+1);snd().sfx('coin');g.msg(g.ing>=3?'🦐🥩🥚 食材湊齊了！交給吧台左邊的主廚':'食材 '+g.ing+'/3');}});});};
+ g.addPetition=function(g,x,y){return g.addItem('petition',x,y,{icon:'📝',glow:'#ffffff88',ring:'#ffffff',label:'連署書',labelBg:'#2e5d8acc',onPick:(g,it)=>{g.papersGot++;snd().sfx('coin');g.puff(it.x,it.y,'連署書 '+g.papersGot+'/5','#ffe09c',10);if(!g.cfg.tutorial)g.msg(g.papersGot>=5?'📝 連署書撿齊了！找機會走到法克身邊':'📝 連署書 '+g.papersGot+'/5');}});};
+ g.addOrder=function(g,x,y){return g.addItem('order',x,y,{icon:'🧾',label:'加點單→點餐台 +'+secs(.12)+'秒',labelBg:'#2e7d4fdd',onPick:(g)=>{g.carry='order';if(!g.cfg.tutorial)g.msg('🧾 拿到加點單！送到右邊的「點餐台」');}});};
+ g.addTea=function(g,x,y){return g.addItem('tea',x,y,{icon:'🍵',label:'熱茶 +'+secs(.06)+'秒',labelBg:'#7a5a12dd',onPick:(g)=>{g.extend(g,.06,'🍵 招待熱茶送上桌，法克慢慢喝…');}});};
+ g.extend=function(g,amt,text){if(g.extends>=MAX_EXTENDS){g.msg('🫃 法克：「吃不下了！再點我就要結帳了！」（最多延長 '+MAX_EXTENDS+' 次）',3);return;}g.meal=Math.max(0,g.meal-amt);g.extends++;snd().sfx('win');g.puff(g.F.x,g.F.y-30,'用餐時間 +'+secs(amt)+' 秒！','#9ff0bf',14);g.msg(text+'（+'+secs(amt)+' 秒）',3);};
  baseSetup(g);};
 // 吧台、桌子、客人、盆栽的外觀
 const baseDraw=A.Game.prototype.drawSolid;
